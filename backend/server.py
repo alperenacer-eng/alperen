@@ -1030,6 +1030,138 @@ async def get_daily_detailed_report(
         "grand_totals": grand_totals
     }
 
+# ============ Çimento Giriş Tablosu API'leri ============
+
+class CimentoGirisCreate(BaseModel):
+    yukleme_tarihi: str = ""
+    bosaltim_tarihi: str = ""
+    irsaliye_no: str = ""
+    fatura_no: str = ""
+    vade_tarihi: str = ""
+    giris_miktari: float = 0
+    kantar_kg_miktari: float = 0
+    birim_fiyat: float = 0
+    giris_kdv_orani: float = 20
+    nakliye_birim_fiyat: float = 0
+    nakliye_kdv_orani: float = 20
+    nakliye_tevkifat_orani: float = 0
+    plaka: str = ""
+    nakliye_firmasi: str = ""
+    sofor: str = ""
+    sehir: str = ""
+    cimento_alinan_firma: str = ""
+
+class CimentoGirisUpdate(BaseModel):
+    yukleme_tarihi: Optional[str] = None
+    bosaltim_tarihi: Optional[str] = None
+    irsaliye_no: Optional[str] = None
+    fatura_no: Optional[str] = None
+    vade_tarihi: Optional[str] = None
+    giris_miktari: Optional[float] = None
+    kantar_kg_miktari: Optional[float] = None
+    birim_fiyat: Optional[float] = None
+    giris_kdv_orani: Optional[float] = None
+    nakliye_birim_fiyat: Optional[float] = None
+    nakliye_kdv_orani: Optional[float] = None
+    nakliye_tevkifat_orani: Optional[float] = None
+    plaka: Optional[str] = None
+    nakliye_firmasi: Optional[str] = None
+    sofor: Optional[str] = None
+    sehir: Optional[str] = None
+    cimento_alinan_firma: Optional[str] = None
+
+def calculate_cimento_fields(data: dict) -> dict:
+    """Çimento giriş hesaplamaları"""
+    giris_miktari = float(data.get('giris_miktari', 0) or 0)
+    kantar_kg_miktari = float(data.get('kantar_kg_miktari', 0) or 0)
+    data['aradaki_fark'] = giris_miktari - kantar_kg_miktari
+    
+    birim_fiyat = float(data.get('birim_fiyat', 0) or 0)
+    giris_kdv_orani = float(data.get('giris_kdv_orani', 0) or 0)
+    
+    data['giris_tutari'] = giris_miktari * birim_fiyat
+    data['giris_kdv_tutari'] = data['giris_tutari'] * (giris_kdv_orani / 100)
+    data['giris_kdv_dahil_toplam'] = data['giris_tutari'] + data['giris_kdv_tutari']
+    
+    nakliye_birim_fiyat = float(data.get('nakliye_birim_fiyat', 0) or 0)
+    nakliye_kdv_orani = float(data.get('nakliye_kdv_orani', 0) or 0)
+    nakliye_tevkifat_orani = float(data.get('nakliye_tevkifat_orani', 0) or 0)
+    
+    data['nakliye_matrahi'] = giris_miktari * nakliye_birim_fiyat
+    data['nakliye_kdv_tutari'] = data['nakliye_matrahi'] * (nakliye_kdv_orani / 100)
+    data['nakliye_t1'] = data['nakliye_matrahi'] + data['nakliye_kdv_tutari']
+    data['nakliye_t2'] = data['nakliye_kdv_tutari'] * (nakliye_tevkifat_orani / 100)
+    data['nakliye_genel_toplam'] = data['nakliye_t1'] - data['nakliye_t2']
+    
+    data['urun_nakliye_matrah'] = data['giris_tutari'] + data['nakliye_matrahi']
+    data['urun_nakliye_kdv_toplam'] = data['giris_kdv_tutari'] + data['nakliye_kdv_tutari']
+    data['urun_nakliye_tevkifat_toplam'] = data['nakliye_t2']
+    data['urun_nakliye_genel_toplam'] = data['giris_kdv_dahil_toplam'] + data['nakliye_genel_toplam']
+    
+    return data
+
+@api_router.post("/cimento-giris")
+async def create_cimento_giris(input: CimentoGirisCreate, current_user: dict = Depends(get_current_user)):
+    data = input.model_dump()
+    data = calculate_cimento_fields(data)
+    data['id'] = str(datetime.now(timezone.utc).timestamp()).replace(".", "")
+    data['created_at'] = datetime.now(timezone.utc).isoformat()
+    data['updated_at'] = datetime.now(timezone.utc).isoformat()
+    data['user_id'] = current_user['id']
+    data['user_name'] = current_user['name']
+    
+    await db.cimento_giris.insert_one(data)
+    return data
+
+@api_router.get("/cimento-giris")
+async def get_cimento_giris(current_user: dict = Depends(get_current_user)):
+    records = await db.cimento_giris.find({}, {"_id": 0}).sort("created_at", -1).to_list(1000)
+    return records
+
+@api_router.put("/cimento-giris/{id}")
+async def update_cimento_giris(id: str, input: CimentoGirisUpdate, current_user: dict = Depends(get_current_user)):
+    existing = await db.cimento_giris.find_one({"id": id}, {"_id": 0})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Kayıt bulunamadı")
+    
+    update_data = {k: v for k, v in input.model_dump().items() if v is not None}
+    for key, value in update_data.items():
+        existing[key] = value
+    
+    existing = calculate_cimento_fields(existing)
+    existing['updated_at'] = datetime.now(timezone.utc).isoformat()
+    
+    await db.cimento_giris.update_one({"id": id}, {"$set": existing})
+    return existing
+
+@api_router.delete("/cimento-giris/{id}")
+async def delete_cimento_giris(id: str, current_user: dict = Depends(get_current_user)):
+    result = await db.cimento_giris.delete_one({"id": id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Kayıt bulunamadı")
+    return {"message": "Kayıt silindi"}
+
+@api_router.get("/cimento-giris-ozet")
+async def get_cimento_giris_ozet(current_user: dict = Depends(get_current_user)):
+    records = await db.cimento_giris.find({}, {"_id": 0}).to_list(1000)
+    
+    return {
+        "kayit_sayisi": len(records),
+        "toplam_giris_miktari": sum(r.get('giris_miktari', 0) for r in records),
+        "toplam_kantar_kg": sum(r.get('kantar_kg_miktari', 0) for r in records),
+        "toplam_fark": sum(r.get('aradaki_fark', 0) for r in records),
+        "toplam_giris_tutari": sum(r.get('giris_tutari', 0) for r in records),
+        "toplam_giris_kdv": sum(r.get('giris_kdv_tutari', 0) for r in records),
+        "toplam_giris_kdv_dahil": sum(r.get('giris_kdv_dahil_toplam', 0) for r in records),
+        "toplam_nakliye_matrah": sum(r.get('nakliye_matrahi', 0) for r in records),
+        "toplam_nakliye_kdv": sum(r.get('nakliye_kdv_tutari', 0) for r in records),
+        "toplam_nakliye_genel": sum(r.get('nakliye_genel_toplam', 0) for r in records),
+        "toplam_urun_nakliye_matrah": sum(r.get('urun_nakliye_matrah', 0) for r in records),
+        "toplam_urun_nakliye_kdv": sum(r.get('urun_nakliye_kdv_toplam', 0) for r in records),
+        "toplam_urun_nakliye_tevkifat": sum(r.get('urun_nakliye_tevkifat_toplam', 0) for r in records),
+        "toplam_urun_nakliye_genel": sum(r.get('urun_nakliye_genel_toplam', 0) for r in records)
+    }
+
 app.include_router(api_router)
 
 app.add_middleware(
