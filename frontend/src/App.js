@@ -106,7 +106,7 @@ const KaynakYonetimi = ({ kaynaklar, onKaynakEkle, onKaynakSil, onRefresh }) => 
           <CardContent className="p-3">
             <div className="flex gap-2 mb-3">
               <Input
-                placeholder={`Yeni ${tur.label.slice(0, -1))}...`}
+                placeholder={`Yeni ${tur.label.slice(0, -1)}...`}
                 value={yeniKaynak[tur.field]}
                 onChange={(e) => setYeniKaynak({ ...yeniKaynak, [tur.field]: e.target.value })}
                 className="h-8 text-sm"
