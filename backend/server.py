@@ -9,7 +9,6 @@ from pydantic import BaseModel, Field, ConfigDict
 from typing import List, Optional
 import uuid
 from datetime import datetime, timezone
-from decimal import Decimal
 
 
 ROOT_DIR = Path(__file__).parent
@@ -27,7 +26,25 @@ app = FastAPI()
 api_router = APIRouter(prefix="/api")
 
 
-# Define Models
+# ==================== KAYNAK MODELLER ====================
+
+class Kaynak(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    ad: str
+    aktif: bool = True
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class KaynakCreate(BaseModel):
+    ad: str
+
+class KaynakUpdate(BaseModel):
+    ad: Optional[str] = None
+    aktif: Optional[bool] = None
+
+
+# ==================== ÇİMENTO GİRİŞ MODELLERİ ====================
+
 class CimentoGiris(BaseModel):
     model_config = ConfigDict(extra="ignore")
     
@@ -39,7 +56,7 @@ class CimentoGiris(BaseModel):
     vade_tarihi: str
     giris_miktari: float = 0
     kantar_kg_miktari: float = 0
-    aradaki_fark: float = 0  # Otomatik hesaplanacak
+    aradaki_fark: float = 0
     birim_fiyat: float = 0
     giris_tutari: float = 0
     giris_kdv_orani: float = 0
@@ -57,6 +74,12 @@ class CimentoGiris(BaseModel):
     urun_nakliye_kdv_toplam: float = 0
     urun_nakliye_tevkifat_toplam: float = 0
     urun_nakliye_genel_toplam: float = 0
+    # Yeni alanlar - kaynaklardan seçilecek
+    plaka: str = ""
+    nakliye_firmasi: str = ""
+    sofor: str = ""
+    sehir: str = ""
+    cimento_alinan_firma: str = ""
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
@@ -74,6 +97,12 @@ class CimentoGirisCreate(BaseModel):
     nakliye_birim_fiyat: float = 0
     nakliye_kdv_orani: float = 20
     nakliye_tevkifat_orani: float = 0
+    # Yeni alanlar
+    plaka: str = ""
+    nakliye_firmasi: str = ""
+    sofor: str = ""
+    sehir: str = ""
+    cimento_alinan_firma: str = ""
 
 
 class CimentoGirisUpdate(BaseModel):
@@ -89,16 +118,20 @@ class CimentoGirisUpdate(BaseModel):
     nakliye_birim_fiyat: Optional[float] = None
     nakliye_kdv_orani: Optional[float] = None
     nakliye_tevkifat_orani: Optional[float] = None
+    # Yeni alanlar
+    plaka: Optional[str] = None
+    nakliye_firmasi: Optional[str] = None
+    sofor: Optional[str] = None
+    sehir: Optional[str] = None
+    cimento_alinan_firma: Optional[str] = None
 
 
 def calculate_fields(data: dict) -> dict:
     """Otomatik hesaplamaları yap"""
-    # Aradaki fark
     giris_miktari = float(data.get('giris_miktari', 0) or 0)
     kantar_kg_miktari = float(data.get('kantar_kg_miktari', 0) or 0)
     data['aradaki_fark'] = giris_miktari - kantar_kg_miktari
     
-    # Giriş hesaplamaları
     birim_fiyat = float(data.get('birim_fiyat', 0) or 0)
     giris_kdv_orani = float(data.get('giris_kdv_orani', 0) or 0)
     
@@ -106,7 +139,6 @@ def calculate_fields(data: dict) -> dict:
     data['giris_kdv_tutari'] = data['giris_tutari'] * (giris_kdv_orani / 100)
     data['giris_kdv_dahil_toplam'] = data['giris_tutari'] + data['giris_kdv_tutari']
     
-    # Nakliye hesaplamaları
     nakliye_birim_fiyat = float(data.get('nakliye_birim_fiyat', 0) or 0)
     nakliye_kdv_orani = float(data.get('nakliye_kdv_orani', 0) or 0)
     nakliye_tevkifat_orani = float(data.get('nakliye_tevkifat_orani', 0) or 0)
@@ -114,13 +146,11 @@ def calculate_fields(data: dict) -> dict:
     data['nakliye_matrahi'] = giris_miktari * nakliye_birim_fiyat
     data['nakliye_kdv_tutari'] = data['nakliye_matrahi'] * (nakliye_kdv_orani / 100)
     
-    # T1 ve T2 hesaplamaları (Tevkifat)
     data['nakliye_t1'] = data['nakliye_matrahi'] + data['nakliye_kdv_tutari']
     data['nakliye_t2'] = data['nakliye_kdv_tutari'] * (nakliye_tevkifat_orani / 100)
     
     data['nakliye_genel_toplam'] = data['nakliye_t1'] - data['nakliye_t2']
     
-    # Ürün-Nakliye toplamları
     data['urun_nakliye_matrah'] = data['giris_tutari'] + data['nakliye_matrahi']
     data['urun_nakliye_kdv_toplam'] = data['giris_kdv_tutari'] + data['nakliye_kdv_tutari']
     data['urun_nakliye_tevkifat_toplam'] = data['nakliye_t2']
@@ -129,7 +159,143 @@ def calculate_fields(data: dict) -> dict:
     return data
 
 
-# Routes
+# ==================== KAYNAK API'LERİ ====================
+
+# Plakalar
+@api_router.get("/kaynaklar/plakalar", response_model=List[Kaynak])
+async def get_plakalar():
+    records = await db.plakalar.find({"aktif": True}, {"_id": 0}).to_list(1000)
+    for r in records:
+        if isinstance(r.get('created_at'), str):
+            r['created_at'] = datetime.fromisoformat(r['created_at'])
+    return records
+
+@api_router.post("/kaynaklar/plakalar", response_model=Kaynak)
+async def create_plaka(input: KaynakCreate):
+    kaynak = Kaynak(ad=input.ad)
+    doc = kaynak.model_dump()
+    doc['created_at'] = doc['created_at'].isoformat()
+    await db.plakalar.insert_one(doc)
+    return kaynak
+
+@api_router.delete("/kaynaklar/plakalar/{id}")
+async def delete_plaka(id: str):
+    await db.plakalar.update_one({"id": id}, {"$set": {"aktif": False}})
+    return {"message": "Silindi"}
+
+
+# Nakliye Firmaları
+@api_router.get("/kaynaklar/nakliye-firmalari", response_model=List[Kaynak])
+async def get_nakliye_firmalari():
+    records = await db.nakliye_firmalari.find({"aktif": True}, {"_id": 0}).to_list(1000)
+    for r in records:
+        if isinstance(r.get('created_at'), str):
+            r['created_at'] = datetime.fromisoformat(r['created_at'])
+    return records
+
+@api_router.post("/kaynaklar/nakliye-firmalari", response_model=Kaynak)
+async def create_nakliye_firmasi(input: KaynakCreate):
+    kaynak = Kaynak(ad=input.ad)
+    doc = kaynak.model_dump()
+    doc['created_at'] = doc['created_at'].isoformat()
+    await db.nakliye_firmalari.insert_one(doc)
+    return kaynak
+
+@api_router.delete("/kaynaklar/nakliye-firmalari/{id}")
+async def delete_nakliye_firmasi(id: str):
+    await db.nakliye_firmalari.update_one({"id": id}, {"$set": {"aktif": False}})
+    return {"message": "Silindi"}
+
+
+# Şoförler
+@api_router.get("/kaynaklar/soforler", response_model=List[Kaynak])
+async def get_soforler():
+    records = await db.soforler.find({"aktif": True}, {"_id": 0}).to_list(1000)
+    for r in records:
+        if isinstance(r.get('created_at'), str):
+            r['created_at'] = datetime.fromisoformat(r['created_at'])
+    return records
+
+@api_router.post("/kaynaklar/soforler", response_model=Kaynak)
+async def create_sofor(input: KaynakCreate):
+    kaynak = Kaynak(ad=input.ad)
+    doc = kaynak.model_dump()
+    doc['created_at'] = doc['created_at'].isoformat()
+    await db.soforler.insert_one(doc)
+    return kaynak
+
+@api_router.delete("/kaynaklar/soforler/{id}")
+async def delete_sofor(id: str):
+    await db.soforler.update_one({"id": id}, {"$set": {"aktif": False}})
+    return {"message": "Silindi"}
+
+
+# Şehirler
+@api_router.get("/kaynaklar/sehirler", response_model=List[Kaynak])
+async def get_sehirler():
+    records = await db.sehirler.find({"aktif": True}, {"_id": 0}).to_list(1000)
+    for r in records:
+        if isinstance(r.get('created_at'), str):
+            r['created_at'] = datetime.fromisoformat(r['created_at'])
+    return records
+
+@api_router.post("/kaynaklar/sehirler", response_model=Kaynak)
+async def create_sehir(input: KaynakCreate):
+    kaynak = Kaynak(ad=input.ad)
+    doc = kaynak.model_dump()
+    doc['created_at'] = doc['created_at'].isoformat()
+    await db.sehirler.insert_one(doc)
+    return kaynak
+
+@api_router.delete("/kaynaklar/sehirler/{id}")
+async def delete_sehir(id: str):
+    await db.sehirler.update_one({"id": id}, {"$set": {"aktif": False}})
+    return {"message": "Silindi"}
+
+
+# Çimento Alınan Firmalar
+@api_router.get("/kaynaklar/cimento-firmalari", response_model=List[Kaynak])
+async def get_cimento_firmalari():
+    records = await db.cimento_firmalari.find({"aktif": True}, {"_id": 0}).to_list(1000)
+    for r in records:
+        if isinstance(r.get('created_at'), str):
+            r['created_at'] = datetime.fromisoformat(r['created_at'])
+    return records
+
+@api_router.post("/kaynaklar/cimento-firmalari", response_model=Kaynak)
+async def create_cimento_firmasi(input: KaynakCreate):
+    kaynak = Kaynak(ad=input.ad)
+    doc = kaynak.model_dump()
+    doc['created_at'] = doc['created_at'].isoformat()
+    await db.cimento_firmalari.insert_one(doc)
+    return kaynak
+
+@api_router.delete("/kaynaklar/cimento-firmalari/{id}")
+async def delete_cimento_firmasi(id: str):
+    await db.cimento_firmalari.update_one({"id": id}, {"$set": {"aktif": False}})
+    return {"message": "Silindi"}
+
+
+# Tüm Kaynakları Getir
+@api_router.get("/kaynaklar/tumu")
+async def get_tum_kaynaklar():
+    plakalar = await db.plakalar.find({"aktif": True}, {"_id": 0}).to_list(1000)
+    nakliye_firmalari = await db.nakliye_firmalari.find({"aktif": True}, {"_id": 0}).to_list(1000)
+    soforler = await db.soforler.find({"aktif": True}, {"_id": 0}).to_list(1000)
+    sehirler = await db.sehirler.find({"aktif": True}, {"_id": 0}).to_list(1000)
+    cimento_firmalari = await db.cimento_firmalari.find({"aktif": True}, {"_id": 0}).to_list(1000)
+    
+    return {
+        "plakalar": plakalar,
+        "nakliye_firmalari": nakliye_firmalari,
+        "soforler": soforler,
+        "sehirler": sehirler,
+        "cimento_firmalari": cimento_firmalari
+    }
+
+
+# ==================== ÇİMENTO GİRİŞ API'LERİ ====================
+
 @api_router.get("/")
 async def root():
     return {"message": "Çimento Giriş Takip API"}
@@ -210,7 +376,6 @@ async def delete_cimento_giris(id: str):
 
 @api_router.get("/cimento-giris-ozet")
 async def get_ozet():
-    """Toplam özet bilgilerini getir"""
     records = await db.cimento_giris.find({}, {"_id": 0}).to_list(1000)
     
     toplam_giris_miktari = sum(r.get('giris_miktari', 0) for r in records)
