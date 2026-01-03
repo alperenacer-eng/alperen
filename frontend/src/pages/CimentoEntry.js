@@ -1,313 +1,612 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { useAuth } from '@/context/AuthContext';
 import { useModule } from '@/context/ModuleContext';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
-import { Save, ArrowLeft } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
+import { Plus, Trash2, Edit, Save, X, FileSpreadsheet, ArrowLeft } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL + '/api';
+
+const formatCurrency = (value) => {
+  if (value === null || value === undefined || value === "") return "0,00";
+  return new Intl.NumberFormat("tr-TR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(value);
+};
+
+const emptyRecord = {
+  yukleme_tarihi: "",
+  bosaltim_tarihi: "",
+  irsaliye_no: "",
+  fatura_no: "",
+  vade_tarihi: "",
+  giris_miktari: 0,
+  kantar_kg_miktari: 0,
+  birim_fiyat: 0,
+  giris_kdv_orani: 20,
+  nakliye_birim_fiyat: 0,
+  nakliye_kdv_orani: 20,
+  nakliye_tevkifat_orani: 0,
+  plaka: "",
+  nakliye_firmasi: "",
+  sofor: "",
+  sehir: "",
+  cimento_alinan_firma: "",
+};
 
 const CimentoEntry = () => {
   const { token } = useAuth();
   const { currentModule } = useModule();
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(false);
   
-  // Kaynak verileri
-  const [cimentoFirmalar, setCimentoFirmalar] = useState([]);
-  const [nakliyeciFirmalar, setNakliyeciFirmalar] = useState([]);
+  const [records, setRecords] = useState([]);
+  const [ozet, setOzet] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [editingId, setEditingId] = useState(null);
+  const [editData, setEditData] = useState({});
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [newRecord, setNewRecord] = useState(emptyRecord);
+  
+  // Kaynaklar
   const [plakalar, setPlakalar] = useState([]);
+  const [nakliyeciFirmalar, setNakliyeciFirmalar] = useState([]);
   const [soforler, setSoforler] = useState([]);
   const [sehirler, setSehirler] = useState([]);
+  const [cimentoFirmalar, setCimentoFirmalar] = useState([]);
 
-  const [formData, setFormData] = useState({
-    tarih: new Date().toISOString().split('T')[0],
-    cimento_firma_id: '',
-    cimento_firma_name: '',
-    nakliyeci_firma_id: '',
-    nakliyeci_firma_name: '',
-    plaka_id: '',
-    plaka: '',
-    sofor_id: '',
-    sofor_name: '',
-    sehir_id: '',
-    sehir_name: '',
-    miktar: '',
-    birim: 'ton',
-    fiyat: '',
-    notes: ''
-  });
+  const headers = { Authorization: `Bearer ${token}` };
+
+  const fetchRecords = useCallback(async () => {
+    try {
+      const response = await axios.get(`${API_URL}/cimento-giris`, { headers });
+      setRecords(response.data);
+    } catch (e) {
+      console.error(e);
+      toast.error("Kayıtlar yüklenirken hata oluştu");
+    }
+  }, [token]);
+
+  const fetchOzet = useCallback(async () => {
+    try {
+      const response = await axios.get(`${API_URL}/cimento-giris-ozet`, { headers });
+      setOzet(response.data);
+    } catch (e) {
+      console.error(e);
+    }
+  }, [token]);
+
+  const fetchKaynaklar = useCallback(async () => {
+    try {
+      const [plakaRes, nakliyeciRes, soforRes, sehirRes, cimentoRes] = await Promise.all([
+        axios.get(`${API_URL}/plakalar`, { headers }),
+        axios.get(`${API_URL}/nakliyeci-firmalar`, { headers }),
+        axios.get(`${API_URL}/soforler`, { headers }),
+        axios.get(`${API_URL}/sehirler`, { headers }),
+        axios.get(`${API_URL}/cimento-firmalar`, { headers }),
+      ]);
+      setPlakalar(plakaRes.data);
+      setNakliyeciFirmalar(nakliyeciRes.data);
+      setSoforler(soforRes.data);
+      setSehirler(sehirRes.data);
+      setCimentoFirmalar(cimentoRes.data);
+    } catch (e) {
+      console.error(e);
+    }
+  }, [token]);
 
   useEffect(() => {
     if (!currentModule || currentModule.id !== 'cimento') {
       navigate('/');
       return;
     }
-    fetchResources();
-  }, [currentModule]);
-
-  const fetchResources = async () => {
-    try {
-      const [cimentoRes, nakliyeciRes, plakaRes, soforRes, sehirRes] = await Promise.all([
-        axios.get(`${API_URL}/cimento-firmalar`, { headers: { Authorization: `Bearer ${token}` } }),
-        axios.get(`${API_URL}/nakliyeci-firmalar`, { headers: { Authorization: `Bearer ${token}` } }),
-        axios.get(`${API_URL}/plakalar`, { headers: { Authorization: `Bearer ${token}` } }),
-        axios.get(`${API_URL}/soforler`, { headers: { Authorization: `Bearer ${token}` } }),
-        axios.get(`${API_URL}/sehirler`, { headers: { Authorization: `Bearer ${token}` } }),
-      ]);
-      setCimentoFirmalar(cimentoRes.data);
-      setNakliyeciFirmalar(nakliyeciRes.data);
-      setPlakalar(plakaRes.data);
-      setSoforler(soforRes.data);
-      setSehirler(sehirRes.data);
-    } catch (error) {
-      toast.error('Kaynaklar yüklenemedi');
-    }
-  };
-
-  const handleChange = (field, value) => {
-    setFormData(prev => {
-      const updated = { ...prev, [field]: value };
-      
-      // İlişkili isimleri de güncelle
-      if (field === 'cimento_firma_id') {
-        const firma = cimentoFirmalar.find(f => f.id === value);
-        updated.cimento_firma_name = firma?.name || '';
-      }
-      if (field === 'nakliyeci_firma_id') {
-        const firma = nakliyeciFirmalar.find(f => f.id === value);
-        updated.nakliyeci_firma_name = firma?.name || '';
-      }
-      if (field === 'plaka_id') {
-        const p = plakalar.find(p => p.id === value);
-        updated.plaka = p?.plaka || '';
-      }
-      if (field === 'sofor_id') {
-        const s = soforler.find(s => s.id === value);
-        updated.sofor_name = s?.name || '';
-      }
-      if (field === 'sehir_id') {
-        const s = sehirler.find(s => s.id === value);
-        updated.sehir_name = s?.name || '';
-      }
-      
-      return updated;
-    });
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
     
-    if (!formData.cimento_firma_id || !formData.miktar) {
-      toast.error('Lütfen zorunlu alanları doldurun');
+    const loadData = async () => {
+      setLoading(true);
+      await Promise.all([fetchRecords(), fetchOzet(), fetchKaynaklar()]);
+      setLoading(false);
+    };
+    loadData();
+  }, [currentModule, fetchRecords, fetchOzet, fetchKaynaklar]);
+
+  const handleAddRecord = async () => {
+    if (!newRecord.plaka) {
+      toast.error("Lütfen plaka seçin");
+      return;
+    }
+    if (!newRecord.nakliye_firmasi) {
+      toast.error("Lütfen nakliye firması seçin");
+      return;
+    }
+    if (!newRecord.sofor) {
+      toast.error("Lütfen şoför seçin");
+      return;
+    }
+    if (!newRecord.sehir) {
+      toast.error("Lütfen şehir seçin");
+      return;
+    }
+    if (!newRecord.cimento_alinan_firma) {
+      toast.error("Lütfen çimento alınan firma seçin");
       return;
     }
 
-    setLoading(true);
     try {
-      await axios.post(`${API_URL}/cimento-records`, {
-        ...formData,
-        miktar: parseFloat(formData.miktar),
-        fiyat: formData.fiyat ? parseFloat(formData.fiyat) : null
-      }, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      
-      toast.success('Çimento kaydı oluşturuldu');
-      navigate('/cimento-list');
-    } catch (error) {
-      toast.error('Kayıt oluşturulamadı');
-    } finally {
-      setLoading(false);
+      await axios.post(`${API_URL}/cimento-giris`, newRecord, { headers });
+      toast.success("Kayıt başarıyla eklendi");
+      setNewRecord(emptyRecord);
+      setIsAddDialogOpen(false);
+      fetchRecords();
+      fetchOzet();
+    } catch (e) {
+      console.error(e);
+      toast.error("Kayıt eklenirken hata oluştu");
     }
+  };
+
+  const handleDeleteRecord = async (id) => {
+    if (window.confirm("Bu kaydı silmek istediğinizden emin misiniz?")) {
+      try {
+        await axios.delete(`${API_URL}/cimento-giris/${id}`, { headers });
+        toast.success("Kayıt silindi");
+        fetchRecords();
+        fetchOzet();
+      } catch (e) {
+        console.error(e);
+        toast.error("Kayıt silinirken hata oluştu");
+      }
+    }
+  };
+
+  const startEdit = (record) => {
+    setEditingId(record.id);
+    setEditData({
+      yukleme_tarihi: record.yukleme_tarihi,
+      bosaltim_tarihi: record.bosaltim_tarihi,
+      irsaliye_no: record.irsaliye_no,
+      fatura_no: record.fatura_no,
+      vade_tarihi: record.vade_tarihi,
+      giris_miktari: record.giris_miktari,
+      kantar_kg_miktari: record.kantar_kg_miktari,
+      birim_fiyat: record.birim_fiyat,
+      giris_kdv_orani: record.giris_kdv_orani,
+      nakliye_birim_fiyat: record.nakliye_birim_fiyat,
+      nakliye_kdv_orani: record.nakliye_kdv_orani,
+      nakliye_tevkifat_orani: record.nakliye_tevkifat_orani,
+      plaka: record.plaka,
+      nakliye_firmasi: record.nakliye_firmasi,
+      sofor: record.sofor,
+      sehir: record.sehir,
+      cimento_alinan_firma: record.cimento_alinan_firma,
+    });
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditData({});
+  };
+
+  const saveEdit = async (id) => {
+    try {
+      await axios.put(`${API_URL}/cimento-giris/${id}`, editData, { headers });
+      toast.success("Kayıt güncellendi");
+      setEditingId(null);
+      setEditData({});
+      fetchRecords();
+      fetchOzet();
+    } catch (e) {
+      console.error(e);
+      toast.error("Kayıt güncellenirken hata oluştu");
+    }
+  };
+
+  const columnHeaders = [
+    { key: "plaka", label: "Plaka", type: "select", source: plakalar, sourceKey: "plaka", editable: true },
+    { key: "nakliye_firmasi", label: "Nakliye Firması", type: "select", source: nakliyeciFirmalar, sourceKey: "name", editable: true },
+    { key: "sofor", label: "Şoför", type: "select", source: soforler, sourceKey: "name", editable: true },
+    { key: "sehir", label: "Şehir", type: "select", source: sehirler, sourceKey: "name", editable: true },
+    { key: "cimento_alinan_firma", label: "Çimento Firma", type: "select", source: cimentoFirmalar, sourceKey: "name", editable: true },
+    { key: "yukleme_tarihi", label: "Yükleme Tarihi", type: "date", editable: true },
+    { key: "bosaltim_tarihi", label: "Boşaltım Tarihi", type: "date", editable: true },
+    { key: "irsaliye_no", label: "İrsaliye No", type: "text", editable: true },
+    { key: "fatura_no", label: "Fatura No", type: "text", editable: true },
+    { key: "vade_tarihi", label: "Vade Tarihi", type: "date", editable: true },
+    { key: "giris_miktari", label: "Giriş Miktarı", type: "number", editable: true },
+    { key: "kantar_kg_miktari", label: "Kantar KG", type: "number", editable: true },
+    { key: "aradaki_fark", label: "Aradaki Fark", type: "calculated", editable: false },
+    { key: "birim_fiyat", label: "Birim Fiyat", type: "currency", editable: true },
+    { key: "giris_tutari", label: "Giriş Tutarı", type: "currency", editable: false },
+    { key: "giris_kdv_orani", label: "Giriş KDV %", type: "number", editable: true },
+    { key: "giris_kdv_tutari", label: "Giriş KDV Tutarı", type: "currency", editable: false },
+    { key: "giris_kdv_dahil_toplam", label: "Giriş KDV Dahil", type: "currency", editable: false },
+    { key: "nakliye_birim_fiyat", label: "Nakliye B.Fiyat", type: "currency", editable: true },
+    { key: "nakliye_matrahi", label: "Nakliye Matrahı", type: "currency", editable: false },
+    { key: "nakliye_kdv_orani", label: "Nakliye KDV %", type: "number", editable: true },
+    { key: "nakliye_kdv_tutari", label: "Nakliye KDV Tutarı", type: "currency", editable: false },
+    { key: "nakliye_t1", label: "Nakliye T1", type: "currency", editable: false },
+    { key: "nakliye_t2", label: "Nakliye T2", type: "currency", editable: false },
+    { key: "nakliye_tevkifat_orani", label: "Tevkifat %", type: "number", editable: true },
+    { key: "nakliye_genel_toplam", label: "Nakliye G.Toplam", type: "currency", editable: false },
+    { key: "urun_nakliye_matrah", label: "Ü-N Matrah", type: "currency", editable: false },
+    { key: "urun_nakliye_kdv_toplam", label: "Ü-N KDV Toplam", type: "currency", editable: false },
+    { key: "urun_nakliye_tevkifat_toplam", label: "Ü-N Tevkifat", type: "currency", editable: false },
+    { key: "urun_nakliye_genel_toplam", label: "Ü-N Genel Toplam", type: "currency", editable: false },
+  ];
+
+  const renderCell = (record, column) => {
+    const value = record[column.key];
+
+    if (editingId === record.id && column.editable) {
+      if (column.type === "select") {
+        return (
+          <Select
+            value={editData[column.key] || ""}
+            onValueChange={(val) => setEditData({ ...editData, [column.key]: val })}
+          >
+            <SelectTrigger className="w-28 h-8 text-xs bg-slate-900 border-slate-700">
+              <SelectValue placeholder="Seçin" />
+            </SelectTrigger>
+            <SelectContent className="bg-slate-900 border-slate-700">
+              {(column.source || []).map((item) => (
+                <SelectItem key={item.id} value={item[column.sourceKey]}>
+                  {item[column.sourceKey]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        );
+      }
+      if (column.type === "date") {
+        return (
+          <Input
+            type="date"
+            value={editData[column.key] || ""}
+            onChange={(e) => setEditData({ ...editData, [column.key]: e.target.value })}
+            className="w-32 h-8 text-xs bg-slate-900 border-slate-700"
+          />
+        );
+      }
+      if (column.type === "number" || column.type === "currency") {
+        return (
+          <Input
+            type="number"
+            step="0.01"
+            value={editData[column.key] || 0}
+            onChange={(e) => setEditData({ ...editData, [column.key]: parseFloat(e.target.value) || 0 })}
+            className="w-24 h-8 text-xs bg-slate-900 border-slate-700"
+          />
+        );
+      }
+      return (
+        <Input
+          type="text"
+          value={editData[column.key] || ""}
+          onChange={(e) => setEditData({ ...editData, [column.key]: e.target.value })}
+          className="w-28 h-8 text-xs bg-slate-900 border-slate-700"
+        />
+      );
+    }
+
+    if (column.type === "currency" || column.type === "calculated") {
+      return <span className="font-mono text-right block">{formatCurrency(value)}</span>;
+    }
+    if (column.type === "number") {
+      return <span className="font-mono text-right block">{value}</span>;
+    }
+    return value || "-";
   };
 
   return (
     <div className="animate-fade-in">
-      <div className="mb-8">
+      {/* Header */}
+      <div className="mb-6">
         <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-slate-400 hover:text-white mb-4 transition-colors">
           <ArrowLeft className="w-4 h-4" />
           Geri
         </button>
-        <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">Çimento Girişi</h1>
-        <p className="text-slate-400">Yeni çimento kaydı oluşturun</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-white mb-2">Çimento Veri Girişi</h1>
+            <p className="text-slate-400">Excel benzeri tablo ile veri girişi yapın</p>
+          </div>
+          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className="bg-orange-500 hover:bg-orange-600">
+                <Plus className="w-4 h-4 mr-2" /> Yeni Kayıt Ekle
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-slate-900 border-slate-700 text-white">
+              <DialogHeader>
+                <DialogTitle>Yeni Çimento Girişi Ekle</DialogTitle>
+              </DialogHeader>
+              <div className="grid grid-cols-3 gap-4 py-4">
+                {/* Kaynak alanları */}
+                <div>
+                  <label className="text-sm font-medium text-red-400">Plaka *</label>
+                  <Select value={newRecord.plaka} onValueChange={(val) => setNewRecord({ ...newRecord, plaka: val })}>
+                    <SelectTrigger className="bg-slate-950 border-slate-700">
+                      <SelectValue placeholder="Plaka seçin" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-slate-900 border-slate-700">
+                      {plakalar.map((item) => (
+                        <SelectItem key={item.id} value={item.plaka}>{item.plaka}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-red-400">Nakliye Firması *</label>
+                  <Select value={newRecord.nakliye_firmasi} onValueChange={(val) => setNewRecord({ ...newRecord, nakliye_firmasi: val })}>
+                    <SelectTrigger className="bg-slate-950 border-slate-700">
+                      <SelectValue placeholder="Firma seçin" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-slate-900 border-slate-700">
+                      {nakliyeciFirmalar.map((item) => (
+                        <SelectItem key={item.id} value={item.name}>{item.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-red-400">Şoför *</label>
+                  <Select value={newRecord.sofor} onValueChange={(val) => setNewRecord({ ...newRecord, sofor: val })}>
+                    <SelectTrigger className="bg-slate-950 border-slate-700">
+                      <SelectValue placeholder="Şoför seçin" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-slate-900 border-slate-700">
+                      {soforler.map((item) => (
+                        <SelectItem key={item.id} value={item.name}>{item.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-red-400">Şehir *</label>
+                  <Select value={newRecord.sehir} onValueChange={(val) => setNewRecord({ ...newRecord, sehir: val })}>
+                    <SelectTrigger className="bg-slate-950 border-slate-700">
+                      <SelectValue placeholder="Şehir seçin" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-slate-900 border-slate-700">
+                      {sehirler.map((item) => (
+                        <SelectItem key={item.id} value={item.name}>{item.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-red-400">Çimento Alınan Firma *</label>
+                  <Select value={newRecord.cimento_alinan_firma} onValueChange={(val) => setNewRecord({ ...newRecord, cimento_alinan_firma: val })}>
+                    <SelectTrigger className="bg-slate-950 border-slate-700">
+                      <SelectValue placeholder="Firma seçin" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-slate-900 border-slate-700">
+                      {cimentoFirmalar.map((item) => (
+                        <SelectItem key={item.id} value={item.name}>{item.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="border-t border-slate-700 col-span-3 pt-2 mt-2"></div>
+                <div>
+                  <label className="text-sm font-medium">Yükleme Tarihi</label>
+                  <Input type="date" value={newRecord.yukleme_tarihi} onChange={(e) => setNewRecord({ ...newRecord, yukleme_tarihi: e.target.value })} className="bg-slate-950 border-slate-700" />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Boşaltım Tarihi</label>
+                  <Input type="date" value={newRecord.bosaltim_tarihi} onChange={(e) => setNewRecord({ ...newRecord, bosaltim_tarihi: e.target.value })} className="bg-slate-950 border-slate-700" />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Vade Tarihi</label>
+                  <Input type="date" value={newRecord.vade_tarihi} onChange={(e) => setNewRecord({ ...newRecord, vade_tarihi: e.target.value })} className="bg-slate-950 border-slate-700" />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">İrsaliye No</label>
+                  <Input type="text" value={newRecord.irsaliye_no} onChange={(e) => setNewRecord({ ...newRecord, irsaliye_no: e.target.value })} className="bg-slate-950 border-slate-700" />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Fatura No</label>
+                  <Input type="text" value={newRecord.fatura_no} onChange={(e) => setNewRecord({ ...newRecord, fatura_no: e.target.value })} className="bg-slate-950 border-slate-700" />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Giriş Miktarı (KG)</label>
+                  <Input type="number" step="0.01" value={newRecord.giris_miktari} onChange={(e) => setNewRecord({ ...newRecord, giris_miktari: parseFloat(e.target.value) || 0 })} className="bg-slate-950 border-slate-700" />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Kantar KG Miktarı</label>
+                  <Input type="number" step="0.01" value={newRecord.kantar_kg_miktari} onChange={(e) => setNewRecord({ ...newRecord, kantar_kg_miktari: parseFloat(e.target.value) || 0 })} className="bg-slate-950 border-slate-700" />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Birim Fiyat (₺)</label>
+                  <Input type="number" step="0.01" value={newRecord.birim_fiyat} onChange={(e) => setNewRecord({ ...newRecord, birim_fiyat: parseFloat(e.target.value) || 0 })} className="bg-slate-950 border-slate-700" />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Giriş KDV Oranı (%)</label>
+                  <Input type="number" step="1" value={newRecord.giris_kdv_orani} onChange={(e) => setNewRecord({ ...newRecord, giris_kdv_orani: parseFloat(e.target.value) || 0 })} className="bg-slate-950 border-slate-700" />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Nakliye Birim Fiyat (₺)</label>
+                  <Input type="number" step="0.01" value={newRecord.nakliye_birim_fiyat} onChange={(e) => setNewRecord({ ...newRecord, nakliye_birim_fiyat: parseFloat(e.target.value) || 0 })} className="bg-slate-950 border-slate-700" />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Nakliye KDV Oranı (%)</label>
+                  <Input type="number" step="1" value={newRecord.nakliye_kdv_orani} onChange={(e) => setNewRecord({ ...newRecord, nakliye_kdv_orani: parseFloat(e.target.value) || 0 })} className="bg-slate-950 border-slate-700" />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Nakliye Tevkifat Oranı (%)</label>
+                  <Input type="number" step="1" value={newRecord.nakliye_tevkifat_orani} onChange={(e) => setNewRecord({ ...newRecord, nakliye_tevkifat_orani: parseFloat(e.target.value) || 0 })} className="bg-slate-950 border-slate-700" />
+                </div>
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setIsAddDialogOpen(false)} className="border-slate-700">İptal</Button>
+                <Button onClick={handleAddRecord} className="bg-orange-500 hover:bg-orange-600">
+                  <Save className="w-4 h-4 mr-2" /> Kaydet
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
-      <div className="glass-effect rounded-xl p-6 md:p-8 border border-slate-800">
-        <form onSubmit={handleSubmit} className="space-y-6">
-          
-          {/* Tarih */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <Label>Tarih *</Label>
-              <Input
-                type="date"
-                value={formData.tarih}
-                onChange={(e) => handleChange('tarih', e.target.value)}
-                required
-                className="h-12 bg-slate-950 border-slate-800 text-white"
-              />
+      {/* Summary Cards */}
+      {ozet && (
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3 mb-6">
+          <Card className="glass-effect border-slate-800">
+            <CardContent className="p-3">
+              <p className="text-xs text-slate-400">Kayıt Sayısı</p>
+              <p className="text-xl font-bold text-orange-500">{ozet.kayit_sayisi}</p>
+            </CardContent>
+          </Card>
+          <Card className="glass-effect border-slate-800">
+            <CardContent className="p-3">
+              <p className="text-xs text-slate-400">Toplam Giriş</p>
+              <p className="text-lg font-bold text-green-500">{formatCurrency(ozet.toplam_giris_miktari)} KG</p>
+            </CardContent>
+          </Card>
+          <Card className="glass-effect border-slate-800">
+            <CardContent className="p-3">
+              <p className="text-xs text-slate-400">Toplam Fark</p>
+              <p className="text-lg font-bold text-yellow-500">{formatCurrency(ozet.toplam_fark)} KG</p>
+            </CardContent>
+          </Card>
+          <Card className="glass-effect border-slate-800">
+            <CardContent className="p-3">
+              <p className="text-xs text-slate-400">Giriş Tutarı</p>
+              <p className="text-lg font-bold text-blue-500">₺{formatCurrency(ozet.toplam_giris_tutari)}</p>
+            </CardContent>
+          </Card>
+          <Card className="glass-effect border-slate-800">
+            <CardContent className="p-3">
+              <p className="text-xs text-slate-400">Nakliye Toplam</p>
+              <p className="text-lg font-bold text-purple-500">₺{formatCurrency(ozet.toplam_nakliye_genel)}</p>
+            </CardContent>
+          </Card>
+          <Card className="glass-effect border-slate-800">
+            <CardContent className="p-3">
+              <p className="text-xs text-slate-400">Toplam KDV</p>
+              <p className="text-lg font-bold text-red-500">₺{formatCurrency(ozet.toplam_urun_nakliye_kdv)}</p>
+            </CardContent>
+          </Card>
+          <Card className="glass-effect border-slate-800">
+            <CardContent className="p-3">
+              <p className="text-xs text-slate-400">Genel Toplam</p>
+              <p className="text-lg font-bold text-emerald-500">₺{formatCurrency(ozet.toplam_urun_nakliye_genel)}</p>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Main Table */}
+      <Card className="glass-effect border-slate-800">
+        <CardHeader className="border-b border-slate-800">
+          <CardTitle className="text-lg flex items-center gap-2 text-white">
+            <FileSpreadsheet className="w-5 h-5" />
+            Çimento Giriş Kayıtları
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          {loading ? (
+            <div className="p-8 text-center text-slate-400">Yükleniyor...</div>
+          ) : records.length === 0 ? (
+            <div className="p-8 text-center text-slate-400">
+              Henüz kayıt bulunmuyor. "Yeni Kayıt Ekle" butonuna tıklayarak başlayın.
             </div>
-          </div>
-
-          {/* Çimento Firma */}
-          <div className="space-y-2">
-            <Label>Çimento Alınan Firma *</Label>
-            <Select value={formData.cimento_firma_id} onValueChange={(value) => handleChange('cimento_firma_id', value)}>
-              <SelectTrigger className="h-12 bg-slate-950 border-slate-800 text-white">
-                <SelectValue placeholder="Firma seçin" />
-              </SelectTrigger>
-              <SelectContent className="bg-slate-900 border-slate-800 text-white">
-                {cimentoFirmalar.map((firma) => (
-                  <SelectItem key={firma.id} value={firma.id}>{firma.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Nakliyeci ve Plaka */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <Label>Nakliyeci Firma</Label>
-              <Select value={formData.nakliyeci_firma_id} onValueChange={(value) => handleChange('nakliyeci_firma_id', value)}>
-                <SelectTrigger className="h-12 bg-slate-950 border-slate-800 text-white">
-                  <SelectValue placeholder="Nakliyeci seçin" />
-                </SelectTrigger>
-                <SelectContent className="bg-slate-900 border-slate-800 text-white">
-                  {nakliyeciFirmalar.map((firma) => (
-                    <SelectItem key={firma.id} value={firma.id}>{firma.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Plaka</Label>
-              <Select value={formData.plaka_id} onValueChange={(value) => handleChange('plaka_id', value)}>
-                <SelectTrigger className="h-12 bg-slate-950 border-slate-800 text-white">
-                  <SelectValue placeholder="Plaka seçin" />
-                </SelectTrigger>
-                <SelectContent className="bg-slate-900 border-slate-800 text-white">
-                  {plakalar.map((plaka) => (
-                    <SelectItem key={plaka.id} value={plaka.id}>{plaka.plaka}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          {/* Şoför ve Şehir */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <Label>Şoför</Label>
-              <Select value={formData.sofor_id} onValueChange={(value) => handleChange('sofor_id', value)}>
-                <SelectTrigger className="h-12 bg-slate-950 border-slate-800 text-white">
-                  <SelectValue placeholder="Şoför seçin" />
-                </SelectTrigger>
-                <SelectContent className="bg-slate-900 border-slate-800 text-white">
-                  {soforler.map((sofor) => (
-                    <SelectItem key={sofor.id} value={sofor.id}>{sofor.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Şehir</Label>
-              <Select value={formData.sehir_id} onValueChange={(value) => handleChange('sehir_id', value)}>
-                <SelectTrigger className="h-12 bg-slate-950 border-slate-800 text-white">
-                  <SelectValue placeholder="Şehir seçin" />
-                </SelectTrigger>
-                <SelectContent className="bg-slate-900 border-slate-800 text-white">
-                  {sehirler.map((sehir) => (
-                    <SelectItem key={sehir.id} value={sehir.id}>{sehir.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          {/* Miktar ve Fiyat */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="space-y-2">
-              <Label>Miktar *</Label>
-              <Input
-                type="number"
-                step="0.01"
-                value={formData.miktar}
-                onChange={(e) => handleChange('miktar', e.target.value)}
-                placeholder="0"
-                required
-                className="h-12 bg-slate-950 border-slate-800 text-white font-mono"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Birim</Label>
-              <Select value={formData.birim} onValueChange={(value) => handleChange('birim', value)}>
-                <SelectTrigger className="h-12 bg-slate-950 border-slate-800 text-white">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="bg-slate-900 border-slate-800 text-white">
-                  <SelectItem value="ton">Ton</SelectItem>
-                  <SelectItem value="kg">Kilogram</SelectItem>
-                  <SelectItem value="torba">Torba</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Fiyat (₺)</Label>
-              <Input
-                type="number"
-                step="0.01"
-                value={formData.fiyat}
-                onChange={(e) => handleChange('fiyat', e.target.value)}
-                placeholder="0.00"
-                className="h-12 bg-slate-950 border-slate-800 text-white font-mono"
-              />
-            </div>
-          </div>
-
-          {/* Notlar */}
-          <div className="space-y-2">
-            <Label>Notlar</Label>
-            <Textarea
-              value={formData.notes}
-              onChange={(e) => handleChange('notes', e.target.value)}
-              placeholder="Ek bilgi veya notlar..."
-              rows={3}
-              className="bg-slate-950 border-slate-800 text-white resize-none"
-            />
-          </div>
-
-          {/* Buttons */}
-          <div className="flex gap-4 pt-4">
-            <Button
-              type="button"
-              onClick={() => navigate(-1)}
-              variant="outline"
-              className="flex-1 h-12 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border-slate-700"
-            >
-              İptal
-            </Button>
-            <Button
-              type="submit"
-              disabled={loading}
-              className="flex-1 h-12 bg-blue-500 hover:bg-blue-600 text-white font-semibold shadow-lg shadow-blue-500/20"
-            >
-              <Save className="w-5 h-5 mr-2" />
-              {loading ? 'Kaydediliyor...' : 'Kaydet'}
-            </Button>
-          </div>
-        </form>
-      </div>
+          ) : (
+            <ScrollArea className="w-full">
+              <div className="min-w-max">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-slate-800 bg-slate-900/50">
+                      <TableHead className="sticky left-0 bg-slate-900 z-10 w-20 text-slate-300">İşlem</TableHead>
+                      {columnHeaders.map((col) => (
+                        <TableHead
+                          key={col.key}
+                          className={`text-xs font-semibold whitespace-nowrap px-2 text-slate-300 ${
+                            col.type === "select" ? "bg-orange-900/20" : col.editable ? "bg-blue-900/20" : "bg-slate-900/30"
+                          }`}
+                        >
+                          {col.label}
+                        </TableHead>
+                      ))}
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {records.map((record, index) => (
+                      <TableRow
+                        key={record.id}
+                        className={`border-slate-800 ${
+                          index % 2 === 0 ? "bg-slate-900/30" : "bg-slate-900/50"
+                        } hover:bg-slate-800/50 transition-colors`}
+                      >
+                        <TableCell className="sticky left-0 bg-inherit z-10">
+                          <div className="flex gap-1">
+                            {editingId === record.id ? (
+                              <>
+                                <Button size="icon" variant="ghost" className="h-7 w-7 text-green-500 hover:text-green-400 hover:bg-green-900/30" onClick={() => saveEdit(record.id)}>
+                                  <Save className="w-4 h-4" />
+                                </Button>
+                                <Button size="icon" variant="ghost" className="h-7 w-7 text-slate-400 hover:text-slate-300 hover:bg-slate-700" onClick={cancelEdit}>
+                                  <X className="w-4 h-4" />
+                                </Button>
+                              </>
+                            ) : (
+                              <>
+                                <Button size="icon" variant="ghost" className="h-7 w-7 text-blue-500 hover:text-blue-400 hover:bg-blue-900/30" onClick={() => startEdit(record)}>
+                                  <Edit className="w-4 h-4" />
+                                </Button>
+                                <Button size="icon" variant="ghost" className="h-7 w-7 text-red-500 hover:text-red-400 hover:bg-red-900/30" onClick={() => handleDeleteRecord(record.id)}>
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </>
+                            )}
+                          </div>
+                        </TableCell>
+                        {columnHeaders.map((col) => (
+                          <TableCell
+                            key={col.key}
+                            className={`text-xs px-2 py-1 whitespace-nowrap text-slate-300 ${
+                              col.type === "select" ? "bg-orange-900/10" : col.editable ? "" : "bg-slate-900/20"
+                            }`}
+                          >
+                            {renderCell(record, col)}
+                          </TableCell>
+                        ))}
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+              <ScrollBar orientation="horizontal" />
+            </ScrollArea>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 };
