@@ -15,6 +15,7 @@ import UserManagement from '@/pages/UserManagement';
 import BimsResources from '@/pages/BimsResources';
 import CimentoDashboard from '@/pages/CimentoDashboard';
 import CimentoResources from '@/pages/CimentoResources';
+import CimentoEntry from '@/pages/CimentoEntry';
 import Layout from '@/components/Layout';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { ModuleProvider } from '@/context/ModuleContext';
