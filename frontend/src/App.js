@@ -73,6 +73,7 @@ function App() {
               <Route path="reports" element={<Reports />} />
               <Route path="bims-resources" element={<BimsResources />} />
               <Route path="cimento" element={<CimentoDashboard />} />
+              <Route path="cimento-entry" element={<CimentoEntry />} />
               <Route path="cimento-resources" element={<CimentoResources />} />
               <Route path="settings" element={<Settings />} />
               <Route path="settings/products" element={<ProductsManagement />} />
