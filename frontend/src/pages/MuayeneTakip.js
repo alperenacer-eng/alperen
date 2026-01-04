@@ -3,9 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import {
   Search,
@@ -18,7 +22,9 @@ import {
   FileText,
   Eye,
   X,
-  Trash2
+  Trash2,
+  RefreshCw,
+  History
 } from 'lucide-react';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -27,12 +33,24 @@ const MuayeneTakip = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [araclar, setAraclar] = useState([]);
+  const [muayeneGecmisi, setMuayeneGecmisi] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [editedData, setEditedData] = useState({});
   const [saving, setSaving] = useState({});
   const [uploading, setUploading] = useState({});
   const fileInputRefs = useRef({});
+  const [activeTab, setActiveTab] = useState('takip');
+  
+  // Muayene Yenileme Modal
+  const [showYenileModal, setShowYenileModal] = useState(false);
+  const [selectedArac, setSelectedArac] = useState(null);
+  const [yenileForm, setYenileForm] = useState({
+    yeni_ilk_muayene_tarihi: '',
+    yeni_son_muayene_tarihi: '',
+    notlar: ''
+  });
+  const [yenilemeLoading, setYenilemeLoading] = useState(false);
 
   const token = localStorage.getItem('token');
   const headers = {
