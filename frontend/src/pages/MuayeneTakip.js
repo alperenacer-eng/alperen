@@ -500,21 +500,31 @@ const MuayeneTakip = () => {
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right">
-                          <Button
-                            size="sm"
-                            onClick={() => handleSave(arac.id)}
-                            disabled={saving[arac.id]}
-                            className="bg-orange-500 hover:bg-orange-600"
-                          >
-                            {saving[arac.id] ? (
-                              <span className="animate-pulse">Kaydediliyor...</span>
-                            ) : (
-                              <>
-                                <Save className="w-4 h-4 mr-1" />
-                                Kaydet
-                              </>
-                            )}
-                          </Button>
+                          <div className="flex justify-end gap-2">
+                            <Button
+                              size="sm"
+                              onClick={() => handleSave(arac.id)}
+                              disabled={saving[arac.id]}
+                              className="bg-orange-500 hover:bg-orange-600"
+                            >
+                              {saving[arac.id] ? (
+                                <span className="animate-pulse">...</span>
+                              ) : (
+                                <>
+                                  <Save className="w-4 h-4 mr-1" />
+                                  Kaydet
+                                </>
+                              )}
+                            </Button>
+                            <Button
+                              size="sm"
+                              onClick={() => openYenileModal(arac)}
+                              className="bg-green-600 hover:bg-green-700"
+                            >
+                              <RefreshCw className="w-4 h-4 mr-1" />
+                              Muayene Yapıldı
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     );
@@ -525,6 +535,145 @@ const MuayeneTakip = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Geçmiş Muayeneler Sekmesi */}
+      <Card className="bg-slate-900/50 border-slate-800">
+        <CardHeader>
+          <CardTitle className="text-white flex items-center gap-2">
+            <History className="w-5 h-5" />
+            Geçmiş Tarihli Muayeneler
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="border-slate-800">
+                  <TableHead className="text-slate-400">Plaka</TableHead>
+                  <TableHead className="text-slate-400">İlk Muayene Tarihi</TableHead>
+                  <TableHead className="text-slate-400">Son Muayene Tarihi</TableHead>
+                  <TableHead className="text-slate-400">Notlar</TableHead>
+                  <TableHead className="text-slate-400">Kayıt Tarihi</TableHead>
+                  <TableHead className="text-slate-400 text-right">İşlem</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {muayeneGecmisi.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center text-slate-400 py-8">
+                      Henüz geçmiş muayene kaydı yok
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  muayeneGecmisi.map((gecmis) => (
+                    <TableRow key={gecmis.id} className="border-slate-800">
+                      <TableCell className="font-medium text-white">{gecmis.plaka}</TableCell>
+                      <TableCell className="text-slate-300">{gecmis.ilk_muayene_tarihi || '-'}</TableCell>
+                      <TableCell className="text-slate-300">{gecmis.son_muayene_tarihi || '-'}</TableCell>
+                      <TableCell className="text-slate-400 max-w-xs truncate">{gecmis.notlar || '-'}</TableCell>
+                      <TableCell className="text-slate-400">
+                        {gecmis.created_at ? new Date(gecmis.created_at).toLocaleDateString('tr-TR') : '-'}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleDeleteGecmis(gecmis.id)}
+                          className="text-red-400 hover:text-red-300 hover:bg-red-500/20"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Muayene Yenileme Modal */}
+      <Dialog open={showYenileModal} onOpenChange={setShowYenileModal}>
+        <DialogContent className="bg-slate-900 border-slate-800">
+          <DialogHeader>
+            <DialogTitle className="text-white flex items-center gap-2">
+              <RefreshCw className="w-5 h-5 text-green-400" />
+              Muayene Yenileme - {selectedArac?.plaka}
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            {/* Mevcut Tarihler Bilgisi */}
+            {(selectedArac?.ilk_muayene_tarihi || selectedArac?.son_muayene_tarihi) && (
+              <div className="bg-slate-800/50 p-3 rounded-lg">
+                <p className="text-sm text-slate-400 mb-2">Mevcut Muayene Tarihleri (Geçmişe kaydedilecek):</p>
+                <div className="flex gap-4 text-sm">
+                  <span className="text-slate-300">
+                    <strong>İlk:</strong> {selectedArac?.ilk_muayene_tarihi || '-'}
+                  </span>
+                  <span className="text-slate-300">
+                    <strong>Son:</strong> {selectedArac?.son_muayene_tarihi || '-'}
+                  </span>
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <Label className="text-slate-300">Yeni İlk Muayene Tarihi *</Label>
+              <Input
+                type="date"
+                value={yenileForm.yeni_ilk_muayene_tarihi}
+                onChange={(e) => setYenileForm({...yenileForm, yeni_ilk_muayene_tarihi: e.target.value})}
+                className="bg-slate-800/50 border-slate-700"
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-slate-300">Yeni Son Muayene Tarihi *</Label>
+              <Input
+                type="date"
+                value={yenileForm.yeni_son_muayene_tarihi}
+                onChange={(e) => setYenileForm({...yenileForm, yeni_son_muayene_tarihi: e.target.value})}
+                className="bg-slate-800/50 border-slate-700"
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-slate-300">Notlar (Opsiyonel)</Label>
+              <Textarea
+                value={yenileForm.notlar}
+                onChange={(e) => setYenileForm({...yenileForm, notlar: e.target.value})}
+                placeholder="Muayene hakkında not ekleyin..."
+                className="bg-slate-800/50 border-slate-700"
+                rows={3}
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setShowYenileModal(false)}>
+              İptal
+            </Button>
+            <Button 
+              onClick={handleMuayeneYenile} 
+              disabled={yenilemeLoading}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              {yenilemeLoading ? (
+                <span className="animate-pulse">Kaydediliyor...</span>
+              ) : (
+                <>
+                  <CheckCircle className="w-4 h-4 mr-2" />
+                  Muayene Yenile
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
