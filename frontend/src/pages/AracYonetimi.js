@@ -41,6 +41,7 @@ const AracYonetimi = () => {
   // Kaynak verileri
   const [aracCinsleri, setAracCinsleri] = useState([]);
   const [markalar, setMarkalar] = useState([]);
+  const [modeller, setModeller] = useState([]);
   const [sirketler, setSirketler] = useState([]);
   
   // Form state
