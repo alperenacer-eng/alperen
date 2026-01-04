@@ -101,14 +101,16 @@ const AracYonetimi = () => {
 
   const fetchKaynaklar = useCallback(async () => {
     try {
-      const [cinsleriRes, markalarRes, sirketlerRes] = await Promise.all([
+      const [cinsleriRes, markalarRes, modellerRes, sirketlerRes] = await Promise.all([
         fetch(`${BACKEND_URL}/api/arac-cinsleri`, { headers }),
         fetch(`${BACKEND_URL}/api/markalar`, { headers }),
+        fetch(`${BACKEND_URL}/api/modeller`, { headers }),
         fetch(`${BACKEND_URL}/api/sirketler`, { headers })
       ]);
       
       if (cinsleriRes.ok) setAracCinsleri(await cinsleriRes.json());
       if (markalarRes.ok) setMarkalar(await markalarRes.json());
+      if (modellerRes.ok) setModeller(await modellerRes.json());
       if (sirketlerRes.ok) setSirketler(await sirketlerRes.json());
     } catch (error) {
       console.error('Kaynaklar alınamadı:', error);
