@@ -1595,6 +1595,8 @@ class AracCreate(BaseModel):
     model_yili: Optional[int] = None
     kayitli_sirket: str = ""
     muayene_tarihi: str = ""
+    ilk_muayene_tarihi: str = ""
+    son_muayene_tarihi: str = ""
     kasko_yenileme_tarihi: str = ""
     sigorta_yenileme_tarihi: str = ""
     arac_takip_id: str = ""
@@ -1610,6 +1612,8 @@ class AracUpdate(BaseModel):
     model_yili: Optional[int] = None
     kayitli_sirket: Optional[str] = None
     muayene_tarihi: Optional[str] = None
+    ilk_muayene_tarihi: Optional[str] = None
+    son_muayene_tarihi: Optional[str] = None
     kasko_yenileme_tarihi: Optional[str] = None
     sigorta_yenileme_tarihi: Optional[str] = None
     arac_takip_id: Optional[str] = None
