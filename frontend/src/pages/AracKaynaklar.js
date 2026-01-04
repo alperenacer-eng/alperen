@@ -210,22 +210,30 @@ const AracKaynaklar = () => {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-4 bg-slate-900/50 border border-slate-800">
-          <TabsTrigger value="arac-cinsleri" className="data-[state=active]:bg-orange-500">
-            <Car className="w-4 h-4 mr-2" />
+        <TabsList className="grid w-full grid-cols-6 bg-slate-900/50 border border-slate-800">
+          <TabsTrigger value="arac-cinsleri" className="data-[state=active]:bg-orange-500 text-xs">
+            <Car className="w-4 h-4 mr-1" />
             Araç Cinsi
           </TabsTrigger>
-          <TabsTrigger value="markalar" className="data-[state=active]:bg-orange-500">
-            <Tag className="w-4 h-4 mr-2" />
+          <TabsTrigger value="markalar" className="data-[state=active]:bg-orange-500 text-xs">
+            <Tag className="w-4 h-4 mr-1" />
             Marka
           </TabsTrigger>
-          <TabsTrigger value="modeller" className="data-[state=active]:bg-orange-500">
-            <Layers className="w-4 h-4 mr-2" />
+          <TabsTrigger value="modeller" className="data-[state=active]:bg-orange-500 text-xs">
+            <Layers className="w-4 h-4 mr-1" />
             Model
           </TabsTrigger>
-          <TabsTrigger value="sirketler" className="data-[state=active]:bg-orange-500">
-            <Building2 className="w-4 h-4 mr-2" />
+          <TabsTrigger value="sirketler" className="data-[state=active]:bg-orange-500 text-xs">
+            <Building2 className="w-4 h-4 mr-1" />
             Şirket
+          </TabsTrigger>
+          <TabsTrigger value="ana-sigorta" className="data-[state=active]:bg-orange-500 text-xs">
+            <Shield className="w-4 h-4 mr-1" />
+            Sigorta Firması
+          </TabsTrigger>
+          <TabsTrigger value="sigorta-acenta" className="data-[state=active]:bg-orange-500 text-xs">
+            <Users className="w-4 h-4 mr-1" />
+            Acenta
           </TabsTrigger>
         </TabsList>
 
