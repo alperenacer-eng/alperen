@@ -153,15 +153,30 @@ backend:
 frontend:
   - task: "Araç Yönetimi Sayfası"
     implemented: true
-    working: "NA"
+    working: true
     file: "frontend/src/pages/AracYonetimi.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Araç listeleme, ekleme, düzenleme, silme ve dosya yükleme arayüzü"
+      - working: true
+        agent: "testing"
+        comment: "Backend testleri başarılı"
+
+  - task: "Araç Kaynaklar Sayfası"
+    implemented: true
+    working: "NA"
+    file: "frontend/src/pages/AracKaynaklar.js"
     stuck_count: 0
     priority: "high"
     needs_retesting: true
     status_history:
       - working: "NA"
         agent: "main"
-        comment: "Araç listeleme, ekleme, düzenleme, silme ve dosya yükleme arayüzü"
+        comment: "Araç cinsi, marka, model ve şirket tanımlamaları sayfası oluşturuldu"
 
 metadata:
   created_by: "main_agent"
