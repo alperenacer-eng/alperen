@@ -721,7 +721,17 @@ async def create_sehir(sehir: SehirCreate, current_user: dict = Depends(get_curr
 @api_router.get("/sehirler", response_model=List[SehirResponse])
 async def get_sehirler(current_user: dict = Depends(get_current_user)):
     sehirler = await db.sehirler.find({}, {"_id": 0}).sort("name", 1).to_list(1000)
-    return [SehirResponse(**s) for s in sehirler]
+    result = []
+    for s in sehirler:
+        # Eski format desteği (ad -> name)
+        if 'ad' in s and 'name' not in s:
+            s['name'] = s['ad']
+        if 'name' not in s:
+            s['name'] = ''
+        if 'code' not in s:
+            s['code'] = None
+        result.append(SehirResponse(**s))
+    return result
 
 @api_router.delete("/sehirler/{sehir_id}")
 async def delete_sehir(sehir_id: str, current_user: dict = Depends(get_current_user)):
