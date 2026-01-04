@@ -180,3 +180,5 @@ test_plan:
 agent_communication:
   - agent: "main"
     message: "Araçlar modülü için backend API'leri ve frontend sayfası oluşturuldu. Backend API'lerini test etmesi gerekiyor: araç ekleme, listeleme, güncelleme, silme ve PDF dosya yükleme."
+  - agent: "testing"
+    message: "Araç modülü backend API'leri kapsamlı olarak test edildi. Tüm CRUD operasyonları (oluşturma, listeleme, güncelleme, silme) başarıyla çalışıyor. Dosya yükleme endpoint'leri (ruhsat, kasko, sigorta PDF'leri) test edildi ve çalışıyor. Araç özet istatistikleri API'si de doğru veri döndürüyor. Kimlik doğrulama sistemi sorunsuz çalışıyor. Bir minor fix uygulandı: MongoDB ObjectId serialization hatası düzeltildi."
