@@ -679,7 +679,25 @@ async def create_sofor(sofor: SoforCreate, current_user: dict = Depends(get_curr
 @api_router.get("/soforler", response_model=List[SoforResponse])
 async def get_soforler(current_user: dict = Depends(get_current_user)):
     soforler = await db.soforler.find({}, {"_id": 0}).sort("name", 1).to_list(1000)
-    return [SoforResponse(**s) for s in soforler]
+    result = []
+    for s in soforler:
+        # Eski format desteği (ad -> name)
+        if 'ad' in s and 'name' not in s:
+            s['name'] = s['ad']
+        if 'name' not in s:
+            s['name'] = ''
+        if 'phone' not in s:
+            s['phone'] = None
+        if 'license_no' not in s:
+            s['license_no'] = None
+        if 'nakliyeci_id' not in s:
+            s['nakliyeci_id'] = None
+        if 'nakliyeci_name' not in s:
+            s['nakliyeci_name'] = None
+        if 'notes' not in s:
+            s['notes'] = None
+        result.append(SoforResponse(**s))
+    return result
 
 @api_router.delete("/soforler/{sofor_id}")
 async def delete_sofor(sofor_id: str, current_user: dict = Depends(get_current_user)):
