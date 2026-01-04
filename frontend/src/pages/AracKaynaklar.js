@@ -450,6 +450,116 @@ const AracKaynaklar = () => {
             </CardContent>
           </Card>
         </TabsContent>
+
+        {/* Ana Sigorta Firmaları */}
+        <TabsContent value="ana-sigorta">
+          <Card className="bg-slate-900/50 border-slate-800">
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="text-white">Ana Sigorta Firmaları</CardTitle>
+              <Button onClick={() => openAddModal('ana-sigorta')} className="bg-orange-500 hover:bg-orange-600">
+                <Plus className="w-4 h-4 mr-2" />
+                Ekle
+              </Button>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow className="border-slate-800">
+                    <TableHead className="text-slate-400">Firma Adı</TableHead>
+                    <TableHead className="text-slate-400">Telefon</TableHead>
+                    <TableHead className="text-slate-400">E-posta</TableHead>
+                    <TableHead className="text-slate-400">Adres</TableHead>
+                    <TableHead className="text-slate-400 text-right">İşlem</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filterData(anaSigortaFirmalari).length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center text-slate-400 py-8">
+                        Henüz ana sigorta firması eklenmemiş
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    filterData(anaSigortaFirmalari).map((item) => (
+                      <TableRow key={item.id} className="border-slate-800">
+                        <TableCell className="font-medium text-white">{item.name}</TableCell>
+                        <TableCell className="text-slate-300">{item.telefon || '-'}</TableCell>
+                        <TableCell className="text-slate-300">{item.email || '-'}</TableCell>
+                        <TableCell className="text-slate-300">{item.adres || '-'}</TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleDelete('ana-sigorta-firmalari', item.id)}
+                            className="text-red-400 hover:text-red-300 hover:bg-red-500/20"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Sigorta Acentaları */}
+        <TabsContent value="sigorta-acenta">
+          <Card className="bg-slate-900/50 border-slate-800">
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="text-white">Sigorta Acentaları</CardTitle>
+              <Button onClick={() => openAddModal('sigorta-acenta')} className="bg-orange-500 hover:bg-orange-600">
+                <Plus className="w-4 h-4 mr-2" />
+                Ekle
+              </Button>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow className="border-slate-800">
+                    <TableHead className="text-slate-400">Acenta Adı</TableHead>
+                    <TableHead className="text-slate-400">Ana Firma</TableHead>
+                    <TableHead className="text-slate-400">Yetkili Kişi</TableHead>
+                    <TableHead className="text-slate-400">Telefon</TableHead>
+                    <TableHead className="text-slate-400">E-posta</TableHead>
+                    <TableHead className="text-slate-400 text-right">İşlem</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filterData(sigortaAcentalari).length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center text-slate-400 py-8">
+                        Henüz sigorta acentası eklenmemiş
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    filterData(sigortaAcentalari).map((item) => (
+                      <TableRow key={item.id} className="border-slate-800">
+                        <TableCell className="font-medium text-white">{item.name}</TableCell>
+                        <TableCell className="text-slate-300">{item.ana_firma || '-'}</TableCell>
+                        <TableCell className="text-slate-300">{item.yetkili_kisi || '-'}</TableCell>
+                        <TableCell className="text-slate-300">{item.telefon || '-'}</TableCell>
+                        <TableCell className="text-slate-300">{item.email || '-'}</TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleDelete('sigorta-acentalari', item.id)}
+                            className="text-red-400 hover:text-red-300 hover:bg-red-500/20"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
       </Tabs>
 
       {/* Ekleme Modal */}
