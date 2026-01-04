@@ -1581,6 +1581,318 @@ async def delete_pozisyon(id: str, current_user: dict = Depends(get_current_user
     await db.pozisyonlar.delete_one({"id": id})
     return {"message": "Pozisyon silindi"}
 
+# ============ ARAÇ MODÜLÜ API'LERİ ============
+
+# Uploads klasörü
+UPLOAD_DIR = ROOT_DIR / "uploads"
+UPLOAD_DIR.mkdir(exist_ok=True)
+
+class AracCreate(BaseModel):
+    plaka: str
+    arac_cinsi: str = ""
+    marka: str = ""
+    model: str = ""
+    model_yili: Optional[int] = None
+    kayitli_sirket: str = ""
+    muayene_tarihi: str = ""
+    kasko_yenileme_tarihi: str = ""
+    sigorta_yenileme_tarihi: str = ""
+    arac_takip_id: str = ""
+    arac_takip_hat_no: str = ""
+    notlar: str = ""
+    aktif: bool = True
+
+class AracUpdate(BaseModel):
+    plaka: Optional[str] = None
+    arac_cinsi: Optional[str] = None
+    marka: Optional[str] = None
+    model: Optional[str] = None
+    model_yili: Optional[int] = None
+    kayitli_sirket: Optional[str] = None
+    muayene_tarihi: Optional[str] = None
+    kasko_yenileme_tarihi: Optional[str] = None
+    sigorta_yenileme_tarihi: Optional[str] = None
+    arac_takip_id: Optional[str] = None
+    arac_takip_hat_no: Optional[str] = None
+    notlar: Optional[str] = None
+    aktif: Optional[bool] = None
+    ruhsat_dosya: Optional[str] = None
+    kasko_dosya: Optional[str] = None
+    sigorta_dosya: Optional[str] = None
+
+# Dosya yükleme endpoint'i
+@api_router.post("/upload")
+async def upload_file(file: UploadFile = File(...), current_user: dict = Depends(get_current_user)):
+    # Sadece PDF dosyalarına izin ver
+    if not file.filename.lower().endswith('.pdf'):
+        raise HTTPException(status_code=400, detail="Sadece PDF dosyaları yüklenebilir")
+    
+    # Benzersiz dosya adı oluştur
+    file_extension = file.filename.split('.')[-1]
+    unique_filename = f"{uuid.uuid4()}.{file_extension}"
+    file_path = UPLOAD_DIR / unique_filename
+    
+    # Dosyayı kaydet
+    with open(file_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+    
+    return {
+        "filename": unique_filename,
+        "original_name": file.filename,
+        "path": f"/api/files/{unique_filename}"
+    }
+
+# Dosya indirme/görüntüleme endpoint'i
+@api_router.get("/files/{filename}")
+async def get_file(filename: str):
+    file_path = UPLOAD_DIR / filename
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="Dosya bulunamadı")
+    return FileResponse(file_path, media_type="application/pdf", filename=filename)
+
+# Araç CRUD işlemleri
+@api_router.post("/araclar")
+async def create_arac(input: AracCreate, current_user: dict = Depends(get_current_user)):
+    # Plaka kontrolü
+    existing = await db.araclar.find_one({"plaka": input.plaka.upper()})
+    if existing:
+        raise HTTPException(status_code=400, detail="Bu plaka zaten kayıtlı")
+    
+    data = input.model_dump()
+    data['id'] = str(datetime.now(timezone.utc).timestamp()).replace(".", "")
+    data['plaka'] = data['plaka'].upper()
+    data['created_at'] = datetime.now(timezone.utc).isoformat()
+    data['updated_at'] = datetime.now(timezone.utc).isoformat()
+    data['ruhsat_dosya'] = None
+    data['kasko_dosya'] = None
+    data['sigorta_dosya'] = None
+    
+    await db.araclar.insert_one(data)
+    return data
+
+@api_router.get("/araclar")
+async def get_araclar(current_user: dict = Depends(get_current_user)):
+    records = await db.araclar.find({}, {"_id": 0}).sort("plaka", 1).to_list(1000)
+    return records
+
+@api_router.get("/araclar/{id}")
+async def get_arac(id: str, current_user: dict = Depends(get_current_user)):
+    record = await db.araclar.find_one({"id": id}, {"_id": 0})
+    if not record:
+        raise HTTPException(status_code=404, detail="Araç bulunamadı")
+    return record
+
+@api_router.put("/araclar/{id}")
+async def update_arac(id: str, input: AracUpdate, current_user: dict = Depends(get_current_user)):
+    existing = await db.araclar.find_one({"id": id}, {"_id": 0})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Araç bulunamadı")
+    
+    update_data = {k: v for k, v in input.model_dump().items() if v is not None}
+    
+    # Plaka değişiyorsa kontrol et
+    if 'plaka' in update_data:
+        update_data['plaka'] = update_data['plaka'].upper()
+        check_plaka = await db.araclar.find_one({"plaka": update_data['plaka'], "id": {"$ne": id}})
+        if check_plaka:
+            raise HTTPException(status_code=400, detail="Bu plaka başka bir araçta kayıtlı")
+    
+    for key, value in update_data.items():
+        existing[key] = value
+    
+    existing['updated_at'] = datetime.now(timezone.utc).isoformat()
+    await db.araclar.update_one({"id": id}, {"$set": existing})
+    return existing
+
+@api_router.delete("/araclar/{id}")
+async def delete_arac(id: str, current_user: dict = Depends(get_current_user)):
+    # Önce aracın dosyalarını sil
+    arac = await db.araclar.find_one({"id": id}, {"_id": 0})
+    if arac:
+        for field in ['ruhsat_dosya', 'kasko_dosya', 'sigorta_dosya']:
+            if arac.get(field):
+                file_path = UPLOAD_DIR / arac[field].split('/')[-1]
+                if file_path.exists():
+                    file_path.unlink()
+    
+    result = await db.araclar.delete_one({"id": id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Araç bulunamadı")
+    return {"message": "Araç silindi"}
+
+# Araç dosya yükleme (özel endpoint)
+@api_router.post("/araclar/{id}/upload/{doc_type}")
+async def upload_arac_document(
+    id: str,
+    doc_type: str,
+    file: UploadFile = File(...),
+    current_user: dict = Depends(get_current_user)
+):
+    if doc_type not in ['ruhsat', 'kasko', 'sigorta']:
+        raise HTTPException(status_code=400, detail="Geçersiz dosya tipi")
+    
+    if not file.filename.lower().endswith('.pdf'):
+        raise HTTPException(status_code=400, detail="Sadece PDF dosyaları yüklenebilir")
+    
+    arac = await db.araclar.find_one({"id": id}, {"_id": 0})
+    if not arac:
+        raise HTTPException(status_code=404, detail="Araç bulunamadı")
+    
+    # Eski dosyayı sil
+    old_file_field = f"{doc_type}_dosya"
+    if arac.get(old_file_field):
+        old_file_path = UPLOAD_DIR / arac[old_file_field].split('/')[-1]
+        if old_file_path.exists():
+            old_file_path.unlink()
+    
+    # Yeni dosyayı kaydet
+    file_extension = file.filename.split('.')[-1]
+    unique_filename = f"{id}_{doc_type}_{uuid.uuid4()}.{file_extension}"
+    file_path = UPLOAD_DIR / unique_filename
+    
+    with open(file_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+    
+    # Veritabanını güncelle
+    await db.araclar.update_one(
+        {"id": id},
+        {"$set": {
+            old_file_field: f"/api/files/{unique_filename}",
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    
+    return {
+        "filename": unique_filename,
+        "path": f"/api/files/{unique_filename}",
+        "doc_type": doc_type
+    }
+
+# Araç dosya silme
+@api_router.delete("/araclar/{id}/file/{doc_type}")
+async def delete_arac_document(
+    id: str,
+    doc_type: str,
+    current_user: dict = Depends(get_current_user)
+):
+    if doc_type not in ['ruhsat', 'kasko', 'sigorta']:
+        raise HTTPException(status_code=400, detail="Geçersiz dosya tipi")
+    
+    arac = await db.araclar.find_one({"id": id}, {"_id": 0})
+    if not arac:
+        raise HTTPException(status_code=404, detail="Araç bulunamadı")
+    
+    file_field = f"{doc_type}_dosya"
+    if arac.get(file_field):
+        file_path = UPLOAD_DIR / arac[file_field].split('/')[-1]
+        if file_path.exists():
+            file_path.unlink()
+        
+        await db.araclar.update_one(
+            {"id": id},
+            {"$set": {
+                file_field: None,
+                "updated_at": datetime.now(timezone.utc).isoformat()
+            }}
+        )
+    
+    return {"message": f"{doc_type} dosyası silindi"}
+
+# Araç özet istatistikleri
+@api_router.get("/arac-ozet")
+async def get_arac_ozet(current_user: dict = Depends(get_current_user)):
+    araclar = await db.araclar.find({"aktif": True}, {"_id": 0}).to_list(1000)
+    
+    today = datetime.now(timezone.utc).strftime('%Y-%m-%d')
+    next_30_days = (datetime.now(timezone.utc) + timedelta(days=30)).strftime('%Y-%m-%d')
+    
+    muayene_yaklasan = 0
+    kasko_yaklasan = 0
+    sigorta_yaklasan = 0
+    
+    for arac in araclar:
+        if arac.get('muayene_tarihi') and arac['muayene_tarihi'] <= next_30_days:
+            muayene_yaklasan += 1
+        if arac.get('kasko_yenileme_tarihi') and arac['kasko_yenileme_tarihi'] <= next_30_days:
+            kasko_yaklasan += 1
+        if arac.get('sigorta_yenileme_tarihi') and arac['sigorta_yenileme_tarihi'] <= next_30_days:
+            sigorta_yaklasan += 1
+    
+    return {
+        "toplam_arac": len(araclar),
+        "muayene_yaklasan": muayene_yaklasan,
+        "kasko_yaklasan": kasko_yaklasan,
+        "sigorta_yaklasan": sigorta_yaklasan
+    }
+
+# Araç Cinsi API'leri
+class AracCinsiCreate(BaseModel):
+    name: str
+
+@api_router.post("/arac-cinsleri")
+async def create_arac_cinsi(input: AracCinsiCreate, current_user: dict = Depends(get_current_user)):
+    data = input.model_dump()
+    data['id'] = str(datetime.now(timezone.utc).timestamp()).replace(".", "")
+    data['created_at'] = datetime.now(timezone.utc).isoformat()
+    await db.arac_cinsleri.insert_one(data)
+    return data
+
+@api_router.get("/arac-cinsleri")
+async def get_arac_cinsleri(current_user: dict = Depends(get_current_user)):
+    records = await db.arac_cinsleri.find({}, {"_id": 0}).sort("name", 1).to_list(1000)
+    return records
+
+@api_router.delete("/arac-cinsleri/{id}")
+async def delete_arac_cinsi(id: str, current_user: dict = Depends(get_current_user)):
+    await db.arac_cinsleri.delete_one({"id": id})
+    return {"message": "Araç cinsi silindi"}
+
+# Marka API'leri
+class MarkaCreate(BaseModel):
+    name: str
+
+@api_router.post("/markalar")
+async def create_marka(input: MarkaCreate, current_user: dict = Depends(get_current_user)):
+    data = input.model_dump()
+    data['id'] = str(datetime.now(timezone.utc).timestamp()).replace(".", "")
+    data['created_at'] = datetime.now(timezone.utc).isoformat()
+    await db.markalar.insert_one(data)
+    return data
+
+@api_router.get("/markalar")
+async def get_markalar(current_user: dict = Depends(get_current_user)):
+    records = await db.markalar.find({}, {"_id": 0}).sort("name", 1).to_list(1000)
+    return records
+
+@api_router.delete("/markalar/{id}")
+async def delete_marka(id: str, current_user: dict = Depends(get_current_user)):
+    await db.markalar.delete_one({"id": id})
+    return {"message": "Marka silindi"}
+
+# Şirket API'leri (araç kayıtlı olduğu)
+class SirketCreate(BaseModel):
+    name: str
+    vergi_no: str = ""
+    adres: str = ""
+
+@api_router.post("/sirketler")
+async def create_sirket(input: SirketCreate, current_user: dict = Depends(get_current_user)):
+    data = input.model_dump()
+    data['id'] = str(datetime.now(timezone.utc).timestamp()).replace(".", "")
+    data['created_at'] = datetime.now(timezone.utc).isoformat()
+    await db.sirketler.insert_one(data)
+    return data
+
+@api_router.get("/sirketler")
+async def get_sirketler(current_user: dict = Depends(get_current_user)):
+    records = await db.sirketler.find({}, {"_id": 0}).sort("name", 1).to_list(1000)
+    return records
+
+@api_router.delete("/sirketler/{id}")
+async def delete_sirket(id: str, current_user: dict = Depends(get_current_user)):
+    await db.sirketler.delete_one({"id": id})
+    return {"message": "Şirket silindi"}
+
 app.include_router(api_router)
 
 app.add_middleware(
