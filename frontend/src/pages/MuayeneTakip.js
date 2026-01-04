@@ -107,6 +107,57 @@ const MuayeneTakip = () => {
     }
   };
 
+  const handleFileUpload = async (aracId, file) => {
+    setUploading(prev => ({ ...prev, [aracId]: true }));
+    
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await fetch(`${BACKEND_URL}/api/araclar/${aracId}/upload/muayene-evrak`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        body: formData
+      });
+
+      if (response.ok) {
+        toast.success('Evrak yüklendi');
+        fetchAraclar();
+      } else {
+        const error = await response.json();
+        toast.error(error.detail || 'Evrak yüklenemedi');
+      }
+    } catch (error) {
+      console.error('Yükleme hatası:', error);
+      toast.error('Bir hata oluştu');
+    } finally {
+      setUploading(prev => ({ ...prev, [aracId]: false }));
+    }
+  };
+
+  const handleDeleteFile = async (aracId) => {
+    if (!window.confirm('Bu evrakı silmek istediğinizden emin misiniz?')) return;
+    
+    try {
+      const response = await fetch(`${BACKEND_URL}/api/araclar/${aracId}/file/muayene-evrak`, {
+        method: 'DELETE',
+        headers
+      });
+
+      if (response.ok) {
+        toast.success('Evrak silindi');
+        fetchAraclar();
+      } else {
+        toast.error('Evrak silinemedi');
+      }
+    } catch (error) {
+      console.error('Silme hatası:', error);
+      toast.error('Bir hata oluştu');
+    }
+  };
+
   const getMuayeneStatus = (sonMuayeneTarihi) => {
     if (!sonMuayeneTarihi) return { status: 'unknown', label: 'Belirsiz', color: 'bg-slate-500/20 text-slate-400' };
     
@@ -121,6 +172,12 @@ const MuayeneTakip = () => {
     } else {
       return { status: 'ok', label: 'Geçerli', color: 'bg-green-500/20 text-green-400', icon: CheckCircle };
     }
+  };
+
+  const getFileExtension = (path) => {
+    if (!path) return '';
+    const parts = path.split('.');
+    return parts[parts.length - 1].toUpperCase();
   };
 
   const filteredAraclar = araclar.filter(arac => 
