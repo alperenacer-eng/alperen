@@ -23,6 +23,7 @@ import IzinYonetimi from '@/pages/IzinYonetimi';
 import MaasBordrosu from '@/pages/MaasBordrosu';
 import AracYonetimi from '@/pages/AracYonetimi';
 import AracKaynaklar from '@/pages/AracKaynaklar';
+import MuayeneTakip from '@/pages/MuayeneTakip';
 import Layout from '@/components/Layout';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { ModuleProvider } from '@/context/ModuleContext';
