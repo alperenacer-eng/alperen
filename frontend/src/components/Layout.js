@@ -65,6 +65,8 @@ const Layout = () => {
     ? [...baseMenuItems, ...cimentoMenuItems]
     : currentModule?.id === 'personel'
     ? [...baseMenuItems, ...personelMenuItems]
+    : currentModule?.id === 'araclar'
+    ? [...baseMenuItems, ...araclarMenuItems]
     : baseMenuItems;
 
   const handleLogout = () => {
