@@ -57,6 +57,7 @@ const Layout = () => {
 
   const araclarMenuItems = [
     { path: '/arac-yonetimi', icon: Car, label: 'Araç Yönetimi', testId: 'nav-arac-yonetimi' },
+    { path: '/arac-kaynaklar', icon: Database, label: 'Kaynaklar', testId: 'nav-arac-kaynaklar' },
   ];
 
   const menuItems = currentModule?.id === 'bims' 
