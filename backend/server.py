@@ -1735,36 +1735,6 @@ async def delete_muayene_evrak(
     
     return {"message": "Muayene evrakı silindi"}
 
-# Dosya yükleme endpoint'i (sadece PDF)
-@api_router.post("/upload")
-async def upload_file(file: UploadFile = File(...), current_user: dict = Depends(get_current_user)):
-    # Sadece PDF dosyalarına izin ver
-    if not file.filename.lower().endswith('.pdf'):
-        raise HTTPException(status_code=400, detail="Sadece PDF dosyaları yüklenebilir")
-    
-    # Benzersiz dosya adı oluştur
-    file_extension = file.filename.split('.')[-1]
-    unique_filename = f"{uuid.uuid4()}.{file_extension}"
-    file_path = UPLOAD_DIR / unique_filename
-    
-    # Dosyayı kaydet
-    with open(file_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
-    
-    return {
-        "filename": unique_filename,
-        "original_name": file.filename,
-        "path": f"/api/files/{unique_filename}"
-    }
-
-# Dosya indirme/görüntüleme endpoint'i
-@api_router.get("/files/{filename}")
-async def get_file(filename: str):
-    file_path = UPLOAD_DIR / filename
-    if not file_path.exists():
-        raise HTTPException(status_code=404, detail="Dosya bulunamadı")
-    return FileResponse(file_path, media_type="application/pdf", filename=filename)
-
 # Araç CRUD işlemleri
 @api_router.post("/araclar")
 async def create_arac(input: AracCreate, current_user: dict = Depends(get_current_user)):
