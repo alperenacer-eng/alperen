@@ -1895,6 +1895,32 @@ async def delete_sirket(id: str, current_user: dict = Depends(get_current_user))
     await db.sirketler.delete_one({"id": id})
     return {"message": "Şirket silindi"}
 
+# Model API'leri (araç modelleri)
+class ModelCreate(BaseModel):
+    name: str
+    marka: str = ""
+
+@api_router.post("/modeller")
+async def create_model(input: ModelCreate, current_user: dict = Depends(get_current_user)):
+    data = input.model_dump()
+    data['id'] = str(datetime.now(timezone.utc).timestamp()).replace(".", "")
+    data['created_at'] = datetime.now(timezone.utc).isoformat()
+    await db.modeller.insert_one(data)
+    return data
+
+@api_router.get("/modeller")
+async def get_modeller(marka: str = None, current_user: dict = Depends(get_current_user)):
+    query = {}
+    if marka:
+        query['marka'] = marka
+    records = await db.modeller.find(query, {"_id": 0}).sort("name", 1).to_list(1000)
+    return records
+
+@api_router.delete("/modeller/{id}")
+async def delete_model(id: str, current_user: dict = Depends(get_current_user)):
+    await db.modeller.delete_one({"id": id})
+    return {"message": "Model silindi"}
+
 app.include_router(api_router)
 
 app.add_middleware(
