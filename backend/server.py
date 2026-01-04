@@ -1623,8 +1623,119 @@ class AracUpdate(BaseModel):
     ruhsat_dosya: Optional[str] = None
     kasko_dosya: Optional[str] = None
     sigorta_dosya: Optional[str] = None
+    muayene_evrak: Optional[str] = None
 
-# Dosya yükleme endpoint'i
+# Dosya yükleme endpoint'i (genel - tüm formatlar)
+@api_router.post("/upload-file")
+async def upload_general_file(file: UploadFile = File(...), current_user: dict = Depends(get_current_user)):
+    # Benzersiz dosya adı oluştur
+    file_extension = file.filename.split('.')[-1] if '.' in file.filename else 'bin'
+    unique_filename = f"{uuid.uuid4()}.{file_extension}"
+    file_path = UPLOAD_DIR / unique_filename
+    
+    # Dosyayı kaydet
+    with open(file_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+    
+    return {
+        "filename": unique_filename,
+        "original_name": file.filename,
+        "path": f"/api/files/{unique_filename}"
+    }
+
+# Dosya indirme/görüntüleme endpoint'i (tüm formatlar)
+@api_router.get("/files/{filename}")
+async def get_file(filename: str):
+    file_path = UPLOAD_DIR / filename
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="Dosya bulunamadı")
+    
+    # Dosya uzantısına göre media type belirle
+    ext = filename.split('.')[-1].lower() if '.' in filename else ''
+    media_types = {
+        'pdf': 'application/pdf',
+        'jpg': 'image/jpeg',
+        'jpeg': 'image/jpeg',
+        'png': 'image/png',
+        'gif': 'image/gif',
+        'doc': 'application/msword',
+        'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'xls': 'application/vnd.ms-excel',
+        'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'txt': 'text/plain',
+        'zip': 'application/zip',
+        'rar': 'application/x-rar-compressed'
+    }
+    media_type = media_types.get(ext, 'application/octet-stream')
+    
+    return FileResponse(file_path, media_type=media_type, filename=filename)
+
+# Muayene evrak yükleme endpoint'i
+@api_router.post("/araclar/{id}/upload/muayene-evrak")
+async def upload_muayene_evrak(
+    id: str,
+    file: UploadFile = File(...),
+    current_user: dict = Depends(get_current_user)
+):
+    arac = await db.araclar.find_one({"id": id}, {"_id": 0})
+    if not arac:
+        raise HTTPException(status_code=404, detail="Araç bulunamadı")
+    
+    # Eski dosyayı sil
+    if arac.get('muayene_evrak'):
+        old_file_path = UPLOAD_DIR / arac['muayene_evrak'].split('/')[-1]
+        if old_file_path.exists():
+            old_file_path.unlink()
+    
+    # Yeni dosyayı kaydet
+    file_extension = file.filename.split('.')[-1] if '.' in file.filename else 'bin'
+    unique_filename = f"{id}_muayene_{uuid.uuid4()}.{file_extension}"
+    file_path = UPLOAD_DIR / unique_filename
+    
+    with open(file_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+    
+    # Veritabanını güncelle
+    await db.araclar.update_one(
+        {"id": id},
+        {"$set": {
+            "muayene_evrak": f"/api/files/{unique_filename}",
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    
+    return {
+        "filename": unique_filename,
+        "original_name": file.filename,
+        "path": f"/api/files/{unique_filename}"
+    }
+
+# Muayene evrak silme endpoint'i
+@api_router.delete("/araclar/{id}/file/muayene-evrak")
+async def delete_muayene_evrak(
+    id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    arac = await db.araclar.find_one({"id": id}, {"_id": 0})
+    if not arac:
+        raise HTTPException(status_code=404, detail="Araç bulunamadı")
+    
+    if arac.get('muayene_evrak'):
+        file_path = UPLOAD_DIR / arac['muayene_evrak'].split('/')[-1]
+        if file_path.exists():
+            file_path.unlink()
+        
+        await db.araclar.update_one(
+            {"id": id},
+            {"$set": {
+                "muayene_evrak": None,
+                "updated_at": datetime.now(timezone.utc).isoformat()
+            }}
+        )
+    
+    return {"message": "Muayene evrakı silindi"}
+
+# Dosya yükleme endpoint'i (sadece PDF)
 @api_router.post("/upload")
 async def upload_file(file: UploadFile = File(...), current_user: dict = Depends(get_current_user)):
     # Sadece PDF dosyalarına izin ver
