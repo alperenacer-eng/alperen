@@ -52,17 +52,21 @@ const AracKaynaklar = () => {
 
   const fetchAllData = useCallback(async () => {
     try {
-      const [cinsleriRes, markalarRes, modellerRes, sirketlerRes] = await Promise.all([
+      const [cinsleriRes, markalarRes, modellerRes, sirketlerRes, anaSigortaRes, acentaRes] = await Promise.all([
         fetch(`${BACKEND_URL}/api/arac-cinsleri`, { headers }),
         fetch(`${BACKEND_URL}/api/markalar`, { headers }),
         fetch(`${BACKEND_URL}/api/modeller`, { headers }),
-        fetch(`${BACKEND_URL}/api/sirketler`, { headers })
+        fetch(`${BACKEND_URL}/api/sirketler`, { headers }),
+        fetch(`${BACKEND_URL}/api/ana-sigorta-firmalari`, { headers }),
+        fetch(`${BACKEND_URL}/api/sigorta-acentalari`, { headers })
       ]);
       
       if (cinsleriRes.ok) setAracCinsleri(await cinsleriRes.json());
       if (markalarRes.ok) setMarkalar(await markalarRes.json());
       if (modellerRes.ok) setModeller(await modellerRes.json());
       if (sirketlerRes.ok) setSirketler(await sirketlerRes.json());
+      if (anaSigortaRes.ok) setAnaSigortaFirmalari(await anaSigortaRes.json());
+      if (acentaRes.ok) setSigortaAcentalari(await acentaRes.json());
     } catch (error) {
       console.error('Veri alınamadı:', error);
       toast.error('Veriler yüklenirken hata oluştu');
