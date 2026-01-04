@@ -1735,6 +1735,75 @@ async def delete_muayene_evrak(
     
     return {"message": "Muayene evrakı silindi"}
 
+# Muayene Geçmişi API'leri
+class MuayeneGecmisiCreate(BaseModel):
+    arac_id: str
+    plaka: str
+    ilk_muayene_tarihi: str
+    son_muayene_tarihi: str
+    notlar: str = ""
+
+@api_router.post("/muayene-gecmisi")
+async def create_muayene_gecmisi(input: MuayeneGecmisiCreate, current_user: dict = Depends(get_current_user)):
+    data = input.model_dump()
+    data['id'] = str(datetime.now(timezone.utc).timestamp()).replace(".", "")
+    data['created_at'] = datetime.now(timezone.utc).isoformat()
+    data['created_by'] = current_user.get('email', '')
+    await db.muayene_gecmisi.insert_one(data)
+    return {k: v for k, v in data.items() if k != '_id'}
+
+@api_router.get("/muayene-gecmisi")
+async def get_muayene_gecmisi(arac_id: str = None, current_user: dict = Depends(get_current_user)):
+    query = {}
+    if arac_id:
+        query['arac_id'] = arac_id
+    records = await db.muayene_gecmisi.find(query, {"_id": 0}).sort("created_at", -1).to_list(1000)
+    return records
+
+@api_router.delete("/muayene-gecmisi/{id}")
+async def delete_muayene_gecmisi(id: str, current_user: dict = Depends(get_current_user)):
+    await db.muayene_gecmisi.delete_one({"id": id})
+    return {"message": "Muayene geçmişi silindi"}
+
+# Muayene Yenileme (eski tarihleri geçmişe kaydet + yeni tarihleri güncelle)
+class MuayeneYenileme(BaseModel):
+    yeni_ilk_muayene_tarihi: str
+    yeni_son_muayene_tarihi: str
+    notlar: str = ""
+
+@api_router.post("/araclar/{id}/muayene-yenile")
+async def muayene_yenile(id: str, input: MuayeneYenileme, current_user: dict = Depends(get_current_user)):
+    # Aracı bul
+    arac = await db.araclar.find_one({"id": id}, {"_id": 0})
+    if not arac:
+        raise HTTPException(status_code=404, detail="Araç bulunamadı")
+    
+    # Eski muayene tarihlerini geçmişe kaydet (eğer varsa)
+    if arac.get('ilk_muayene_tarihi') or arac.get('son_muayene_tarihi'):
+        gecmis_data = {
+            'id': str(datetime.now(timezone.utc).timestamp()).replace(".", ""),
+            'arac_id': id,
+            'plaka': arac.get('plaka', ''),
+            'ilk_muayene_tarihi': arac.get('ilk_muayene_tarihi', ''),
+            'son_muayene_tarihi': arac.get('son_muayene_tarihi', ''),
+            'notlar': input.notlar,
+            'created_at': datetime.now(timezone.utc).isoformat(),
+            'created_by': current_user.get('email', '')
+        }
+        await db.muayene_gecmisi.insert_one(gecmis_data)
+    
+    # Aracın muayene tarihlerini güncelle
+    await db.araclar.update_one(
+        {"id": id},
+        {"$set": {
+            "ilk_muayene_tarihi": input.yeni_ilk_muayene_tarihi,
+            "son_muayene_tarihi": input.yeni_son_muayene_tarihi,
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    
+    return {"message": "Muayene yenilendi", "arac_id": id}
+
 # Araç CRUD işlemleri
 @api_router.post("/araclar")
 async def create_arac(input: AracCreate, current_user: dict = Depends(get_current_user)):
