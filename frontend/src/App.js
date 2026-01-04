@@ -91,6 +91,7 @@ function App() {
               <Route path="maas-bordrosu" element={<MaasBordrosu />} />
               <Route path="arac-yonetimi" element={<AracYonetimi />} />
               <Route path="arac-kaynaklar" element={<AracKaynaklar />} />
+              <Route path="muayene-takip" element={<MuayeneTakip />} />
               <Route path="settings" element={<Settings />} />
               <Route path="settings/products" element={<ProductsManagement />} />
               <Route path="settings/departments" element={<DepartmentsManagement />} />
