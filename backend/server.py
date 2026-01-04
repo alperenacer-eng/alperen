@@ -1921,6 +1921,60 @@ async def delete_model(id: str, current_user: dict = Depends(get_current_user)):
     await db.modeller.delete_one({"id": id})
     return {"message": "Model silindi"}
 
+# Ana Sigorta Firması API'leri
+class AnaSigortaFirmasiCreate(BaseModel):
+    name: str
+    telefon: str = ""
+    email: str = ""
+    adres: str = ""
+    notlar: str = ""
+
+@api_router.post("/ana-sigorta-firmalari")
+async def create_ana_sigorta_firmasi(input: AnaSigortaFirmasiCreate, current_user: dict = Depends(get_current_user)):
+    data = input.model_dump()
+    data['id'] = str(datetime.now(timezone.utc).timestamp()).replace(".", "")
+    data['created_at'] = datetime.now(timezone.utc).isoformat()
+    await db.ana_sigorta_firmalari.insert_one(data)
+    return {k: v for k, v in data.items() if k != '_id'}
+
+@api_router.get("/ana-sigorta-firmalari")
+async def get_ana_sigorta_firmalari(current_user: dict = Depends(get_current_user)):
+    records = await db.ana_sigorta_firmalari.find({}, {"_id": 0}).sort("name", 1).to_list(1000)
+    return records
+
+@api_router.delete("/ana-sigorta-firmalari/{id}")
+async def delete_ana_sigorta_firmasi(id: str, current_user: dict = Depends(get_current_user)):
+    await db.ana_sigorta_firmalari.delete_one({"id": id})
+    return {"message": "Ana sigorta firması silindi"}
+
+# Sigorta Acentası API'leri
+class SigortaAcentasiCreate(BaseModel):
+    name: str
+    ana_firma: str = ""
+    yetkili_kisi: str = ""
+    telefon: str = ""
+    email: str = ""
+    adres: str = ""
+    notlar: str = ""
+
+@api_router.post("/sigorta-acentalari")
+async def create_sigorta_acentasi(input: SigortaAcentasiCreate, current_user: dict = Depends(get_current_user)):
+    data = input.model_dump()
+    data['id'] = str(datetime.now(timezone.utc).timestamp()).replace(".", "")
+    data['created_at'] = datetime.now(timezone.utc).isoformat()
+    await db.sigorta_acentalari.insert_one(data)
+    return {k: v for k, v in data.items() if k != '_id'}
+
+@api_router.get("/sigorta-acentalari")
+async def get_sigorta_acentalari(current_user: dict = Depends(get_current_user)):
+    records = await db.sigorta_acentalari.find({}, {"_id": 0}).sort("name", 1).to_list(1000)
+    return records
+
+@api_router.delete("/sigorta-acentalari/{id}")
+async def delete_sigorta_acentasi(id: str, current_user: dict = Depends(get_current_user)):
+    await db.sigorta_acentalari.delete_one({"id": id})
+    return {"message": "Sigorta acentası silindi"}
+
 app.include_router(api_router)
 
 app.add_middleware(
