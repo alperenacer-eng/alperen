@@ -1765,6 +1765,26 @@ async def delete_muayene_gecmisi(id: str, current_user: dict = Depends(get_curre
     await db.muayene_gecmisi.delete_one({"id": id})
     return {"message": "Muayene geçmişi silindi"}
 
+# Muayene Geçmişi Güncelleme
+class MuayeneGecmisiUpdate(BaseModel):
+    ilk_muayene_tarihi: Optional[str] = None
+    son_muayene_tarihi: Optional[str] = None
+    notlar: Optional[str] = None
+
+@api_router.put("/muayene-gecmisi/{id}")
+async def update_muayene_gecmisi(id: str, input: MuayeneGecmisiUpdate, current_user: dict = Depends(get_current_user)):
+    existing = await db.muayene_gecmisi.find_one({"id": id}, {"_id": 0})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Kayıt bulunamadı")
+    
+    update_data = {k: v for k, v in input.model_dump().items() if v is not None}
+    update_data['updated_at'] = datetime.now(timezone.utc).isoformat()
+    
+    await db.muayene_gecmisi.update_one({"id": id}, {"$set": update_data})
+    
+    updated = await db.muayene_gecmisi.find_one({"id": id}, {"_id": 0})
+    return updated
+
 # Muayene Yenileme (eski tarihleri geçmişe kaydet + yeni tarihleri güncelle)
 class MuayeneYenileme(BaseModel):
     yeni_ilk_muayene_tarihi: str
