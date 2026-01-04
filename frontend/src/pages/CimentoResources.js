@@ -277,6 +277,47 @@ const CimentoResources = () => {
     }
   };
 
+  // Çimento Cinsleri
+  const fetchCimentoCinsleri = async () => {
+    try {
+      const response = await axios.get(`${API_URL}/cimento-cinsleri`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setCimentoCinsleri(response.data);
+    } catch (error) {
+      toast.error('Çimento cinsleri yüklenemedi');
+    }
+  };
+
+  const handleAddCimentoCinsi = async (e) => {
+    e.preventDefault();
+    if (!newCimentoCinsi.name.trim()) return;
+    try {
+      await axios.post(`${API_URL}/cimento-cinsleri`, newCimentoCinsi, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      toast.success('Çimento cinsi eklendi');
+      setNewCimentoCinsi({ name: '', description: '' });
+      fetchCimentoCinsleri();
+    } catch (error) {
+      toast.error('Çimento cinsi eklenemedi');
+    }
+  };
+
+  const handleDeleteCimentoCinsi = async () => {
+    try {
+      await axios.delete(`${API_URL}/cimento-cinsleri/${deleteCimentoCinsiId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      toast.success('Çimento cinsi silindi');
+      fetchCimentoCinsleri();
+    } catch (error) {
+      toast.error('Çimento cinsi silinemedi');
+    } finally {
+      setDeleteCimentoCinsiId(null);
+    }
+  };
+
   return (
     <div className="animate-fade-in" data-testid="cimento-resources-page">
       <div className="mb-8">
