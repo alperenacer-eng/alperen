@@ -60,6 +60,7 @@ const emptyRecord = {
   sofor: "",
   sehir: "",
   cimento_alinan_firma: "",
+  cimento_cinsi: "",
 };
 
 const CimentoEntry = () => {
@@ -81,6 +82,7 @@ const CimentoEntry = () => {
   const [soforler, setSoforler] = useState([]);
   const [sehirler, setSehirler] = useState([]);
   const [cimentoFirmalar, setCimentoFirmalar] = useState([]);
+  const [cimentoCinsleri, setCimentoCinsleri] = useState([]);
 
   const headers = { Authorization: `Bearer ${token}` };
 
@@ -105,18 +107,20 @@ const CimentoEntry = () => {
 
   const fetchKaynaklar = useCallback(async () => {
     try {
-      const [plakaRes, nakliyeciRes, soforRes, sehirRes, cimentoRes] = await Promise.all([
+      const [plakaRes, nakliyeciRes, soforRes, sehirRes, cimentoRes, cinsRes] = await Promise.all([
         axios.get(`${API_URL}/plakalar`, { headers }),
         axios.get(`${API_URL}/nakliyeci-firmalar`, { headers }),
         axios.get(`${API_URL}/soforler`, { headers }),
         axios.get(`${API_URL}/sehirler`, { headers }),
         axios.get(`${API_URL}/cimento-firmalar`, { headers }),
+        axios.get(`${API_URL}/cimento-cinsleri`, { headers }),
       ]);
       setPlakalar(plakaRes.data);
       setNakliyeciFirmalar(nakliyeciRes.data);
       setSoforler(soforRes.data);
       setSehirler(sehirRes.data);
       setCimentoFirmalar(cimentoRes.data);
+      setCimentoCinsleri(cinsRes.data);
     } catch (e) {
       console.error(e);
     }
@@ -155,6 +159,10 @@ const CimentoEntry = () => {
     }
     if (!newRecord.cimento_alinan_firma) {
       toast.error("Lütfen çimento alınan firma seçin");
+      return;
+    }
+    if (!newRecord.cimento_cinsi) {
+      toast.error("Lütfen çimento cinsi seçin");
       return;
     }
 
@@ -205,6 +213,7 @@ const CimentoEntry = () => {
       sofor: record.sofor,
       sehir: record.sehir,
       cimento_alinan_firma: record.cimento_alinan_firma,
+      cimento_cinsi: record.cimento_cinsi || "",
     });
   };
 
@@ -233,6 +242,7 @@ const CimentoEntry = () => {
     { key: "sofor", label: "Şoför", type: "select", source: soforler, sourceKey: "name", editable: true },
     { key: "sehir", label: "Şehir", type: "select", source: sehirler, sourceKey: "name", editable: true },
     { key: "cimento_alinan_firma", label: "Çimento Firma", type: "select", source: cimentoFirmalar, sourceKey: "name", editable: true },
+    { key: "cimento_cinsi", label: "Çimento Cinsi", type: "select", source: cimentoCinsleri, sourceKey: "name", editable: true },
     { key: "yukleme_tarihi", label: "Yükleme Tarihi", type: "date", editable: true },
     { key: "bosaltim_tarihi", label: "Boşaltım Tarihi", type: "date", editable: true },
     { key: "irsaliye_no", label: "İrsaliye No", type: "text", editable: true },
@@ -408,6 +418,19 @@ const CimentoEntry = () => {
                     </SelectTrigger>
                     <SelectContent className="bg-slate-900 border-slate-700">
                       {cimentoFirmalar.map((item) => (
+                        <SelectItem key={item.id} value={item.name}>{item.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-red-400">Çimento Cinsi *</label>
+                  <Select value={newRecord.cimento_cinsi} onValueChange={(val) => setNewRecord({ ...newRecord, cimento_cinsi: val })}>
+                    <SelectTrigger className="bg-slate-950 border-slate-700">
+                      <SelectValue placeholder="Cins seçin" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-slate-900 border-slate-700">
+                      {cimentoCinsleri.map((item) => (
                         <SelectItem key={item.id} value={item.name}>{item.name}</SelectItem>
                       ))}
                     </SelectContent>
