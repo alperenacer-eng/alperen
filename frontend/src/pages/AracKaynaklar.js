@@ -134,7 +134,9 @@ const AracKaynaklar = () => {
       'arac-cinsleri': '/api/arac-cinsleri',
       'markalar': '/api/markalar',
       'modeller': '/api/modeller',
-      'sirketler': '/api/sirketler'
+      'sirketler': '/api/sirketler',
+      'ana-sigorta-firmalari': '/api/ana-sigorta-firmalari',
+      'sigorta-acentalari': '/api/sigorta-acentalari'
     };
 
     try {
