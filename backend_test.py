@@ -103,8 +103,10 @@ class VehicleAPITester:
     
     def test_create_vehicle(self):
         """Test vehicle creation"""
+        # Use timestamp to ensure unique plate
+        timestamp = str(int(datetime.now().timestamp()))[-6:]
         vehicle_data = {
-            "plaka": "34 ABC 123",
+            "plaka": f"34 TEST {timestamp}",
             "arac_cinsi": "Kamyon",
             "marka": "Mercedes",
             "model": "Actros",
