@@ -696,6 +696,41 @@ async def delete_sehir(sehir_id: str, current_user: dict = Depends(get_current_u
         raise HTTPException(status_code=404, detail="Şehir not found")
     return {"message": "Şehir deleted"}
 
+# Çimento Cinsleri routes
+class CimentoCinsiCreate(BaseModel):
+    name: str
+    description: Optional[str] = None
+
+class CimentoCinsiResponse(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str
+    name: str
+    description: Optional[str] = None
+    created_at: str
+
+@api_router.post("/cimento-cinsleri", response_model=CimentoCinsiResponse)
+async def create_cimento_cinsi(cins: CimentoCinsiCreate, current_user: dict = Depends(get_current_user)):
+    cins_dict = {
+        "id": str(datetime.now(timezone.utc).timestamp()).replace(".", ""),
+        "name": cins.name,
+        "description": cins.description,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.cimento_cinsleri.insert_one(cins_dict)
+    return CimentoCinsiResponse(**cins_dict)
+
+@api_router.get("/cimento-cinsleri", response_model=List[CimentoCinsiResponse])
+async def get_cimento_cinsleri(current_user: dict = Depends(get_current_user)):
+    cinsleri = await db.cimento_cinsleri.find({}, {"_id": 0}).sort("name", 1).to_list(1000)
+    return [CimentoCinsiResponse(**c) for c in cinsleri]
+
+@api_router.delete("/cimento-cinsleri/{cins_id}")
+async def delete_cimento_cinsi(cins_id: str, current_user: dict = Depends(get_current_user)):
+    result = await db.cimento_cinsleri.delete_one({"id": cins_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Çimento cinsi not found")
+    return {"message": "Çimento cinsi deleted"}
+
 # Production routes
 @api_router.post("/production", response_model=ProductionRecordResponse)
 async def create_production_record(record: ProductionRecordCreate, current_user: dict = Depends(get_current_user)):
