@@ -24,7 +24,8 @@ import {
   X,
   Trash2,
   RefreshCw,
-  History
+  History,
+  Edit
 } from 'lucide-react';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -51,6 +52,25 @@ const MuayeneTakip = () => {
     notlar: ''
   });
   const [yenilemeLoading, setYenilemeLoading] = useState(false);
+
+  // Düzenleme Modal (Muayene Takip Listesi)
+  const [showDuzeltModal, setShowDuzeltModal] = useState(false);
+  const [duzeltArac, setDuzeltArac] = useState(null);
+  const [duzeltForm, setDuzeltForm] = useState({
+    ilk_muayene_tarihi: '',
+    son_muayene_tarihi: ''
+  });
+  const [duzeltLoading, setDuzeltLoading] = useState(false);
+
+  // Düzenleme Modal (Geçmiş)
+  const [showGecmisDuzeltModal, setShowGecmisDuzeltModal] = useState(false);
+  const [duzeltGecmis, setDuzeltGecmis] = useState(null);
+  const [gecmisDuzeltForm, setGecmisDuzeltForm] = useState({
+    ilk_muayene_tarihi: '',
+    son_muayene_tarihi: '',
+    notlar: ''
+  });
+  const [gecmisDuzeltLoading, setGecmisDuzeltLoading] = useState(false);
 
   const token = localStorage.getItem('token');
   const headers = {
