@@ -58,6 +58,7 @@ const Layout = () => {
 
   const araclarMenuItems = [
     { path: '/arac-yonetimi', icon: Car, label: 'Araç Yönetimi', testId: 'nav-arac-yonetimi' },
+    { path: '/muayene-takip', icon: ClipboardCheck, label: 'Muayene Takip', testId: 'nav-muayene-takip' },
     { path: '/arac-kaynaklar', icon: Database, label: 'Kaynaklar', testId: 'nav-arac-kaynaklar' },
   ];
 
