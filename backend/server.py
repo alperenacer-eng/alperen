@@ -1883,7 +1883,7 @@ async def create_sirket(input: SirketCreate, current_user: dict = Depends(get_cu
     data['id'] = str(datetime.now(timezone.utc).timestamp()).replace(".", "")
     data['created_at'] = datetime.now(timezone.utc).isoformat()
     await db.sirketler.insert_one(data)
-    return data
+    return {k: v for k, v in data.items() if k != '_id'}
 
 @api_router.get("/sirketler")
 async def get_sirketler(current_user: dict = Depends(get_current_user)):
