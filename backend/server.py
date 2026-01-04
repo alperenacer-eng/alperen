@@ -1906,7 +1906,7 @@ async def create_model(input: ModelCreate, current_user: dict = Depends(get_curr
     data['id'] = str(datetime.now(timezone.utc).timestamp()).replace(".", "")
     data['created_at'] = datetime.now(timezone.utc).isoformat()
     await db.modeller.insert_one(data)
-    return data
+    return {k: v for k, v in data.items() if k != '_id'}
 
 @api_router.get("/modeller")
 async def get_modeller(marka: str = None, current_user: dict = Depends(get_current_user)):
