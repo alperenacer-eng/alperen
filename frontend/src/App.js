@@ -21,6 +21,7 @@ import PersonelListesi from '@/pages/PersonelListesi';
 import Puantaj from '@/pages/Puantaj';
 import IzinYonetimi from '@/pages/IzinYonetimi';
 import MaasBordrosu from '@/pages/MaasBordrosu';
+import AracYonetimi from '@/pages/AracYonetimi';
 import Layout from '@/components/Layout';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { ModuleProvider } from '@/context/ModuleContext';
