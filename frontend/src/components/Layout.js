@@ -20,7 +20,8 @@ import {
   Calendar,
   DollarSign,
   Car,
-  Truck
+  Truck,
+  ClipboardCheck
 } from 'lucide-react';
 
 const Layout = () => {
