@@ -44,6 +44,11 @@ const CimentoResources = () => {
   const [newSehir, setNewSehir] = useState({ name: '', code: '' });
   const [deleteSehirId, setDeleteSehirId] = useState(null);
 
+  // Çimento Cinsleri
+  const [cimentoCinsleri, setCimentoCinsleri] = useState([]);
+  const [newCimentoCinsi, setNewCimentoCinsi] = useState({ name: '', description: '' });
+  const [deleteCimentoCinsiId, setDeleteCimentoCinsiId] = useState(null);
+
   useEffect(() => {
     fetchAll();
   }, []);
