@@ -87,6 +87,7 @@ function App() {
               <Route path="puantaj" element={<Puantaj />} />
               <Route path="izin-yonetimi" element={<IzinYonetimi />} />
               <Route path="maas-bordrosu" element={<MaasBordrosu />} />
+              <Route path="arac-yonetimi" element={<AracYonetimi />} />
               <Route path="settings" element={<Settings />} />
               <Route path="settings/products" element={<ProductsManagement />} />
               <Route path="settings/departments" element={<DepartmentsManagement />} />
