@@ -80,6 +80,12 @@ function App() {
               <Route path="cimento" element={<CimentoDashboard />} />
               <Route path="cimento-entry" element={<CimentoEntry />} />
               <Route path="cimento-resources" element={<CimentoResources />} />
+              <Route path="personel" element={<PersonelDashboard />} />
+              <Route path="personel-listesi" element={<PersonelListesi />} />
+              <Route path="personel-ekle" element={<PersonelListesi />} />
+              <Route path="puantaj" element={<Puantaj />} />
+              <Route path="izin-yonetimi" element={<IzinYonetimi />} />
+              <Route path="maas-bordrosu" element={<MaasBordrosu />} />
               <Route path="settings" element={<Settings />} />
               <Route path="settings/products" element={<ProductsManagement />} />
               <Route path="settings/departments" element={<DepartmentsManagement />} />
