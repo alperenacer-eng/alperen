@@ -330,10 +330,14 @@ const CimentoResources = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-5 bg-slate-900 border border-slate-800 mb-6">
+        <TabsList className="grid w-full grid-cols-6 bg-slate-900 border border-slate-800 mb-6">
           <TabsTrigger value="cimento-firmalar" className="data-[state=active]:bg-blue-500 data-[state=active]:text-white">
             <Building2 className="w-4 h-4 mr-2" />
             Çimento Firmaları
+          </TabsTrigger>
+          <TabsTrigger value="cimento-cinsleri" className="data-[state=active]:bg-amber-500 data-[state=active]:text-white">
+            <Package className="w-4 h-4 mr-2" />
+            Çimento Cinsleri
           </TabsTrigger>
           <TabsTrigger value="nakliyeci-firmalar" className="data-[state=active]:bg-green-500 data-[state=active]:text-white">
             <Truck className="w-4 h-4 mr-2" />
