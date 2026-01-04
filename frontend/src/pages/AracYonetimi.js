@@ -610,17 +610,13 @@ const AracYonetimi = () => {
                     <SelectValue placeholder="Seçiniz" />
                   </SelectTrigger>
                   <SelectContent className="bg-slate-800 border-slate-700">
-                    {aracCinsleri.map(c => (
-                      <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>
-                    ))}
-                    <SelectItem value="Binek">Binek</SelectItem>
-                    <SelectItem value="Kamyon">Kamyon</SelectItem>
-                    <SelectItem value="Kamyonet">Kamyonet</SelectItem>
-                    <SelectItem value="Tır">Tır</SelectItem>
-                    <SelectItem value="Minibüs">Minibüs</SelectItem>
-                    <SelectItem value="Otobüs">Otobüs</SelectItem>
-                    <SelectItem value="Forklift">Forklift</SelectItem>
-                    <SelectItem value="İş Makinesi">İş Makinesi</SelectItem>
+                    {aracCinsleri.length === 0 ? (
+                      <SelectItem value="" disabled>Önce Kaynaklar'dan ekleyin</SelectItem>
+                    ) : (
+                      aracCinsleri.map(c => (
+                        <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>
+                      ))
+                    )}
                   </SelectContent>
                 </Select>
               </div>
@@ -636,22 +632,13 @@ const AracYonetimi = () => {
                     <SelectValue placeholder="Seçiniz" />
                   </SelectTrigger>
                   <SelectContent className="bg-slate-800 border-slate-700">
-                    {markalar.map(m => (
-                      <SelectItem key={m.id} value={m.name}>{m.name}</SelectItem>
-                    ))}
-                    <SelectItem value="Mercedes">Mercedes</SelectItem>
-                    <SelectItem value="BMW">BMW</SelectItem>
-                    <SelectItem value="Audi">Audi</SelectItem>
-                    <SelectItem value="Volkswagen">Volkswagen</SelectItem>
-                    <SelectItem value="Ford">Ford</SelectItem>
-                    <SelectItem value="Fiat">Fiat</SelectItem>
-                    <SelectItem value="Renault">Renault</SelectItem>
-                    <SelectItem value="Toyota">Toyota</SelectItem>
-                    <SelectItem value="Hyundai">Hyundai</SelectItem>
-                    <SelectItem value="Scania">Scania</SelectItem>
-                    <SelectItem value="MAN">MAN</SelectItem>
-                    <SelectItem value="Volvo">Volvo</SelectItem>
-                    <SelectItem value="Iveco">Iveco</SelectItem>
+                    {markalar.length === 0 ? (
+                      <SelectItem value="" disabled>Önce Kaynaklar'dan ekleyin</SelectItem>
+                    ) : (
+                      markalar.map(m => (
+                        <SelectItem key={m.id} value={m.name}>{m.name}</SelectItem>
+                      ))
+                    )}
                   </SelectContent>
                 </Select>
               </div>
@@ -659,13 +646,23 @@ const AracYonetimi = () => {
               {/* Model */}
               <div className="space-y-2">
                 <Label htmlFor="model" className="text-slate-300">Model</Label>
-                <Input
-                  id="model"
+                <Select
                   value={formData.model}
-                  onChange={(e) => setFormData({...formData, model: e.target.value})}
-                  placeholder="Örn: Actros, Golf, 3008"
-                  className="bg-slate-800/50 border-slate-700"
-                />
+                  onValueChange={(value) => setFormData({...formData, model: value})}
+                >
+                  <SelectTrigger className="bg-slate-800/50 border-slate-700">
+                    <SelectValue placeholder="Seçiniz" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-slate-800 border-slate-700">
+                    {modeller.length === 0 ? (
+                      <SelectItem value="" disabled>Önce Kaynaklar'dan ekleyin</SelectItem>
+                    ) : (
+                      modeller.map(m => (
+                        <SelectItem key={m.id} value={m.name}>{m.name}</SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
               </div>
 
               {/* Model Yılı */}
