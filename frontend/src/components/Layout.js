@@ -14,7 +14,11 @@ import {
   Factory,
   Settings,
   ArrowLeft,
-  Database
+  Database,
+  Users,
+  Clock,
+  Calendar,
+  DollarSign
 } from 'lucide-react';
 
 const Layout = () => {
@@ -42,10 +46,19 @@ const Layout = () => {
     { path: '/cimento-resources', icon: Database, label: 'Kaynaklar', testId: 'nav-cimento-resources' },
   ];
 
+  const personelMenuItems = [
+    { path: '/personel-listesi', icon: Users, label: 'Personel Listesi', testId: 'nav-personel-listesi' },
+    { path: '/puantaj', icon: Clock, label: 'Puantaj', testId: 'nav-puantaj' },
+    { path: '/izin-yonetimi', icon: Calendar, label: 'İzin Yönetimi', testId: 'nav-izin-yonetimi' },
+    { path: '/maas-bordrosu', icon: DollarSign, label: 'Maaş Bordrosu', testId: 'nav-maas-bordrosu' },
+  ];
+
   const menuItems = currentModule?.id === 'bims' 
     ? [...baseMenuItems, ...bimsMenuItems]
     : currentModule?.id === 'cimento'
     ? [...baseMenuItems, ...cimentoMenuItems]
+    : currentModule?.id === 'personel'
+    ? [...baseMenuItems, ...personelMenuItems]
     : baseMenuItems;
 
   const handleLogout = () => {
