@@ -691,11 +691,13 @@ const AracYonetimi = () => {
                     <SelectValue placeholder="Seçiniz" />
                   </SelectTrigger>
                   <SelectContent className="bg-slate-800 border-slate-700">
-                    {sirketler.map(s => (
-                      <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
-                    ))}
-                    <SelectItem value="Acerler Bims">Acerler Bims</SelectItem>
-                    <SelectItem value="Acerler Yapı">Acerler Yapı</SelectItem>
+                    {sirketler.length === 0 ? (
+                      <SelectItem value="" disabled>Önce Kaynaklar'dan ekleyin</SelectItem>
+                    ) : (
+                      sirketler.map(s => (
+                        <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
+                      ))
+                    )}
                   </SelectContent>
                 </Select>
               </div>
