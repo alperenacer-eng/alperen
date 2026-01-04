@@ -1085,6 +1085,7 @@ class CimentoGirisCreate(BaseModel):
     sofor: str = ""
     sehir: str = ""
     cimento_alinan_firma: str = ""
+    cimento_cinsi: str = ""
 
 class CimentoGirisUpdate(BaseModel):
     yukleme_tarihi: Optional[str] = None
@@ -1104,6 +1105,7 @@ class CimentoGirisUpdate(BaseModel):
     sofor: Optional[str] = None
     sehir: Optional[str] = None
     cimento_alinan_firma: Optional[str] = None
+    cimento_cinsi: Optional[str] = None
 
 def calculate_cimento_fields(data: dict) -> dict:
     """Çimento giriş hesaplamaları"""
