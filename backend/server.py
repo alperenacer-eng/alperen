@@ -1668,7 +1668,9 @@ async def create_arac(input: AracCreate, current_user: dict = Depends(get_curren
     data['sigorta_dosya'] = None
     
     await db.araclar.insert_one(data)
-    return data
+    
+    # Return the data without MongoDB ObjectId
+    return {k: v for k, v in data.items() if k != '_id'}
 
 @api_router.get("/araclar")
 async def get_araclar(current_user: dict = Depends(get_current_user)):
