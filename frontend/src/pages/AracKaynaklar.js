@@ -170,7 +170,9 @@ const AracKaynaklar = () => {
       'arac-cinsi': 'Araç Cinsi Ekle',
       'marka': 'Marka Ekle',
       'model': 'Model Ekle',
-      'sirket': 'Şirket Ekle'
+      'sirket': 'Şirket Ekle',
+      'ana-sigorta': 'Ana Sigorta Firması Ekle',
+      'sigorta-acenta': 'Sigorta Acentası Ekle'
     };
     return titles[modalType] || 'Ekle';
   };
