@@ -101,3 +101,73 @@
 #====================================================================================================
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
+
+user_problem_statement: "Araçlar modülüne yeni araç ekleme özelliği ekle: araç cinsi, marka, model, kayıtlı şirket, muayene tarihi, kasko yenileme tarihi, sigorta yenileme tarihi, araç takip id no, araç takip hat no alanları + ruhsat/kasko/sigorta PDF dosya yükleme"
+
+backend:
+  - task: "Araç CRUD API'leri (/api/araclar)"
+    implemented: true
+    working: "NA"
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Araç oluşturma, listeleme, güncelleme, silme API'leri eklendi"
+  
+  - task: "Dosya yükleme API'leri (/api/araclar/{id}/upload/{doc_type})"
+    implemented: true
+    working: "NA"
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Ruhsat, kasko, sigorta PDF dosya yükleme endpoint'leri eklendi"
+
+  - task: "Araç özet istatistikleri (/api/arac-ozet)"
+    implemented: true
+    working: "NA"
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Yaklaşan muayene/kasko/sigorta tarihleri özet API'si"
+
+frontend:
+  - task: "Araç Yönetimi Sayfası"
+    implemented: true
+    working: "NA"
+    file: "frontend/src/pages/AracYonetimi.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Araç listeleme, ekleme, düzenleme, silme ve dosya yükleme arayüzü"
+
+metadata:
+  created_by: "main_agent"
+  version: "1.0"
+  test_sequence: 1
+  run_ui: false
+
+test_plan:
+  current_focus:
+    - "Araç CRUD API'leri"
+    - "Dosya yükleme API'leri"
+  stuck_tasks: []
+  test_all: false
+  test_priority: "high_first"
+
+agent_communication:
+  - agent: "main"
+    message: "Araçlar modülü için backend API'leri ve frontend sayfası oluşturuldu. Backend API'lerini test etmesi gerekiyor: araç ekleme, listeleme, güncelleme, silme ve PDF dosya yükleme."
