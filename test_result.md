@@ -107,39 +107,48 @@ user_problem_statement: "Araçlar modülüne yeni araç ekleme özelliği ekle: 
 backend:
   - task: "Araç CRUD API'leri (/api/araclar)"
     implemented: true
-    working: "NA"
+    working: true
     file: "backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "Araç oluşturma, listeleme, güncelleme, silme API'leri eklendi"
+      - working: true
+        agent: "testing"
+        comment: "Tüm CRUD operasyonları test edildi ve başarılı. POST /api/araclar (araç oluşturma), GET /api/araclar (listeleme), GET /api/araclar/{id} (tekil araç), PUT /api/araclar/{id} (güncelleme), DELETE /api/araclar/{id} (silme) endpoint'leri çalışıyor. Plaka benzersizlik kontrolü aktif."
   
   - task: "Dosya yükleme API'leri (/api/araclar/{id}/upload/{doc_type})"
     implemented: true
-    working: "NA"
+    working: true
     file: "backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "Ruhsat, kasko, sigorta PDF dosya yükleme endpoint'leri eklendi"
+      - working: true
+        agent: "testing"
+        comment: "Dosya yükleme endpoint'leri test edildi ve çalışıyor. POST /api/araclar/{id}/upload/ruhsat, /api/araclar/{id}/upload/kasko, /api/araclar/{id}/upload/sigorta endpoint'leri PDF dosya yükleme işlemini başarıyla gerçekleştiriyor. Dosya validasyonu (sadece PDF) aktif."
 
   - task: "Araç özet istatistikleri (/api/arac-ozet)"
     implemented: true
-    working: "NA"
+    working: true
     file: "backend/server.py"
     stuck_count: 0
     priority: "medium"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "Yaklaşan muayene/kasko/sigorta tarihleri özet API'si"
+      - working: true
+        agent: "testing"
+        comment: "Araç özet API'si test edildi ve çalışıyor. GET /api/arac-ozet endpoint'i toplam_arac, muayene_yaklasan, kasko_yaklasan, sigorta_yaklasan bilgilerini döndürüyor."
 
 frontend:
   - task: "Araç Yönetimi Sayfası"
