@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -13,7 +13,12 @@ import {
   AlertTriangle,
   CheckCircle,
   Clock,
-  Car
+  Car,
+  Upload,
+  FileText,
+  Eye,
+  X,
+  Trash2
 } from 'lucide-react';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -26,6 +31,8 @@ const MuayeneTakip = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [editedData, setEditedData] = useState({});
   const [saving, setSaving] = useState({});
+  const [uploading, setUploading] = useState({});
+  const fileInputRefs = useRef({});
 
   const token = localStorage.getItem('token');
   const headers = {
