@@ -432,6 +432,62 @@ const CimentoResources = () => {
           </div>
         </TabsContent>
 
+        {/* Çimento Cinsleri Tab */}
+        <TabsContent value="cimento-cinsleri">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="glass-effect rounded-xl p-6 border border-slate-800">
+              <h2 className="text-xl font-semibold text-white mb-6">Yeni Çimento Cinsi Ekle</h2>
+              <form onSubmit={handleAddCimentoCinsi} className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Çimento Cinsi Adı</Label>
+                  <Input
+                    value={newCimentoCinsi.name}
+                    onChange={(e) => setNewCimentoCinsi({ ...newCimentoCinsi, name: e.target.value })}
+                    placeholder="Örn: CEM I 42.5 R"
+                    required
+                    className="h-12 bg-slate-950 border-slate-800 text-white"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Açıklama (Opsiyonel)</Label>
+                  <Textarea
+                    value={newCimentoCinsi.description}
+                    onChange={(e) => setNewCimentoCinsi({ ...newCimentoCinsi, description: e.target.value })}
+                    placeholder="Çimento cinsi hakkında açıklama"
+                    rows={2}
+                    className="bg-slate-950 border-slate-800 text-white resize-none"
+                  />
+                </div>
+                <Button type="submit" className="w-full h-12 bg-amber-500 hover:bg-amber-600 text-white">
+                  <Plus className="w-5 h-5 mr-2" />
+                  Ekle
+                </Button>
+              </form>
+            </div>
+
+            <div className="glass-effect rounded-xl p-6 border border-slate-800">
+              <h2 className="text-xl font-semibold text-white mb-6">Çimento Cinsleri Listesi ({cimentoCinsleri.length})</h2>
+              <div className="space-y-2 max-h-96 overflow-y-auto">
+                {cimentoCinsleri.length > 0 ? (
+                  cimentoCinsleri.map((cins) => (
+                    <div key={cins.id} className="flex items-center justify-between p-4 bg-slate-800/30 rounded-lg border border-slate-800 hover:bg-slate-800/50 transition-colors">
+                      <div>
+                        <h3 className="font-semibold text-white">{cins.name}</h3>
+                        {cins.description && <p className="text-sm text-slate-400">{cins.description}</p>}
+                      </div>
+                      <Button variant="ghost" size="sm" onClick={() => setDeleteCimentoCinsiId(cins.id)} className="text-red-400 hover:text-red-300 hover:bg-red-400/10">
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-8 text-slate-500">Henüz çimento cinsi eklenmedi</div>
+                )}
+              </div>
+            </div>
+          </div>
+        </TabsContent>
+
         {/* Nakliyeci Firmaları Tab */}
         <TabsContent value="nakliyeci-firmalar">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
