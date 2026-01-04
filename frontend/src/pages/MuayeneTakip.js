@@ -82,13 +82,88 @@ const MuayeneTakip = () => {
     }
   }, []);
 
+  const fetchMuayeneGecmisi = useCallback(async () => {
+    try {
+      const response = await fetch(`${BACKEND_URL}/api/muayene-gecmisi`, { headers });
+      if (response.ok) {
+        const data = await response.json();
+        setMuayeneGecmisi(data);
+      }
+    } catch (error) {
+      console.error('Muayene geçmişi alınamadı:', error);
+    }
+  }, []);
+
   useEffect(() => {
     if (!user) {
       navigate('/login');
       return;
     }
     fetchAraclar();
-  }, [user, navigate, fetchAraclar]);
+    fetchMuayeneGecmisi();
+  }, [user, navigate, fetchAraclar, fetchMuayeneGecmisi]);
+
+  const openYenileModal = (arac) => {
+    setSelectedArac(arac);
+    setYenileForm({
+      yeni_ilk_muayene_tarihi: '',
+      yeni_son_muayene_tarihi: '',
+      notlar: ''
+    });
+    setShowYenileModal(true);
+  };
+
+  const handleMuayeneYenile = async () => {
+    if (!yenileForm.yeni_ilk_muayene_tarihi || !yenileForm.yeni_son_muayene_tarihi) {
+      toast.error('Lütfen yeni muayene tarihlerini girin');
+      return;
+    }
+
+    setYenilemeLoading(true);
+    try {
+      const response = await fetch(`${BACKEND_URL}/api/araclar/${selectedArac.id}/muayene-yenile`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(yenileForm)
+      });
+
+      if (response.ok) {
+        toast.success('Muayene yenilendi ve geçmişe kaydedildi');
+        setShowYenileModal(false);
+        fetchAraclar();
+        fetchMuayeneGecmisi();
+      } else {
+        const error = await response.json();
+        toast.error(error.detail || 'İşlem başarısız');
+      }
+    } catch (error) {
+      console.error('Yenileme hatası:', error);
+      toast.error('Bir hata oluştu');
+    } finally {
+      setYenilemeLoading(false);
+    }
+  };
+
+  const handleDeleteGecmis = async (id) => {
+    if (!window.confirm('Bu geçmiş kaydını silmek istediğinizden emin misiniz?')) return;
+    
+    try {
+      const response = await fetch(`${BACKEND_URL}/api/muayene-gecmisi/${id}`, {
+        method: 'DELETE',
+        headers
+      });
+
+      if (response.ok) {
+        toast.success('Geçmiş kaydı silindi');
+        fetchMuayeneGecmisi();
+      } else {
+        toast.error('Silme işlemi başarısız');
+      }
+    } catch (error) {
+      console.error('Silme hatası:', error);
+      toast.error('Bir hata oluştu');
+    }
+  };
 
   const handleDateChange = (aracId, field, value) => {
     setEditedData(prev => ({
