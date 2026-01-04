@@ -1837,7 +1837,7 @@ async def create_arac_cinsi(input: AracCinsiCreate, current_user: dict = Depends
     data['id'] = str(datetime.now(timezone.utc).timestamp()).replace(".", "")
     data['created_at'] = datetime.now(timezone.utc).isoformat()
     await db.arac_cinsleri.insert_one(data)
-    return data
+    return {k: v for k, v in data.items() if k != '_id'}
 
 @api_router.get("/arac-cinsleri")
 async def get_arac_cinsleri(current_user: dict = Depends(get_current_user)):
