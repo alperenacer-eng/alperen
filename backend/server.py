@@ -1859,7 +1859,7 @@ async def create_marka(input: MarkaCreate, current_user: dict = Depends(get_curr
     data['id'] = str(datetime.now(timezone.utc).timestamp()).replace(".", "")
     data['created_at'] = datetime.now(timezone.utc).isoformat()
     await db.markalar.insert_one(data)
-    return data
+    return {k: v for k, v in data.items() if k != '_id'}
 
 @api_router.get("/markalar")
 async def get_markalar(current_user: dict = Depends(get_current_user)):
