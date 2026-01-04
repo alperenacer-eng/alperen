@@ -185,6 +185,77 @@ const MuayeneTakip = () => {
     }
   };
 
+  // Muayene Takip Listesi Düzelt Modal
+  const openDuzeltModal = (arac) => {
+    setDuzeltArac(arac);
+    setDuzeltForm({
+      ilk_muayene_tarihi: arac.ilk_muayene_tarihi || '',
+      son_muayene_tarihi: arac.son_muayene_tarihi || ''
+    });
+    setShowDuzeltModal(true);
+  };
+
+  const handleDuzelt = async () => {
+    setDuzeltLoading(true);
+    try {
+      const response = await fetch(`${BACKEND_URL}/api/araclar/${duzeltArac.id}`, {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify(duzeltForm)
+      });
+
+      if (response.ok) {
+        toast.success('Muayene tarihleri düzeltildi');
+        setShowDuzeltModal(false);
+        fetchAraclar();
+      } else {
+        const error = await response.json();
+        toast.error(error.detail || 'Düzeltme başarısız');
+      }
+    } catch (error) {
+      console.error('Düzeltme hatası:', error);
+      toast.error('Bir hata oluştu');
+    } finally {
+      setDuzeltLoading(false);
+    }
+  };
+
+  // Geçmiş Düzelt Modal
+  const openGecmisDuzeltModal = (gecmis) => {
+    setDuzeltGecmis(gecmis);
+    setGecmisDuzeltForm({
+      ilk_muayene_tarihi: gecmis.ilk_muayene_tarihi || '',
+      son_muayene_tarihi: gecmis.son_muayene_tarihi || '',
+      notlar: gecmis.notlar || ''
+    });
+    setShowGecmisDuzeltModal(true);
+  };
+
+  const handleGecmisDuzelt = async () => {
+    setGecmisDuzeltLoading(true);
+    try {
+      const response = await fetch(`${BACKEND_URL}/api/muayene-gecmisi/${duzeltGecmis.id}`, {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify(gecmisDuzeltForm)
+      });
+
+      if (response.ok) {
+        toast.success('Geçmiş kaydı düzeltildi');
+        setShowGecmisDuzeltModal(false);
+        fetchMuayeneGecmisi();
+      } else {
+        const error = await response.json();
+        toast.error(error.detail || 'Düzeltme başarısız');
+      }
+    } catch (error) {
+      console.error('Düzeltme hatası:', error);
+      toast.error('Bir hata oluştu');
+    } finally {
+      setGecmisDuzeltLoading(false);
+    }
+  };
+
   const handleDateChange = (aracId, field, value) => {
     setEditedData(prev => ({
       ...prev,
