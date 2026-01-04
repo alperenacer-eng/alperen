@@ -574,7 +574,10 @@ const AracKaynaklar = () => {
               <Label htmlFor="name" className="text-slate-300">
                 {modalType === 'arac-cinsi' ? 'Araç Cinsi' : 
                  modalType === 'marka' ? 'Marka Adı' :
-                 modalType === 'model' ? 'Model Adı' : 'Şirket Adı'} *
+                 modalType === 'model' ? 'Model Adı' : 
+                 modalType === 'sirket' ? 'Şirket Adı' :
+                 modalType === 'ana-sigorta' ? 'Firma Adı' :
+                 modalType === 'sigorta-acenta' ? 'Acenta Adı' : 'Ad'} *
               </Label>
               <Input
                 id="name"
@@ -584,7 +587,9 @@ const AracKaynaklar = () => {
                   modalType === 'arac-cinsi' ? 'Örn: Kamyon, Kamyonet, Binek...' : 
                   modalType === 'marka' ? 'Örn: Mercedes, Ford, Volvo...' :
                   modalType === 'model' ? 'Örn: Actros, Transit, FH16...' : 
-                  'Örn: Acerler Bims A.Ş.'
+                  modalType === 'sirket' ? 'Örn: Acerler Bims A.Ş.' :
+                  modalType === 'ana-sigorta' ? 'Örn: Allianz, Axa, Aksigorta...' :
+                  'Örn: ABC Sigorta Acentası'
                 }
                 className="bg-slate-800/50 border-slate-700"
                 required
@@ -631,6 +636,96 @@ const AracKaynaklar = () => {
                     value={formData.adres || ''}
                     onChange={(e) => setFormData({...formData, adres: e.target.value})}
                     placeholder="Şirket adresi"
+                    className="bg-slate-800/50 border-slate-700"
+                  />
+                </div>
+              </>
+            )}
+
+            {/* Ana Sigorta Firması için ek alanlar */}
+            {modalType === 'ana-sigorta' && (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="telefon" className="text-slate-300">Telefon</Label>
+                  <Input
+                    id="telefon"
+                    value={formData.telefon || ''}
+                    onChange={(e) => setFormData({...formData, telefon: e.target.value})}
+                    placeholder="0212 123 45 67"
+                    className="bg-slate-800/50 border-slate-700"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="email" className="text-slate-300">E-posta</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={formData.email || ''}
+                    onChange={(e) => setFormData({...formData, email: e.target.value})}
+                    placeholder="info@sigorta.com"
+                    className="bg-slate-800/50 border-slate-700"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="adres" className="text-slate-300">Adres</Label>
+                  <Input
+                    id="adres"
+                    value={formData.adres || ''}
+                    onChange={(e) => setFormData({...formData, adres: e.target.value})}
+                    placeholder="Firma adresi"
+                    className="bg-slate-800/50 border-slate-700"
+                  />
+                </div>
+              </>
+            )}
+
+            {/* Sigorta Acentası için ek alanlar */}
+            {modalType === 'sigorta-acenta' && (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="ana_firma" className="text-slate-300">Ana Sigorta Firması</Label>
+                  <Select
+                    value={formData.ana_firma || ''}
+                    onValueChange={(value) => setFormData({...formData, ana_firma: value})}
+                  >
+                    <SelectTrigger className="bg-slate-800/50 border-slate-700">
+                      <SelectValue placeholder="Ana firma seçin" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-slate-800 border-slate-700">
+                      {anaSigortaFirmalari.map(f => (
+                        <SelectItem key={f.id} value={f.name}>{f.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="yetkili_kisi" className="text-slate-300">Yetkili Kişi</Label>
+                  <Input
+                    id="yetkili_kisi"
+                    value={formData.yetkili_kisi || ''}
+                    onChange={(e) => setFormData({...formData, yetkili_kisi: e.target.value})}
+                    placeholder="Yetkili kişi adı"
+                    className="bg-slate-800/50 border-slate-700"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="telefon" className="text-slate-300">Telefon</Label>
+                  <Input
+                    id="telefon"
+                    value={formData.telefon || ''}
+                    onChange={(e) => setFormData({...formData, telefon: e.target.value})}
+                    placeholder="0532 123 45 67"
+                    className="bg-slate-800/50 border-slate-700"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="email" className="text-slate-300">E-posta</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={formData.email || ''}
+                    onChange={(e) => setFormData({...formData, email: e.target.value})}
+                    placeholder="acenta@email.com"
                     className="bg-slate-800/50 border-slate-700"
                   />
                 </div>
