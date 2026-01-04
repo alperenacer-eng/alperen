@@ -17,7 +17,9 @@ import {
   Tag,
   Layers,
   Building2,
-  Search
+  Search,
+  Shield,
+  Users
 } from 'lucide-react';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -34,6 +36,8 @@ const AracKaynaklar = () => {
   const [markalar, setMarkalar] = useState([]);
   const [modeller, setModeller] = useState([]);
   const [sirketler, setSirketler] = useState([]);
+  const [anaSigortaFirmalari, setAnaSigortaFirmalari] = useState([]);
+  const [sigortaAcentalari, setSigortaAcentalari] = useState([]);
   
   // Modal states
   const [showModal, setShowModal] = useState(false);
