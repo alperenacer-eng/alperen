@@ -1243,6 +1243,340 @@ async def get_cimento_giris_ozet(current_user: dict = Depends(get_current_user))
         "toplam_urun_nakliye_genel": sum(r.get('urun_nakliye_genel_toplam', 0) for r in records)
     }
 
+# ============ PERSONEL MODÜLÜ API'LERİ ============
+
+class PersonelCreate(BaseModel):
+    ad_soyad: str
+    tc_kimlik: str = ""
+    telefon: str = ""
+    email: str = ""
+    adres: str = ""
+    dogum_tarihi: str = ""
+    ise_giris_tarihi: str = ""
+    departman: str = ""
+    pozisyon: str = ""
+    maas: float = 0
+    banka: str = ""
+    iban: str = ""
+    sgk_no: str = ""
+    ehliyet_sinifi: str = ""
+    kan_grubu: str = ""
+    acil_durum_kisi: str = ""
+    acil_durum_telefon: str = ""
+    notlar: str = ""
+    aktif: bool = True
+
+class PersonelUpdate(BaseModel):
+    ad_soyad: Optional[str] = None
+    tc_kimlik: Optional[str] = None
+    telefon: Optional[str] = None
+    email: Optional[str] = None
+    adres: Optional[str] = None
+    dogum_tarihi: Optional[str] = None
+    ise_giris_tarihi: Optional[str] = None
+    departman: Optional[str] = None
+    pozisyon: Optional[str] = None
+    maas: Optional[float] = None
+    banka: Optional[str] = None
+    iban: Optional[str] = None
+    sgk_no: Optional[str] = None
+    ehliyet_sinifi: Optional[str] = None
+    kan_grubu: Optional[str] = None
+    acil_durum_kisi: Optional[str] = None
+    acil_durum_telefon: Optional[str] = None
+    notlar: Optional[str] = None
+    aktif: Optional[bool] = None
+
+# Personel CRUD
+@api_router.post("/personeller")
+async def create_personel(input: PersonelCreate, current_user: dict = Depends(get_current_user)):
+    data = input.model_dump()
+    data['id'] = str(datetime.now(timezone.utc).timestamp()).replace(".", "")
+    data['created_at'] = datetime.now(timezone.utc).isoformat()
+    data['updated_at'] = datetime.now(timezone.utc).isoformat()
+    data['yillik_izin_hakki'] = 14  # Varsayılan yıllık izin
+    data['kullanilan_izin'] = 0
+    data['kalan_izin'] = 14
+    await db.personeller.insert_one(data)
+    return data
+
+@api_router.get("/personeller")
+async def get_personeller(current_user: dict = Depends(get_current_user)):
+    records = await db.personeller.find({}, {"_id": 0}).sort("ad_soyad", 1).to_list(1000)
+    return records
+
+@api_router.get("/personeller/{id}")
+async def get_personel(id: str, current_user: dict = Depends(get_current_user)):
+    record = await db.personeller.find_one({"id": id}, {"_id": 0})
+    if not record:
+        raise HTTPException(status_code=404, detail="Personel bulunamadı")
+    return record
+
+@api_router.put("/personeller/{id}")
+async def update_personel(id: str, input: PersonelUpdate, current_user: dict = Depends(get_current_user)):
+    existing = await db.personeller.find_one({"id": id}, {"_id": 0})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Personel bulunamadı")
+    
+    update_data = {k: v for k, v in input.model_dump().items() if v is not None}
+    for key, value in update_data.items():
+        existing[key] = value
+    
+    existing['updated_at'] = datetime.now(timezone.utc).isoformat()
+    await db.personeller.update_one({"id": id}, {"$set": existing})
+    return existing
+
+@api_router.delete("/personeller/{id}")
+async def delete_personel(id: str, current_user: dict = Depends(get_current_user)):
+    result = await db.personeller.delete_one({"id": id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Personel bulunamadı")
+    return {"message": "Personel silindi"}
+
+# Puantaj (Giriş-Çıkış) API'leri
+class PuantajCreate(BaseModel):
+    personel_id: str
+    personel_adi: str
+    tarih: str
+    giris_saati: str = ""
+    cikis_saati: str = ""
+    mesai_suresi: float = 0
+    fazla_mesai: float = 0
+    notlar: str = ""
+
+@api_router.post("/puantaj")
+async def create_puantaj(input: PuantajCreate, current_user: dict = Depends(get_current_user)):
+    data = input.model_dump()
+    data['id'] = str(datetime.now(timezone.utc).timestamp()).replace(".", "")
+    data['created_at'] = datetime.now(timezone.utc).isoformat()
+    
+    # Mesai hesaplama
+    if data['giris_saati'] and data['cikis_saati']:
+        try:
+            giris = datetime.strptime(data['giris_saati'], "%H:%M")
+            cikis = datetime.strptime(data['cikis_saati'], "%H:%M")
+            fark = (cikis - giris).seconds / 3600
+            data['mesai_suresi'] = round(fark, 2)
+            data['fazla_mesai'] = max(0, round(fark - 8, 2))  # 8 saatten fazlası fazla mesai
+        except:
+            pass
+    
+    await db.puantaj.insert_one(data)
+    return data
+
+@api_router.get("/puantaj")
+async def get_puantaj(
+    personel_id: Optional[str] = None,
+    tarih_baslangic: Optional[str] = None,
+    tarih_bitis: Optional[str] = None,
+    current_user: dict = Depends(get_current_user)
+):
+    query = {}
+    if personel_id:
+        query['personel_id'] = personel_id
+    if tarih_baslangic and tarih_bitis:
+        query['tarih'] = {"$gte": tarih_baslangic, "$lte": tarih_bitis}
+    
+    records = await db.puantaj.find(query, {"_id": 0}).sort("tarih", -1).to_list(1000)
+    return records
+
+@api_router.delete("/puantaj/{id}")
+async def delete_puantaj(id: str, current_user: dict = Depends(get_current_user)):
+    result = await db.puantaj.delete_one({"id": id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Puantaj kaydı bulunamadı")
+    return {"message": "Puantaj kaydı silindi"}
+
+# İzin API'leri
+class IzinCreate(BaseModel):
+    personel_id: str
+    personel_adi: str
+    izin_turu: str  # Yıllık, Mazeret, Hastalık, Ücretsiz
+    baslangic_tarihi: str
+    bitis_tarihi: str
+    gun_sayisi: int = 1
+    aciklama: str = ""
+    durum: str = "Beklemede"  # Beklemede, Onaylandı, Reddedildi
+
+@api_router.post("/izinler")
+async def create_izin(input: IzinCreate, current_user: dict = Depends(get_current_user)):
+    data = input.model_dump()
+    data['id'] = str(datetime.now(timezone.utc).timestamp()).replace(".", "")
+    data['created_at'] = datetime.now(timezone.utc).isoformat()
+    data['onayla_tarihi'] = ""
+    data['onaylayan'] = ""
+    
+    await db.izinler.insert_one(data)
+    return data
+
+@api_router.get("/izinler")
+async def get_izinler(personel_id: Optional[str] = None, current_user: dict = Depends(get_current_user)):
+    query = {}
+    if personel_id:
+        query['personel_id'] = personel_id
+    records = await db.izinler.find(query, {"_id": 0}).sort("created_at", -1).to_list(1000)
+    return records
+
+@api_router.put("/izinler/{id}/onayla")
+async def onayla_izin(id: str, durum: str, current_user: dict = Depends(get_current_user)):
+    existing = await db.izinler.find_one({"id": id}, {"_id": 0})
+    if not existing:
+        raise HTTPException(status_code=404, detail="İzin kaydı bulunamadı")
+    
+    existing['durum'] = durum
+    existing['onayla_tarihi'] = datetime.now(timezone.utc).isoformat()
+    existing['onaylayan'] = current_user['name']
+    
+    # Eğer onaylandıysa ve yıllık izinse, personelin izin hakkından düş
+    if durum == "Onaylandı" and existing['izin_turu'] == "Yıllık":
+        personel = await db.personeller.find_one({"id": existing['personel_id']})
+        if personel:
+            kullanilan = personel.get('kullanilan_izin', 0) + existing['gun_sayisi']
+            kalan = personel.get('yillik_izin_hakki', 14) - kullanilan
+            await db.personeller.update_one(
+                {"id": existing['personel_id']},
+                {"$set": {"kullanilan_izin": kullanilan, "kalan_izin": kalan}}
+            )
+    
+    await db.izinler.update_one({"id": id}, {"$set": existing})
+    return existing
+
+@api_router.delete("/izinler/{id}")
+async def delete_izin(id: str, current_user: dict = Depends(get_current_user)):
+    result = await db.izinler.delete_one({"id": id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="İzin kaydı bulunamadı")
+    return {"message": "İzin kaydı silindi"}
+
+# Maaş Bordrosu API'leri
+class MaasBordrosuCreate(BaseModel):
+    personel_id: str
+    personel_adi: str
+    yil: int
+    ay: int
+    brut_maas: float = 0
+    sgk_isci: float = 0
+    sgk_isveren: float = 0
+    gelir_vergisi: float = 0
+    damga_vergisi: float = 0
+    net_maas: float = 0
+    fazla_mesai_ucreti: float = 0
+    ikramiye: float = 0
+    kesintiler: float = 0
+    toplam_odeme: float = 0
+    odeme_tarihi: str = ""
+    odendi: bool = False
+
+@api_router.post("/maas-bordrolari")
+async def create_maas_bordrosu(input: MaasBordrosuCreate, current_user: dict = Depends(get_current_user)):
+    data = input.model_dump()
+    data['id'] = str(datetime.now(timezone.utc).timestamp()).replace(".", "")
+    data['created_at'] = datetime.now(timezone.utc).isoformat()
+    
+    # Otomatik hesaplamalar (2024 oranları tahmini)
+    brut = data['brut_maas']
+    data['sgk_isci'] = round(brut * 0.14, 2)  # %14 SGK işçi payı
+    data['sgk_isveren'] = round(brut * 0.205, 2)  # %20.5 SGK işveren payı
+    data['gelir_vergisi'] = round((brut - data['sgk_isci']) * 0.15, 2)  # %15 gelir vergisi (basit)
+    data['damga_vergisi'] = round(brut * 0.00759, 2)  # %0.759 damga vergisi
+    data['net_maas'] = round(brut - data['sgk_isci'] - data['gelir_vergisi'] - data['damga_vergisi'], 2)
+    data['toplam_odeme'] = round(data['net_maas'] + data['fazla_mesai_ucreti'] + data['ikramiye'] - data['kesintiler'], 2)
+    
+    await db.maas_bordrolari.insert_one(data)
+    return data
+
+@api_router.get("/maas-bordrolari")
+async def get_maas_bordrolari(
+    personel_id: Optional[str] = None,
+    yil: Optional[int] = None,
+    ay: Optional[int] = None,
+    current_user: dict = Depends(get_current_user)
+):
+    query = {}
+    if personel_id:
+        query['personel_id'] = personel_id
+    if yil:
+        query['yil'] = yil
+    if ay:
+        query['ay'] = ay
+    
+    records = await db.maas_bordrolari.find(query, {"_id": 0}).sort([("yil", -1), ("ay", -1)]).to_list(1000)
+    return records
+
+@api_router.put("/maas-bordrolari/{id}/odendi")
+async def maas_odendi(id: str, current_user: dict = Depends(get_current_user)):
+    existing = await db.maas_bordrolari.find_one({"id": id}, {"_id": 0})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Bordro bulunamadı")
+    
+    existing['odendi'] = True
+    existing['odeme_tarihi'] = datetime.now(timezone.utc).isoformat()
+    
+    await db.maas_bordrolari.update_one({"id": id}, {"$set": existing})
+    return existing
+
+# Personel Özet API
+@api_router.get("/personel-ozet")
+async def get_personel_ozet(current_user: dict = Depends(get_current_user)):
+    personeller = await db.personeller.find({"aktif": True}, {"_id": 0}).to_list(1000)
+    puantaj_bugun = await db.puantaj.find({"tarih": datetime.now().strftime("%Y-%m-%d")}, {"_id": 0}).to_list(1000)
+    bekleyen_izinler = await db.izinler.find({"durum": "Beklemede"}, {"_id": 0}).to_list(1000)
+    
+    toplam_maas = sum(p.get('maas', 0) for p in personeller)
+    
+    return {
+        "toplam_personel": len(personeller),
+        "bugun_giris_yapan": len(puantaj_bugun),
+        "bekleyen_izin_talepleri": len(bekleyen_izinler),
+        "toplam_maas_gideri": toplam_maas
+    }
+
+# Departman API'leri (Personel için)
+class PersonelDepartmanCreate(BaseModel):
+    name: str
+    aciklama: str = ""
+
+@api_router.post("/personel-departmanlar")
+async def create_personel_departman(input: PersonelDepartmanCreate, current_user: dict = Depends(get_current_user)):
+    data = input.model_dump()
+    data['id'] = str(datetime.now(timezone.utc).timestamp()).replace(".", "")
+    data['created_at'] = datetime.now(timezone.utc).isoformat()
+    await db.personel_departmanlar.insert_one(data)
+    return data
+
+@api_router.get("/personel-departmanlar")
+async def get_personel_departmanlar(current_user: dict = Depends(get_current_user)):
+    records = await db.personel_departmanlar.find({}, {"_id": 0}).sort("name", 1).to_list(1000)
+    return records
+
+@api_router.delete("/personel-departmanlar/{id}")
+async def delete_personel_departman(id: str, current_user: dict = Depends(get_current_user)):
+    await db.personel_departmanlar.delete_one({"id": id})
+    return {"message": "Departman silindi"}
+
+# Pozisyon API'leri
+class PozisyonCreate(BaseModel):
+    name: str
+    departman: str = ""
+
+@api_router.post("/pozisyonlar")
+async def create_pozisyon(input: PozisyonCreate, current_user: dict = Depends(get_current_user)):
+    data = input.model_dump()
+    data['id'] = str(datetime.now(timezone.utc).timestamp()).replace(".", "")
+    data['created_at'] = datetime.now(timezone.utc).isoformat()
+    await db.pozisyonlar.insert_one(data)
+    return data
+
+@api_router.get("/pozisyonlar")
+async def get_pozisyonlar(current_user: dict = Depends(get_current_user)):
+    records = await db.pozisyonlar.find({}, {"_id": 0}).sort("name", 1).to_list(1000)
+    return records
+
+@api_router.delete("/pozisyonlar/{id}")
+async def delete_pozisyon(id: str, current_user: dict = Depends(get_current_user)):
+    await db.pozisyonlar.delete_one({"id": id})
+    return {"message": "Pozisyon silindi"}
+
 app.include_router(api_router)
 
 app.add_middleware(
