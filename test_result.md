@@ -150,6 +150,21 @@ backend:
         agent: "testing"
         comment: "Araç özet API'si test edildi ve çalışıyor. GET /api/arac-ozet endpoint'i toplam_arac, muayene_yaklasan, kasko_yaklasan, sigorta_yaklasan bilgilerini döndürüyor."
 
+  - task: "Production Login Functionality (/api/auth/login, /api/auth/me)"
+    implemented: true
+    working: true
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "user"
+        comment: "User reported login works on first visit but fails after logout and re-login attempt with same credentials"
+      - working: true
+        agent: "testing"
+        comment: "COMPREHENSIVE PRODUCTION TESTING COMPLETED: Tested login functionality on https://project-upload-12.emergent.host with credentials alperenacer@acerler.com/1234. ALL TESTS PASSED (100% success rate): 1) Login API returns proper access_token and user object, 2) /api/auth/me endpoint validates tokens correctly, 3) Multiple rapid logins work, 4) Login-logout-relogin cycles work flawlessly (3 cycles tested), 5) Session persistence across requests works, 6) CORS headers properly configured (Access-Control-Allow-Origin: *, Allow-Credentials: true), 7) Error handling for invalid credentials works. Backend APIs are functioning correctly. Issue may be frontend-specific, browser cache/cookies, or network-related."
+
 frontend:
   - task: "Araç Yönetimi Sayfası"
     implemented: true
