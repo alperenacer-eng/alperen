@@ -839,6 +839,19 @@ const CimentoResources = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <AlertDialog open={!!deleteCimentoCinsiId} onOpenChange={() => setDeleteCimentoCinsiId(null)}>
+        <AlertDialogContent className="bg-slate-900 border-slate-800 text-white">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Emin misiniz?</AlertDialogTitle>
+            <AlertDialogDescription className="text-slate-400">Bu çimento cinsini silmek istediğinize emin misiniz?</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700">İptal</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteCimentoCinsi} className="bg-red-500 hover:bg-red-600 text-white">Sil</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
