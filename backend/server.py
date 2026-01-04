@@ -635,7 +635,23 @@ async def create_plaka(plaka: PlakaCreate, current_user: dict = Depends(get_curr
 @api_router.get("/plakalar", response_model=List[PlakaResponse])
 async def get_plakalar(current_user: dict = Depends(get_current_user)):
     plakalar = await db.plakalar.find({}, {"_id": 0}).sort("plaka", 1).to_list(1000)
-    return [PlakaResponse(**p) for p in plakalar]
+    result = []
+    for p in plakalar:
+        # Eski format desteği (ad -> plaka)
+        if 'ad' in p and 'plaka' not in p:
+            p['plaka'] = p['ad']
+        if 'plaka' not in p:
+            p['plaka'] = ''
+        if 'vehicle_type' not in p:
+            p['vehicle_type'] = None
+        if 'nakliyeci_id' not in p:
+            p['nakliyeci_id'] = None
+        if 'nakliyeci_name' not in p:
+            p['nakliyeci_name'] = None
+        if 'notes' not in p:
+            p['notes'] = None
+        result.append(PlakaResponse(**p))
+    return result
 
 @api_router.delete("/plakalar/{plaka_id}")
 async def delete_plaka(plaka_id: str, current_user: dict = Depends(get_current_user)):
