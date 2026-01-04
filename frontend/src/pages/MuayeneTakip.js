@@ -594,6 +594,15 @@ const MuayeneTakip = () => {
                           <div className="flex justify-end gap-2">
                             <Button
                               size="sm"
+                              variant="outline"
+                              onClick={() => openDuzeltModal(arac)}
+                              className="text-blue-400 border-blue-400/30 hover:bg-blue-500/20"
+                            >
+                              <Edit className="w-4 h-4 mr-1" />
+                              Düzelt
+                            </Button>
+                            <Button
+                              size="sm"
                               onClick={() => handleSave(arac.id)}
                               disabled={saving[arac.id]}
                               className="bg-orange-500 hover:bg-orange-600"
