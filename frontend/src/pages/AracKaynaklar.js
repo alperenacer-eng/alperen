@@ -85,7 +85,7 @@ const AracKaynaklar = () => {
 
   const openAddModal = (type) => {
     setModalType(type);
-    setFormData({ name: '', marka: '', vergi_no: '', adres: '' });
+    setFormData({ name: '', marka: '', vergi_no: '', adres: '', telefon: '', email: '', notlar: '', yetkili_kisi: '', ana_firma: '' });
     setShowModal(true);
   };
 
@@ -101,7 +101,9 @@ const AracKaynaklar = () => {
       'arac-cinsi': '/api/arac-cinsleri',
       'marka': '/api/markalar',
       'model': '/api/modeller',
-      'sirket': '/api/sirketler'
+      'sirket': '/api/sirketler',
+      'ana-sigorta': '/api/ana-sigorta-firmalari',
+      'sigorta-acenta': '/api/sigorta-acentalari'
     };
 
     try {
