@@ -784,6 +784,125 @@ const MuayeneTakip = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Muayene Takip Düzelt Modal */}
+      <Dialog open={showDuzeltModal} onOpenChange={setShowDuzeltModal}>
+        <DialogContent className="bg-slate-900 border-slate-800">
+          <DialogHeader>
+            <DialogTitle className="text-white flex items-center gap-2">
+              <Edit className="w-5 h-5 text-blue-400" />
+              Muayene Tarihi Düzelt - {duzeltArac?.plaka}
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label className="text-slate-300">İlk Muayene Tarihi</Label>
+              <Input
+                type="date"
+                value={duzeltForm.ilk_muayene_tarihi}
+                onChange={(e) => setDuzeltForm({...duzeltForm, ilk_muayene_tarihi: e.target.value})}
+                className="bg-slate-800/50 border-slate-700"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-slate-300">Son Muayene Tarihi</Label>
+              <Input
+                type="date"
+                value={duzeltForm.son_muayene_tarihi}
+                onChange={(e) => setDuzeltForm({...duzeltForm, son_muayene_tarihi: e.target.value})}
+                className="bg-slate-800/50 border-slate-700"
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setShowDuzeltModal(false)}>
+              İptal
+            </Button>
+            <Button 
+              onClick={handleDuzelt} 
+              disabled={duzeltLoading}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              {duzeltLoading ? (
+                <span className="animate-pulse">Kaydediliyor...</span>
+              ) : (
+                <>
+                  <Save className="w-4 h-4 mr-2" />
+                  Kaydet
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Geçmiş Düzelt Modal */}
+      <Dialog open={showGecmisDuzeltModal} onOpenChange={setShowGecmisDuzeltModal}>
+        <DialogContent className="bg-slate-900 border-slate-800">
+          <DialogHeader>
+            <DialogTitle className="text-white flex items-center gap-2">
+              <Edit className="w-5 h-5 text-blue-400" />
+              Geçmiş Kayıt Düzelt - {duzeltGecmis?.plaka}
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label className="text-slate-300">İlk Muayene Tarihi</Label>
+              <Input
+                type="date"
+                value={gecmisDuzeltForm.ilk_muayene_tarihi}
+                onChange={(e) => setGecmisDuzeltForm({...gecmisDuzeltForm, ilk_muayene_tarihi: e.target.value})}
+                className="bg-slate-800/50 border-slate-700"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-slate-300">Son Muayene Tarihi</Label>
+              <Input
+                type="date"
+                value={gecmisDuzeltForm.son_muayene_tarihi}
+                onChange={(e) => setGecmisDuzeltForm({...gecmisDuzeltForm, son_muayene_tarihi: e.target.value})}
+                className="bg-slate-800/50 border-slate-700"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-slate-300">Notlar</Label>
+              <Textarea
+                value={gecmisDuzeltForm.notlar}
+                onChange={(e) => setGecmisDuzeltForm({...gecmisDuzeltForm, notlar: e.target.value})}
+                placeholder="Not ekleyin..."
+                className="bg-slate-800/50 border-slate-700"
+                rows={3}
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setShowGecmisDuzeltModal(false)}>
+              İptal
+            </Button>
+            <Button 
+              onClick={handleGecmisDuzelt} 
+              disabled={gecmisDuzeltLoading}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              {gecmisDuzeltLoading ? (
+                <span className="animate-pulse">Kaydediliyor...</span>
+              ) : (
+                <>
+                  <Save className="w-4 h-4 mr-2" />
+                  Kaydet
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
