@@ -59,6 +59,7 @@ const CimentoResources = () => {
     fetchPlakalar();
     fetchSoforler();
     fetchSehirler();
+    fetchCimentoCinsleri();
   };
 
   // Çimento Firmaları
