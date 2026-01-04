@@ -18,7 +18,9 @@ import {
   Users,
   Clock,
   Calendar,
-  DollarSign
+  DollarSign,
+  Car,
+  Truck
 } from 'lucide-react';
 
 const Layout = () => {
