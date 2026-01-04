@@ -304,6 +304,7 @@ const MuayeneTakip = () => {
               <TableHeader>
                 <TableRow className="border-slate-800">
                   <TableHead className="text-slate-400">Plaka</TableHead>
+                  <TableHead className="text-slate-400">Evrak</TableHead>
                   <TableHead className="text-slate-400">Araç Bilgisi</TableHead>
                   <TableHead className="text-slate-400">İlk Muayene Tarihi</TableHead>
                   <TableHead className="text-slate-400">Son Muayene Tarihi</TableHead>
@@ -314,7 +315,7 @@ const MuayeneTakip = () => {
               <TableBody>
                 {filteredAraclar.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center text-slate-400 py-8">
+                    <TableCell colSpan={7} className="text-center text-slate-400 py-8">
                       {searchTerm ? 'Araç bulunamadı' : 'Henüz araç eklenmemiş'}
                     </TableCell>
                   </TableRow>
@@ -326,6 +327,56 @@ const MuayeneTakip = () => {
                     return (
                       <TableRow key={arac.id} className="border-slate-800">
                         <TableCell className="font-medium text-white">{arac.plaka}</TableCell>
+                        <TableCell>
+                          <input
+                            type="file"
+                            ref={el => fileInputRefs.current[arac.id] = el}
+                            className="hidden"
+                            onChange={(e) => {
+                              if (e.target.files[0]) {
+                                handleFileUpload(arac.id, e.target.files[0]);
+                              }
+                            }}
+                          />
+                          {arac.muayene_evrak ? (
+                            <div className="flex items-center gap-1">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-7 text-xs bg-green-500/10 border-green-500/30 text-green-400 hover:bg-green-500/20"
+                                onClick={() => window.open(`${BACKEND_URL}${arac.muayene_evrak}`, '_blank')}
+                              >
+                                <Eye className="w-3 h-3 mr-1" />
+                                {getFileExtension(arac.muayene_evrak)}
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-7 w-7 p-0 text-red-400 hover:bg-red-500/20"
+                                onClick={() => handleDeleteFile(arac.id)}
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </Button>
+                            </div>
+                          ) : (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-7 text-xs"
+                              disabled={uploading[arac.id]}
+                              onClick={() => fileInputRefs.current[arac.id]?.click()}
+                            >
+                              {uploading[arac.id] ? (
+                                <span className="animate-pulse">Yükleniyor...</span>
+                              ) : (
+                                <>
+                                  <Upload className="w-3 h-3 mr-1" />
+                                  Yükle
+                                </>
+                              )}
+                            </Button>
+                          )}
+                        </TableCell>
                         <TableCell className="text-slate-300">
                           <div>
                             <span className="font-medium">{arac.marka} {arac.model}</span>
