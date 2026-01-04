@@ -55,6 +55,10 @@ const Layout = () => {
     { path: '/maas-bordrosu', icon: DollarSign, label: 'Maaş Bordrosu', testId: 'nav-maas-bordrosu' },
   ];
 
+  const araclarMenuItems = [
+    { path: '/arac-yonetimi', icon: Car, label: 'Araç Yönetimi', testId: 'nav-arac-yonetimi' },
+  ];
+
   const menuItems = currentModule?.id === 'bims' 
     ? [...baseMenuItems, ...bimsMenuItems]
     : currentModule?.id === 'cimento'
