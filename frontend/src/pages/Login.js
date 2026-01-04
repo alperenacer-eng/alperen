@@ -19,17 +19,24 @@ const Login = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
+    console.log('Login attempt:', { email, isLogin });
 
     try {
       if (isLogin) {
-        await login(email, password);
+        console.log('Calling login...');
+        const result = await login(email, password);
+        console.log('Login result:', result);
         toast.success('Giriş başarılı!');
       } else {
+        console.log('Calling register...');
         await register(name, email, password);
         toast.success('Kayıt başarılı!');
       }
+      console.log('Navigating to /');
       navigate('/');
     } catch (error) {
+      console.error('Login error:', error);
+      console.error('Error response:', error.response);
       toast.error(error.response?.data?.detail || 'Bir hata oluştu');
     } finally {
       setLoading(false);
