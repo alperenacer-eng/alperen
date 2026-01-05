@@ -2194,13 +2194,21 @@ class MotorinAlimCreate(BaseModel):
     tarih: str
     tedarikci_id: str = ""
     tedarikci_adi: str = ""
+    cekici_plaka: str = ""
+    dorse_plaka: str = ""
+    sofor_adi: str = ""
+    sofor_soyadi: str = ""
     miktar_litre: float
+    miktar_kg: float = 0
+    kesafet: float = 0  # Yoğunluk (kg/litre)
+    kantar_kg: float = 0
     birim_fiyat: float
     toplam_tutar: float
     fatura_no: str = ""
     irsaliye_no: str = ""
     odeme_durumu: str = "beklemede"  # beklemede, odendi, vadeli
     vade_tarihi: str = ""
+    teslim_alan: str = ""
     notlar: str = ""
 
 @api_router.post("/motorin-alimlar")
