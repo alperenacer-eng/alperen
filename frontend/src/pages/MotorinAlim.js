@@ -217,6 +217,22 @@ const MotorinAlim = () => {
               </select>
             </div>
 
+            {/* Akaryakıt Markası */}
+            <div>
+              <Label className="text-slate-300">Akaryakıt Markası *</Label>
+              <select
+                value={formData.akaryakit_markasi}
+                onChange={(e) => setFormData({ ...formData, akaryakit_markasi: e.target.value })}
+                className="w-full bg-slate-800 border border-slate-700 text-white rounded-md px-3 py-2 mt-1"
+                required
+              >
+                <option value="">Marka Seçin</option>
+                {markalar.map(m => (
+                  <option key={m.id} value={m.name}>{m.name}</option>
+                ))}
+              </select>
+            </div>
+
             {/* Teslim Alan */}
             <div>
               <Label className="text-slate-300">Teslim Alan *</Label>
