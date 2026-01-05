@@ -103,12 +103,93 @@ class MotorinAPITester:
             self.log_result("Auth Login (Existing User)", False, f"Exception: {str(e)}")
             return False
     
-    def test_create_vehicle(self):
-        """Test vehicle creation"""
-        # Use timestamp to ensure unique plate
+    def test_create_tedarikci(self):
+        """Test motorin tedarikci creation"""
+        timestamp = str(int(datetime.now().timestamp()))[-6:]
+        tedarikci_data = {
+            "name": f"Test Tedarikçi {timestamp}",
+            "yetkili_kisi": "Ahmet Yılmaz",
+            "telefon": "0532 123 4567",
+            "email": f"tedarikci{timestamp}@example.com",
+            "adres": "İstanbul, Türkiye",
+            "vergi_no": f"123456789{timestamp[-3:]}",
+            "notlar": "Test tedarikçisi"
+        }
+        
+        try:
+            response = self.session.post(f"{BACKEND_URL}/motorin-tedarikciler", json=tedarikci_data)
+            
+            if response.status_code == 200:
+                data = response.json()
+                self.test_tedarikci_id = data.get("id")
+                
+                self.log_result("Create Motorin Tedarikci", True, f"Tedarikci created with ID: {self.test_tedarikci_id}")
+                return True
+            else:
+                self.log_result("Create Motorin Tedarikci", False, "Tedarikci creation failed", response)
+                return False
+                
+        except Exception as e:
+            self.log_result("Create Motorin Tedarikci", False, f"Exception: {str(e)}")
+            return False
+    
+    def test_get_tedarikciler(self):
+        """Test getting all motorin tedarikciler"""
+        try:
+            response = self.session.get(f"{BACKEND_URL}/motorin-tedarikciler")
+            
+            if response.status_code == 200:
+                data = response.json()
+                tedarikci_count = len(data)
+                
+                self.log_result("Get All Motorin Tedarikciler", True, f"Retrieved {tedarikci_count} tedarikciler")
+                return True
+            else:
+                self.log_result("Get All Motorin Tedarikciler", False, "Failed to get tedarikciler", response)
+                return False
+                
+        except Exception as e:
+            self.log_result("Get All Motorin Tedarikciler", False, f"Exception: {str(e)}")
+            return False
+    
+    def test_update_tedarikci(self):
+        """Test updating a motorin tedarikci"""
+        if not self.test_tedarikci_id:
+            self.log_result("Update Motorin Tedarikci", False, "No test tedarikci ID available")
+            return False
+            
+        update_data = {
+            "name": "Updated Test Tedarikçi",
+            "yetkili_kisi": "Mehmet Demir",
+            "telefon": "0533 987 6543",
+            "email": "updated@example.com",
+            "adres": "Ankara, Türkiye",
+            "vergi_no": "987654321",
+            "notlar": "Updated test tedarikçisi"
+        }
+        
+        try:
+            response = self.session.put(f"{BACKEND_URL}/motorin-tedarikciler/{self.test_tedarikci_id}", json=update_data)
+            
+            if response.status_code == 200:
+                data = response.json()
+                updated_name = data.get("name")
+                
+                self.log_result("Update Motorin Tedarikci", True, f"Tedarikci updated, new name: {updated_name}")
+                return True
+            else:
+                self.log_result("Update Motorin Tedarikci", False, "Failed to update tedarikci", response)
+                return False
+                
+        except Exception as e:
+            self.log_result("Update Motorin Tedarikci", False, f"Exception: {str(e)}")
+            return False
+    
+    def test_create_arac_for_motorin(self):
+        """Create a test vehicle for motorin verme operations"""
         timestamp = str(int(datetime.now().timestamp()))[-6:]
         vehicle_data = {
-            "plaka": f"34 TEST {timestamp}",
+            "plaka": f"34 MOT {timestamp}",
             "arac_cinsi": "Kamyon",
             "marka": "Mercedes",
             "model": "Actros",
@@ -119,7 +200,7 @@ class MotorinAPITester:
             "sigorta_yenileme_tarihi": "2025-04-10",
             "arac_takip_id": "TK123456",
             "arac_takip_hat_no": "5551234567",
-            "notlar": "Test aracı",
+            "notlar": "Test aracı motorin için",
             "aktif": True
         }
         
@@ -128,148 +209,316 @@ class MotorinAPITester:
             
             if response.status_code == 200:
                 data = response.json()
-                self.test_vehicle_id = data.get("id")
+                self.test_arac_id = data.get("id")
                 
-                self.log_result("Create Vehicle", True, f"Vehicle created with ID: {self.test_vehicle_id}")
+                self.log_result("Create Test Vehicle for Motorin", True, f"Vehicle created with ID: {self.test_arac_id}")
                 return True
             else:
-                self.log_result("Create Vehicle", False, "Vehicle creation failed", response)
+                self.log_result("Create Test Vehicle for Motorin", False, "Vehicle creation failed", response)
                 return False
                 
         except Exception as e:
-            self.log_result("Create Vehicle", False, f"Exception: {str(e)}")
+            self.log_result("Create Test Vehicle for Motorin", False, f"Exception: {str(e)}")
             return False
     
-    def test_get_vehicles(self):
-        """Test getting all vehicles"""
-        try:
-            response = self.session.get(f"{BACKEND_URL}/araclar")
-            
-            if response.status_code == 200:
-                data = response.json()
-                vehicle_count = len(data)
-                
-                self.log_result("Get All Vehicles", True, f"Retrieved {vehicle_count} vehicles")
-                return True
-            else:
-                self.log_result("Get All Vehicles", False, "Failed to get vehicles", response)
-                return False
-                
-        except Exception as e:
-            self.log_result("Get All Vehicles", False, f"Exception: {str(e)}")
-            return False
-    
-    def test_get_single_vehicle(self):
-        """Test getting a single vehicle"""
-        if not self.test_vehicle_id:
-            self.log_result("Get Single Vehicle", False, "No test vehicle ID available")
+    def test_create_motorin_alim(self):
+        """Test motorin alim creation"""
+        if not self.test_tedarikci_id:
+            self.log_result("Create Motorin Alim", False, "No test tedarikci ID available")
             return False
             
-        try:
-            response = self.session.get(f"{BACKEND_URL}/araclar/{self.test_vehicle_id}")
-            
-            if response.status_code == 200:
-                data = response.json()
-                plaka = data.get("plaka")
-                
-                self.log_result("Get Single Vehicle", True, f"Retrieved vehicle: {plaka}")
-                return True
-            else:
-                self.log_result("Get Single Vehicle", False, "Failed to get single vehicle", response)
-                return False
-                
-        except Exception as e:
-            self.log_result("Get Single Vehicle", False, f"Exception: {str(e)}")
-            return False
-    
-    def test_update_vehicle(self):
-        """Test updating a vehicle"""
-        if not self.test_vehicle_id:
-            self.log_result("Update Vehicle", False, "No test vehicle ID available")
-            return False
-            
-        update_data = {
-            "marka": "Volvo",
-            "model": "FH16",
-            "notlar": "Updated test vehicle"
+        today = datetime.now().strftime("%Y-%m-%d")
+        alim_data = {
+            "tarih": today,
+            "tedarikci_id": self.test_tedarikci_id,
+            "tedarikci_adi": "Test Tedarikçi",
+            "miktar_litre": 1000.0,
+            "birim_fiyat": 35.50,
+            "toplam_tutar": 35500.0,
+            "fatura_no": "FAT2024001",
+            "irsaliye_no": "IRS2024001",
+            "odeme_durumu": "beklemede",
+            "vade_tarihi": "2024-12-31",
+            "notlar": "Test alım kaydı"
         }
         
         try:
-            response = self.session.put(f"{BACKEND_URL}/araclar/{self.test_vehicle_id}", json=update_data)
+            response = self.session.post(f"{BACKEND_URL}/motorin-alimlar", json=alim_data)
             
             if response.status_code == 200:
                 data = response.json()
-                updated_marka = data.get("marka")
+                self.test_alim_id = data.get("id")
                 
-                self.log_result("Update Vehicle", True, f"Vehicle updated, new marka: {updated_marka}")
+                self.log_result("Create Motorin Alim", True, f"Alim created with ID: {self.test_alim_id}")
                 return True
             else:
-                self.log_result("Update Vehicle", False, "Failed to update vehicle", response)
+                self.log_result("Create Motorin Alim", False, "Alim creation failed", response)
                 return False
                 
         except Exception as e:
-            self.log_result("Update Vehicle", False, f"Exception: {str(e)}")
+            self.log_result("Create Motorin Alim", False, f"Exception: {str(e)}")
             return False
     
-    def test_vehicle_summary(self):
-        """Test vehicle summary stats"""
+    def test_get_motorin_alimlar(self):
+        """Test getting all motorin alimlar"""
         try:
-            response = self.session.get(f"{BACKEND_URL}/arac-ozet")
+            response = self.session.get(f"{BACKEND_URL}/motorin-alimlar")
             
             if response.status_code == 200:
                 data = response.json()
-                total_vehicles = data.get("toplam_arac", 0)
+                alim_count = len(data)
                 
-                self.log_result("Vehicle Summary", True, f"Summary retrieved, total vehicles: {total_vehicles}")
+                self.log_result("Get All Motorin Alimlar", True, f"Retrieved {alim_count} alimlar")
                 return True
             else:
-                self.log_result("Vehicle Summary", False, "Failed to get vehicle summary", response)
+                self.log_result("Get All Motorin Alimlar", False, "Failed to get alimlar", response)
                 return False
                 
         except Exception as e:
-            self.log_result("Vehicle Summary", False, f"Exception: {str(e)}")
+            self.log_result("Get All Motorin Alimlar", False, f"Exception: {str(e)}")
             return False
     
-    def test_file_upload_endpoints(self):
-        """Test file upload endpoints (without actual file)"""
-        if not self.test_vehicle_id:
-            self.log_result("File Upload Test", False, "No test vehicle ID available")
-            return False
-        
-        # Test the upload endpoints exist (they should return 422 without file)
-        upload_types = ["ruhsat", "kasko", "sigorta"]
-        
-        for doc_type in upload_types:
-            try:
-                response = self.session.post(f"{BACKEND_URL}/araclar/{self.test_vehicle_id}/upload/{doc_type}")
-                
-                # Expecting 422 (validation error) since we're not sending a file
-                if response.status_code == 422:
-                    self.log_result(f"File Upload Endpoint ({doc_type})", True, "Endpoint exists and validates input")
-                else:
-                    self.log_result(f"File Upload Endpoint ({doc_type})", False, f"Unexpected response", response)
-                    
-            except Exception as e:
-                self.log_result(f"File Upload Endpoint ({doc_type})", False, f"Exception: {str(e)}")
-    
-    def test_delete_vehicle(self):
-        """Test deleting a vehicle"""
-        if not self.test_vehicle_id:
-            self.log_result("Delete Vehicle", False, "No test vehicle ID available")
+    def test_get_single_motorin_alim(self):
+        """Test getting a single motorin alim"""
+        if not self.test_alim_id:
+            self.log_result("Get Single Motorin Alim", False, "No test alim ID available")
             return False
             
         try:
-            response = self.session.delete(f"{BACKEND_URL}/araclar/{self.test_vehicle_id}")
+            response = self.session.get(f"{BACKEND_URL}/motorin-alimlar/{self.test_alim_id}")
             
             if response.status_code == 200:
-                self.log_result("Delete Vehicle", True, "Vehicle deleted successfully")
+                data = response.json()
+                miktar = data.get("miktar_litre")
+                
+                self.log_result("Get Single Motorin Alim", True, f"Retrieved alim: {miktar} litre")
                 return True
             else:
-                self.log_result("Delete Vehicle", False, "Failed to delete vehicle", response)
+                self.log_result("Get Single Motorin Alim", False, "Failed to get single alim", response)
                 return False
                 
         except Exception as e:
-            self.log_result("Delete Vehicle", False, f"Exception: {str(e)}")
+            self.log_result("Get Single Motorin Alim", False, f"Exception: {str(e)}")
+            return False
+    
+    def test_update_motorin_alim(self):
+        """Test updating a motorin alim"""
+        if not self.test_alim_id:
+            self.log_result("Update Motorin Alim", False, "No test alim ID available")
+            return False
+            
+        today = datetime.now().strftime("%Y-%m-%d")
+        update_data = {
+            "tarih": today,
+            "tedarikci_id": self.test_tedarikci_id,
+            "tedarikci_adi": "Updated Test Tedarikçi",
+            "miktar_litre": 1500.0,
+            "birim_fiyat": 36.00,
+            "toplam_tutar": 54000.0,
+            "fatura_no": "FAT2024002",
+            "irsaliye_no": "IRS2024002",
+            "odeme_durumu": "odendi",
+            "vade_tarihi": "",
+            "notlar": "Updated test alım kaydı"
+        }
+        
+        try:
+            response = self.session.put(f"{BACKEND_URL}/motorin-alimlar/{self.test_alim_id}", json=update_data)
+            
+            if response.status_code == 200:
+                data = response.json()
+                updated_miktar = data.get("miktar_litre")
+                
+                self.log_result("Update Motorin Alim", True, f"Alim updated, new miktar: {updated_miktar} litre")
+                return True
+            else:
+                self.log_result("Update Motorin Alim", False, "Failed to update alim", response)
+                return False
+                
+        except Exception as e:
+            self.log_result("Update Motorin Alim", False, f"Exception: {str(e)}")
+            return False
+    
+    def test_create_motorin_verme(self):
+        """Test motorin verme creation"""
+        if not self.test_arac_id:
+            self.log_result("Create Motorin Verme", False, "No test arac ID available")
+            return False
+            
+        today = datetime.now().strftime("%Y-%m-%d")
+        verme_data = {
+            "tarih": today,
+            "arac_id": self.test_arac_id,
+            "arac_plaka": "34 MOT 123",
+            "arac_bilgi": "Mercedes Actros",
+            "miktar_litre": 200.0,
+            "kilometre": 125000.0,
+            "sofor_id": "",
+            "sofor_adi": "Ali Veli",
+            "personel_id": "",
+            "personel_adi": "Mehmet Özkan",
+            "notlar": "Test verme kaydı"
+        }
+        
+        try:
+            response = self.session.post(f"{BACKEND_URL}/motorin-verme", json=verme_data)
+            
+            if response.status_code == 200:
+                data = response.json()
+                self.test_verme_id = data.get("id")
+                
+                self.log_result("Create Motorin Verme", True, f"Verme created with ID: {self.test_verme_id}")
+                return True
+            else:
+                self.log_result("Create Motorin Verme", False, "Verme creation failed", response)
+                return False
+                
+        except Exception as e:
+            self.log_result("Create Motorin Verme", False, f"Exception: {str(e)}")
+            return False
+    
+    def test_get_motorin_verme(self):
+        """Test getting all motorin verme"""
+        try:
+            response = self.session.get(f"{BACKEND_URL}/motorin-verme")
+            
+            if response.status_code == 200:
+                data = response.json()
+                verme_count = len(data)
+                
+                self.log_result("Get All Motorin Verme", True, f"Retrieved {verme_count} verme records")
+                return True
+            else:
+                self.log_result("Get All Motorin Verme", False, "Failed to get verme records", response)
+                return False
+                
+        except Exception as e:
+            self.log_result("Get All Motorin Verme", False, f"Exception: {str(e)}")
+            return False
+    
+    def test_get_single_motorin_verme(self):
+        """Test getting a single motorin verme"""
+        if not self.test_verme_id:
+            self.log_result("Get Single Motorin Verme", False, "No test verme ID available")
+            return False
+            
+        try:
+            response = self.session.get(f"{BACKEND_URL}/motorin-verme/{self.test_verme_id}")
+            
+            if response.status_code == 200:
+                data = response.json()
+                miktar = data.get("miktar_litre")
+                
+                self.log_result("Get Single Motorin Verme", True, f"Retrieved verme: {miktar} litre")
+                return True
+            else:
+                self.log_result("Get Single Motorin Verme", False, "Failed to get single verme", response)
+                return False
+                
+        except Exception as e:
+            self.log_result("Get Single Motorin Verme", False, f"Exception: {str(e)}")
+            return False
+    
+    def test_update_motorin_verme(self):
+        """Test updating a motorin verme"""
+        if not self.test_verme_id or not self.test_arac_id:
+            self.log_result("Update Motorin Verme", False, "No test verme or arac ID available")
+            return False
+            
+        today = datetime.now().strftime("%Y-%m-%d")
+        update_data = {
+            "tarih": today,
+            "arac_id": self.test_arac_id,
+            "arac_plaka": "34 MOT 123",
+            "arac_bilgi": "Mercedes Actros Updated",
+            "miktar_litre": 250.0,
+            "kilometre": 126000.0,
+            "sofor_id": "",
+            "sofor_adi": "Veli Ali",
+            "personel_id": "",
+            "personel_adi": "Özkan Mehmet",
+            "notlar": "Updated test verme kaydı"
+        }
+        
+        try:
+            response = self.session.put(f"{BACKEND_URL}/motorin-verme/{self.test_verme_id}", json=update_data)
+            
+            if response.status_code == 200:
+                data = response.json()
+                updated_miktar = data.get("miktar_litre")
+                
+                self.log_result("Update Motorin Verme", True, f"Verme updated, new miktar: {updated_miktar} litre")
+                return True
+            else:
+                self.log_result("Update Motorin Verme", False, "Failed to update verme", response)
+                return False
+                
+        except Exception as e:
+            self.log_result("Update Motorin Verme", False, f"Exception: {str(e)}")
+            return False
+    
+    def test_motorin_stok(self):
+        """Test motorin stok API"""
+        try:
+            response = self.session.get(f"{BACKEND_URL}/motorin-stok")
+            
+            if response.status_code == 200:
+                data = response.json()
+                mevcut_stok = data.get("mevcut_stok", 0)
+                toplam_alim = data.get("toplam_alim", 0)
+                toplam_verme = data.get("toplam_verme", 0)
+                
+                self.log_result("Motorin Stok", True, f"Stok: {mevcut_stok}L, Alım: {toplam_alim}L, Verme: {toplam_verme}L")
+                return True
+            else:
+                self.log_result("Motorin Stok", False, "Failed to get motorin stok", response)
+                return False
+                
+        except Exception as e:
+            self.log_result("Motorin Stok", False, f"Exception: {str(e)}")
+            return False
+    
+    def test_motorin_ozet(self):
+        """Test motorin ozet API"""
+        try:
+            response = self.session.get(f"{BACKEND_URL}/motorin-ozet")
+            
+            if response.status_code == 200:
+                data = response.json()
+                mevcut_stok = data.get("mevcut_stok", 0)
+                ayki_alim = data.get("ayki_alim", 0)
+                ayki_maliyet = data.get("ayki_maliyet", 0)
+                tedarikci_sayisi = data.get("tedarikci_sayisi", 0)
+                
+                self.log_result("Motorin Ozet", True, f"Stok: {mevcut_stok}L, Aylık alım: {ayki_alim}L, Tedarikçi: {tedarikci_sayisi}")
+                return True
+            else:
+                self.log_result("Motorin Ozet", False, "Failed to get motorin ozet", response)
+                return False
+                
+        except Exception as e:
+            self.log_result("Motorin Ozet", False, f"Exception: {str(e)}")
+            return False
+    
+    def test_motorin_arac_tuketim(self):
+        """Test motorin arac tuketim raporu API"""
+        try:
+            # Test with date filter
+            today = datetime.now().strftime("%Y-%m-%d")
+            response = self.session.get(f"{BACKEND_URL}/motorin-arac-tuketim?tarih_baslangic={today}&tarih_bitis={today}")
+            
+            if response.status_code == 200:
+                data = response.json()
+                rapor_count = len(data)
+                
+                self.log_result("Motorin Arac Tuketim Raporu", True, f"Retrieved {rapor_count} arac tuketim records")
+                return True
+            else:
+                self.log_result("Motorin Arac Tuketim Raporu", False, "Failed to get arac tuketim raporu", response)
+                return False
+                
+        except Exception as e:
+            self.log_result("Motorin Arac Tuketim Raporu", False, f"Exception: {str(e)}")
             return False
     
     def run_all_tests(self):
