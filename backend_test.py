@@ -460,6 +460,67 @@ class MotorinAPITester:
     def test_motorin_stok(self):
         """Test motorin stok API"""
         try:
+            response = self.session.get(f"{BACKEND_URL}/motorin-stok")
+            
+            if response.status_code == 200:
+                data = response.json()
+                mevcut_stok = data.get("mevcut_stok", 0)
+                toplam_alim = data.get("toplam_alim", 0)
+                toplam_verme = data.get("toplam_verme", 0)
+                
+                self.log_result("Motorin Stok", True, f"Stok: {mevcut_stok}L, Alım: {toplam_alim}L, Verme: {toplam_verme}L")
+                return True
+            else:
+                self.log_result("Motorin Stok", False, "Failed to get motorin stok", response)
+                return False
+                
+        except Exception as e:
+            self.log_result("Motorin Stok", False, f"Exception: {str(e)}")
+            return False
+    
+    def test_motorin_ozet(self):
+        """Test motorin ozet API"""
+        try:
+            response = self.session.get(f"{BACKEND_URL}/motorin-ozet")
+            
+            if response.status_code == 200:
+                data = response.json()
+                mevcut_stok = data.get("mevcut_stok", 0)
+                ayki_alim = data.get("ayki_alim", 0)
+                ayki_maliyet = data.get("ayki_maliyet", 0)
+                tedarikci_sayisi = data.get("tedarikci_sayisi", 0)
+                
+                self.log_result("Motorin Ozet", True, f"Stok: {mevcut_stok}L, Aylık alım: {ayki_alim}L, Tedarikçi: {tedarikci_sayisi}")
+                return True
+            else:
+                self.log_result("Motorin Ozet", False, "Failed to get motorin ozet", response)
+                return False
+                
+        except Exception as e:
+            self.log_result("Motorin Ozet", False, f"Exception: {str(e)}")
+            return False
+    
+    def test_motorin_arac_tuketim(self):
+        """Test motorin arac tuketim raporu API"""
+        try:
+            # Test with date filter
+            today = datetime.now().strftime("%Y-%m-%d")
+            response = self.session.get(f"{BACKEND_URL}/motorin-arac-tuketim?tarih_baslangic={today}&tarih_bitis={today}")
+            
+            if response.status_code == 200:
+                data = response.json()
+                rapor_count = len(data)
+                
+                self.log_result("Motorin Arac Tuketim Raporu", True, f"Retrieved {rapor_count} arac tuketim records")
+                return True
+            else:
+                self.log_result("Motorin Arac Tuketim Raporu", False, "Failed to get arac tuketim raporu", response)
+                return False
+                
+        except Exception as e:
+            self.log_result("Motorin Arac Tuketim Raporu", False, f"Exception: {str(e)}")
+            return False
+    
     def test_delete_motorin_verme(self):
         """Test deleting a motorin verme"""
         if not self.test_verme_id:
