@@ -20,6 +20,7 @@ class MotorinAPITester:
         self.user_data = None
         self.test_tedarikci_id = None
         self.test_alim_id = None
+        self.test_new_fields_alim_id = None  # For testing new fields
         self.test_verme_id = None
         self.test_arac_id = None
         self.results = {
