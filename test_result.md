@@ -186,11 +186,14 @@ backend:
     file: "backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "Motorin alım kayıtları CRUD API'leri eklendi - tarih, miktar, birim fiyat, toplam tutar, fatura/irsaliye no, ödeme durumu"
+      - working: true
+        agent: "testing"
+        comment: "COMPREHENSIVE TESTING COMPLETED: All motorin alım API endpoints tested successfully. POST /api/motorin-alimlar (alım oluşturma), GET /api/motorin-alimlar (listeleme), GET /api/motorin-alimlar/{id} (tekil alım), PUT /api/motorin-alimlar/{id} (güncelleme), DELETE /api/motorin-alimlar/{id} (silme) endpoint'leri çalışıyor. Alım bilgileri (tarih, tedarikci_id, tedarikci_adi, miktar_litre, birim_fiyat, toplam_tutar, fatura_no, irsaliye_no, odeme_durumu, vade_tarihi, notlar) doğru şekilde işleniyor. Stok hesaplaması otomatik güncelleniyor."
 
   - task: "Motorin Verme API'leri (/api/motorin-verme)"
     implemented: true
