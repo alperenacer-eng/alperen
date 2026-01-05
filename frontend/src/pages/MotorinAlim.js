@@ -92,6 +92,17 @@ const MotorinAlim = () => {
     }
   };
 
+  const fetchMarkalar = async () => {
+    try {
+      const res = await axios.get(`${API_URL}/akaryakit-markalari`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setMarkalar(res.data);
+    } catch (error) {
+      console.log('Markalar yüklenemedi');
+    }
+  };
+
   const handleTedarikciChange = (e) => {
     const tedarikciId = e.target.value;
     const tedarikci = tedarikciler.find(t => t.id === tedarikciId);
