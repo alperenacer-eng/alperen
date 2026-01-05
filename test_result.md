@@ -253,6 +253,78 @@ frontend:
         agent: "main"
         comment: "Araç cinsi, marka, model ve şirket tanımlamaları sayfası oluşturuldu"
 
+  - task: "Motorin Dashboard Sayfası"
+    implemented: true
+    working: "NA"
+    file: "frontend/src/pages/MotorinDashboard.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Motorin modülü ana sayfa - stok gösterimi, özet istatistikler, son kayıtlar"
+
+  - task: "Motorin Alım Sayfası"
+    implemented: true
+    working: "NA"
+    file: "frontend/src/pages/MotorinAlim.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Motorin alım formu - tarih, tedarikçi, miktar, birim fiyat, fatura/irsaliye, ödeme durumu"
+
+  - task: "Motorin Verme Sayfası"
+    implemented: true
+    working: "NA"
+    file: "frontend/src/pages/MotorinVerme.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Araçlara motorin verme formu - araç seçimi, miktar, kilometre, şoför/personel"
+
+  - task: "Motorin Liste Sayfası"
+    implemented: true
+    working: "NA"
+    file: "frontend/src/pages/MotorinListe.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Alım ve verme kayıtları listesi - tab görünümü, filtreleme, silme"
+
+  - task: "Motorin Kaynaklar Sayfası"
+    implemented: true
+    working: "NA"
+    file: "frontend/src/pages/MotorinKaynaklar.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Tedarikçi firma yönetimi - ekleme, düzenleme, silme"
+
+  - task: "Motorin Raporlar Sayfası"
+    implemented: true
+    working: "NA"
+    file: "frontend/src/pages/MotorinRaporlar.js"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Araç bazlı tüketim raporu, tarih filtreleme, özet istatistikler"
+
 metadata:
   created_by: "main_agent"
   version: "1.0"
