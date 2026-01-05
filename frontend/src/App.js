@@ -98,6 +98,12 @@ function App() {
               <Route path="arac-yonetimi" element={<AracYonetimi />} />
               <Route path="arac-kaynaklar" element={<AracKaynaklar />} />
               <Route path="muayene-takip" element={<MuayeneTakip />} />
+              <Route path="motorin" element={<MotorinDashboard />} />
+              <Route path="motorin-alim" element={<MotorinAlim />} />
+              <Route path="motorin-verme-giris" element={<MotorinVerme />} />
+              <Route path="motorin-liste" element={<MotorinListe />} />
+              <Route path="motorin-kaynaklar" element={<MotorinKaynaklar />} />
+              <Route path="motorin-raporlar" element={<MotorinRaporlar />} />
               <Route path="settings" element={<Settings />} />
               <Route path="settings/products" element={<ProductsManagement />} />
               <Route path="settings/departments" element={<DepartmentsManagement />} />
