@@ -216,11 +216,14 @@ backend:
     file: "backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "Motorin stok hesaplama ve özet istatistikleri API'leri eklendi"
+      - working: true
+        agent: "testing"
+        comment: "COMPREHENSIVE TESTING COMPLETED: Motorin stok ve özet API'leri test edildi ve başarılı. GET /api/motorin-stok endpoint'i mevcut_stok, toplam_alim, toplam_verme bilgilerini doğru hesaplıyor. GET /api/motorin-ozet endpoint'i mevcut_stok, ayki_alim, ayki_maliyet, ayki_verme, bugunki_alim_sayisi, bugunki_verme_sayisi, tedarikci_sayisi istatistiklerini döndürüyor. Stok hesaplamaları alım ve verme işlemlerinde otomatik güncelleniyor."
 
   - task: "Motorin Araç Tüketim Raporu API'si (/api/motorin-arac-tuketim)"
     implemented: true
