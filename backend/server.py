@@ -2221,6 +2221,37 @@ async def delete_bosaltim_tesisi(id: str, current_user: dict = Depends(get_curre
     await db.bosaltim_tesisleri.delete_one({"id": id})
     return {"message": "Tesis silindi"}
 
+# Akaryakıt Markaları
+class AkaryakitMarkasiCreate(BaseModel):
+    name: str
+    notlar: str = ""
+
+@api_router.post("/akaryakit-markalari")
+async def create_akaryakit_markasi(input: AkaryakitMarkasiCreate, current_user: dict = Depends(get_current_user)):
+    data = input.model_dump()
+    data['id'] = str(datetime.now(timezone.utc).timestamp()).replace(".", "")
+    data['created_at'] = datetime.now(timezone.utc).isoformat()
+    await db.akaryakit_markalari.insert_one(data)
+    return {k: v for k, v in data.items() if k != '_id'}
+
+@api_router.get("/akaryakit-markalari")
+async def get_akaryakit_markalari(current_user: dict = Depends(get_current_user)):
+    records = await db.akaryakit_markalari.find({}, {"_id": 0}).sort("name", 1).to_list(1000)
+    return records
+
+@api_router.put("/akaryakit-markalari/{id}")
+async def update_akaryakit_markasi(id: str, input: AkaryakitMarkasiCreate, current_user: dict = Depends(get_current_user)):
+    data = input.model_dump()
+    data['updated_at'] = datetime.now(timezone.utc).isoformat()
+    await db.akaryakit_markalari.update_one({"id": id}, {"$set": data})
+    updated = await db.akaryakit_markalari.find_one({"id": id}, {"_id": 0})
+    return updated
+
+@api_router.delete("/akaryakit-markalari/{id}")
+async def delete_akaryakit_markasi(id: str, current_user: dict = Depends(get_current_user)):
+    await db.akaryakit_markalari.delete_one({"id": id})
+    return {"message": "Marka silindi"}
+
 # Motorin Alım Kayıtları
 class MotorinAlimCreate(BaseModel):
     tarih: str
