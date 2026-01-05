@@ -201,11 +201,14 @@ backend:
     file: "backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "Araçlara motorin verme CRUD API'leri eklendi - araç seçimi, miktar, kilometre, şoför/personel bilgisi"
+      - working: true
+        agent: "testing"
+        comment: "COMPREHENSIVE TESTING COMPLETED: All motorin verme API endpoints tested successfully. POST /api/motorin-verme (verme oluşturma), GET /api/motorin-verme (listeleme), GET /api/motorin-verme/{id} (tekil verme), PUT /api/motorin-verme/{id} (güncelleme), DELETE /api/motorin-verme/{id} (silme) endpoint'leri çalışıyor. Verme bilgileri (tarih, arac_id, arac_plaka, arac_bilgi, miktar_litre, kilometre, sofor_id, sofor_adi, personel_id, personel_adi, notlar) doğru şekilde işleniyor. Stok hesaplaması otomatik güncelleniyor."
 
   - task: "Motorin Stok ve Özet API'leri (/api/motorin-stok, /api/motorin-ozet)"
     implemented: true
