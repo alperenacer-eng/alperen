@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Backend API Test Suite for Vehicle Management System
-Tests authentication and vehicle CRUD operations
+Backend API Test Suite for Motorin Management System
+Tests authentication and motorin module CRUD operations
 """
 
 import requests
@@ -13,7 +13,7 @@ from datetime import datetime
 # Backend URL from environment
 BACKEND_URL = "https://getir-calisma.preview.emergentagent.com/api"
 
-class VehicleAPITester:
+class MotorinAPITester:
     def __init__(self):
         self.session = requests.Session()
         self.token = None
