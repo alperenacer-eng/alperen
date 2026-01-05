@@ -460,6 +460,85 @@ class MotorinAPITester:
     def test_motorin_stok(self):
         """Test motorin stok API"""
         try:
+    def test_delete_motorin_verme(self):
+        """Test deleting a motorin verme"""
+        if not self.test_verme_id:
+            self.log_result("Delete Motorin Verme", False, "No test verme ID available")
+            return False
+            
+        try:
+            response = self.session.delete(f"{BACKEND_URL}/motorin-verme/{self.test_verme_id}")
+            
+            if response.status_code == 200:
+                self.log_result("Delete Motorin Verme", True, "Verme deleted successfully")
+                return True
+            else:
+                self.log_result("Delete Motorin Verme", False, "Failed to delete verme", response)
+                return False
+                
+        except Exception as e:
+            self.log_result("Delete Motorin Verme", False, f"Exception: {str(e)}")
+            return False
+    
+    def test_delete_motorin_alim(self):
+        """Test deleting a motorin alim"""
+        if not self.test_alim_id:
+            self.log_result("Delete Motorin Alim", False, "No test alim ID available")
+            return False
+            
+        try:
+            response = self.session.delete(f"{BACKEND_URL}/motorin-alimlar/{self.test_alim_id}")
+            
+            if response.status_code == 200:
+                self.log_result("Delete Motorin Alim", True, "Alim deleted successfully")
+                return True
+            else:
+                self.log_result("Delete Motorin Alim", False, "Failed to delete alim", response)
+                return False
+                
+        except Exception as e:
+            self.log_result("Delete Motorin Alim", False, f"Exception: {str(e)}")
+            return False
+    
+    def test_delete_tedarikci(self):
+        """Test deleting a motorin tedarikci"""
+        if not self.test_tedarikci_id:
+            self.log_result("Delete Motorin Tedarikci", False, "No test tedarikci ID available")
+            return False
+            
+        try:
+            response = self.session.delete(f"{BACKEND_URL}/motorin-tedarikciler/{self.test_tedarikci_id}")
+            
+            if response.status_code == 200:
+                self.log_result("Delete Motorin Tedarikci", True, "Tedarikci deleted successfully")
+                return True
+            else:
+                self.log_result("Delete Motorin Tedarikci", False, "Failed to delete tedarikci", response)
+                return False
+                
+        except Exception as e:
+            self.log_result("Delete Motorin Tedarikci", False, f"Exception: {str(e)}")
+            return False
+    
+    def test_delete_test_arac(self):
+        """Test deleting the test vehicle"""
+        if not self.test_arac_id:
+            self.log_result("Delete Test Vehicle", False, "No test arac ID available")
+            return False
+            
+        try:
+            response = self.session.delete(f"{BACKEND_URL}/araclar/{self.test_arac_id}")
+            
+            if response.status_code == 200:
+                self.log_result("Delete Test Vehicle", True, "Test vehicle deleted successfully")
+                return True
+            else:
+                self.log_result("Delete Test Vehicle", False, "Failed to delete test vehicle", response)
+                return False
+                
+        except Exception as e:
+            self.log_result("Delete Test Vehicle", False, f"Exception: {str(e)}")
+            return False
             response = self.session.get(f"{BACKEND_URL}/motorin-stok")
             
             if response.status_code == 200:
