@@ -109,6 +109,17 @@ const MotorinListe = () => {
     }
   };
 
+  const fetchMarkalar = async () => {
+    try {
+      const res = await axios.get(`${API_URL}/akaryakit-markalari`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setMarkalar(res.data);
+    } catch (error) {
+      console.log('Markalar yüklenemedi');
+    }
+  };
+
   const fetchAraclar = async () => {
     try {
       const res = await axios.get(`${API_URL}/araclar`, {
