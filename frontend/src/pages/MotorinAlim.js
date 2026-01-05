@@ -219,14 +219,17 @@ const MotorinAlim = () => {
             {/* Boşaltım Yapılan Tesis */}
             <div>
               <Label className="text-slate-300">Boşaltım Yapılan Tesis *</Label>
-              <Input
-                type="text"
+              <select
                 value={formData.bosaltim_tesisi}
-                onChange={(e) => setFormData({ ...formData, bosaltim_tesisi: e.target.value })}
-                className="bg-slate-800 border-slate-700 text-white mt-1"
-                placeholder="Tesis adı veya lokasyon"
+                onChange={handleTesisChange}
+                className="w-full bg-slate-800 border border-slate-700 text-white rounded-md px-3 py-2 mt-1"
                 required
-              />
+              >
+                <option value="">Tesis Seçin</option>
+                {tesisler.map(t => (
+                  <option key={t.id} value={t.name}>{t.name}</option>
+                ))}
+              </select>
             </div>
           </div>
         </div>
