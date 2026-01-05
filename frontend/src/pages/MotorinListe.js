@@ -638,12 +638,17 @@ const MotorinListe = () => {
                 </div>
                 <div>
                   <Label className="text-slate-300">Boşaltım Tesisi *</Label>
-                  <Input
+                  <select
                     value={editingAlim.bosaltim_tesisi}
                     onChange={(e) => setEditingAlim({ ...editingAlim, bosaltim_tesisi: e.target.value })}
-                    className="bg-slate-800 border-slate-700 text-white mt-1"
+                    className="w-full bg-slate-800 border border-slate-700 text-white rounded-md px-3 py-2 mt-1"
                     required
-                  />
+                  >
+                    <option value="">Seçin</option>
+                    {tesisler.map(t => (
+                      <option key={t.id} value={t.name}>{t.name}</option>
+                    ))}
+                  </select>
                 </div>
               </div>
 
