@@ -81,6 +81,8 @@ const Layout = () => {
     ? [...baseMenuItems, ...personelMenuItems]
     : currentModule?.id === 'araclar'
     ? [...baseMenuItems, ...araclarMenuItems]
+    : currentModule?.id === 'motorin'
+    ? [...baseMenuItems, ...motorinMenuItems]
     : baseMenuItems;
 
   const handleLogout = () => {
