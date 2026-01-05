@@ -65,6 +65,14 @@ const Layout = () => {
     { path: '/arac-kaynaklar', icon: Database, label: 'Kaynaklar', testId: 'nav-arac-kaynaklar' },
   ];
 
+  const motorinMenuItems = [
+    { path: '/motorin-alim', icon: TrendingUp, label: 'Motorin Alımı', testId: 'nav-motorin-alim' },
+    { path: '/motorin-verme-giris', icon: TrendingDown, label: 'Araçlara Verme', testId: 'nav-motorin-verme' },
+    { path: '/motorin-liste', icon: List, label: 'Kayıtlar', testId: 'nav-motorin-liste' },
+    { path: '/motorin-raporlar', icon: BarChart3, label: 'Raporlar', testId: 'nav-motorin-raporlar' },
+    { path: '/motorin-kaynaklar', icon: Database, label: 'Kaynaklar', testId: 'nav-motorin-kaynaklar' },
+  ];
+
   const menuItems = currentModule?.id === 'bims' 
     ? [...baseMenuItems, ...bimsMenuItems]
     : currentModule?.id === 'cimento'
