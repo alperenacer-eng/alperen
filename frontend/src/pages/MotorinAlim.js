@@ -218,49 +218,53 @@ const MotorinAlim = () => {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             {/* Çekici Plaka */}
             <div>
-              <Label className="text-slate-300">Çekici Plaka</Label>
+              <Label className="text-slate-300">Çekici Plaka *</Label>
               <Input
                 type="text"
                 value={formData.cekici_plaka}
                 onChange={(e) => setFormData({ ...formData, cekici_plaka: e.target.value.toUpperCase() })}
                 className="bg-slate-800 border-slate-700 text-white mt-1 uppercase"
                 placeholder="34 ABC 123"
+                required
               />
             </div>
 
             {/* Dorse Plaka */}
             <div>
-              <Label className="text-slate-300">Dorse Plaka</Label>
+              <Label className="text-slate-300">Dorse Plaka *</Label>
               <Input
                 type="text"
                 value={formData.dorse_plaka}
                 onChange={(e) => setFormData({ ...formData, dorse_plaka: e.target.value.toUpperCase() })}
                 className="bg-slate-800 border-slate-700 text-white mt-1 uppercase"
                 placeholder="34 DEF 456"
+                required
               />
             </div>
 
             {/* Şoför Adı */}
             <div>
-              <Label className="text-slate-300">Şoför Adı</Label>
+              <Label className="text-slate-300">Şoför Adı *</Label>
               <Input
                 type="text"
                 value={formData.sofor_adi}
                 onChange={(e) => setFormData({ ...formData, sofor_adi: e.target.value })}
                 className="bg-slate-800 border-slate-700 text-white mt-1"
                 placeholder="Şoför adı"
+                required
               />
             </div>
 
             {/* Şoför Soyadı */}
             <div>
-              <Label className="text-slate-300">Şoför Soyadı</Label>
+              <Label className="text-slate-300">Şoför Soyadı *</Label>
               <Input
                 type="text"
                 value={formData.sofor_soyadi}
                 onChange={(e) => setFormData({ ...formData, sofor_soyadi: e.target.value })}
                 className="bg-slate-800 border-slate-700 text-white mt-1"
                 placeholder="Şoför soyadı"
+                required
               />
             </div>
           </div>
