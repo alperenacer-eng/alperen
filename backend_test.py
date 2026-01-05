@@ -352,6 +352,61 @@ class MotorinAPITester:
         except Exception as e:
             self.log_result("Get All Motorin Alimlar", False, f"Exception: {str(e)}")
             return False
+
+    def test_verify_new_fields_in_list(self):
+        """Test that new fields are returned when listing motorin alimlar"""
+        try:
+            response = self.session.get(f"{BACKEND_URL}/motorin-alimlar")
+            
+            if response.status_code == 200:
+                data = response.json()
+                
+                # Find our test record with new fields
+                test_record = None
+                if hasattr(self, 'test_new_fields_alim_id') and self.test_new_fields_alim_id:
+                    test_record = next((record for record in data if record.get('id') == self.test_new_fields_alim_id), None)
+                
+                if test_record:
+                    # Verify new fields are present in the list response
+                    new_fields_check = {
+                        "cekici_plaka": "34 ABC 123",
+                        "dorse_plaka": "34 DEF 456", 
+                        "sofor_adi": "Ahmet",
+                        "sofor_soyadi": "Yılmaz",
+                        "miktar_kg": 8350,
+                        "kesafet": 0.835,
+                        "kantar_kg": 8400,
+                        "teslim_alan": "Mehmet Demir"
+                    }
+                    
+                    missing_fields = []
+                    incorrect_values = []
+                    
+                    for field, expected_value in new_fields_check.items():
+                        if field not in test_record:
+                            missing_fields.append(field)
+                        elif test_record[field] != expected_value:
+                            incorrect_values.append(f"{field}: expected {expected_value}, got {test_record[field]}")
+                    
+                    if missing_fields:
+                        self.log_result("Verify New Fields in List", False, f"Missing fields in list response: {', '.join(missing_fields)}")
+                        return False
+                    elif incorrect_values:
+                        self.log_result("Verify New Fields in List", False, f"Incorrect values in list response: {', '.join(incorrect_values)}")
+                        return False
+                    else:
+                        self.log_result("Verify New Fields in List", True, "All new fields present and correct in list response")
+                        return True
+                else:
+                    self.log_result("Verify New Fields in List", False, "Test record with new fields not found in list")
+                    return False
+            else:
+                self.log_result("Verify New Fields in List", False, "Failed to get alimlar list", response)
+                return False
+                
+        except Exception as e:
+            self.log_result("Verify New Fields in List", False, f"Exception: {str(e)}")
+            return False
     
     def test_get_single_motorin_alim(self):
         """Test getting a single motorin alim"""
