@@ -11,7 +11,7 @@ import os
 from datetime import datetime
 
 # Backend URL from environment
-BACKEND_URL = "https://getir-calisma.preview.emergentagent.com/api"
+BACKEND_URL = "https://project-finder-50.preview.emergentagent.com/api"
 
 class MotorinAPITester:
     def __init__(self):
