@@ -646,6 +646,20 @@ const MotorinListe = () => {
                   </select>
                 </div>
                 <div>
+                  <Label className="text-slate-300">Akaryakıt Markası *</Label>
+                  <select
+                    value={editingAlim.akaryakit_markasi}
+                    onChange={(e) => setEditingAlim({ ...editingAlim, akaryakit_markasi: e.target.value })}
+                    className="w-full bg-slate-800 border border-slate-700 text-white rounded-md px-3 py-2 mt-1"
+                    required
+                  >
+                    <option value="">Seçin</option>
+                    {markalar.map(m => (
+                      <option key={m.id} value={m.name}>{m.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
                   <Label className="text-slate-300">Teslim Alan *</Label>
                   <Input
                     value={editingAlim.teslim_alan}
