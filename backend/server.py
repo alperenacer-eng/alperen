@@ -2149,6 +2149,297 @@ async def delete_sigorta_acentasi(id: str, current_user: dict = Depends(get_curr
     await db.sigorta_acentalari.delete_one({"id": id})
     return {"message": "Sigorta acentası silindi"}
 
+# =====================================================
+# MOTORİN MODÜLÜ API'LERİ
+# =====================================================
+
+# Motorin Tedarikçi Firmaları
+class MotorinTedarikciCreate(BaseModel):
+    name: str
+    yetkili_kisi: str = ""
+    telefon: str = ""
+    email: str = ""
+    adres: str = ""
+    vergi_no: str = ""
+    notlar: str = ""
+
+@api_router.post("/motorin-tedarikciler")
+async def create_motorin_tedarikci(input: MotorinTedarikciCreate, current_user: dict = Depends(get_current_user)):
+    data = input.model_dump()
+    data['id'] = str(datetime.now(timezone.utc).timestamp()).replace(".", "")
+    data['created_at'] = datetime.now(timezone.utc).isoformat()
+    await db.motorin_tedarikciler.insert_one(data)
+    return {k: v for k, v in data.items() if k != '_id'}
+
+@api_router.get("/motorin-tedarikciler")
+async def get_motorin_tedarikciler(current_user: dict = Depends(get_current_user)):
+    records = await db.motorin_tedarikciler.find({}, {"_id": 0}).sort("name", 1).to_list(1000)
+    return records
+
+@api_router.put("/motorin-tedarikciler/{id}")
+async def update_motorin_tedarikci(id: str, input: MotorinTedarikciCreate, current_user: dict = Depends(get_current_user)):
+    data = input.model_dump()
+    data['updated_at'] = datetime.now(timezone.utc).isoformat()
+    await db.motorin_tedarikciler.update_one({"id": id}, {"$set": data})
+    updated = await db.motorin_tedarikciler.find_one({"id": id}, {"_id": 0})
+    return updated
+
+@api_router.delete("/motorin-tedarikciler/{id}")
+async def delete_motorin_tedarikci(id: str, current_user: dict = Depends(get_current_user)):
+    await db.motorin_tedarikciler.delete_one({"id": id})
+    return {"message": "Tedarikçi silindi"}
+
+# Motorin Alım Kayıtları
+class MotorinAlimCreate(BaseModel):
+    tarih: str
+    tedarikci_id: str = ""
+    tedarikci_adi: str = ""
+    miktar_litre: float
+    birim_fiyat: float
+    toplam_tutar: float
+    fatura_no: str = ""
+    irsaliye_no: str = ""
+    odeme_durumu: str = "beklemede"  # beklemede, odendi, vadeli
+    vade_tarihi: str = ""
+    notlar: str = ""
+
+@api_router.post("/motorin-alimlar")
+async def create_motorin_alim(input: MotorinAlimCreate, current_user: dict = Depends(get_current_user)):
+    data = input.model_dump()
+    data['id'] = str(datetime.now(timezone.utc).timestamp()).replace(".", "")
+    data['created_at'] = datetime.now(timezone.utc).isoformat()
+    data['created_by'] = current_user['id']
+    data['created_by_name'] = current_user['name']
+    await db.motorin_alimlar.insert_one(data)
+    
+    # Stok güncelle
+    await update_motorin_stok()
+    
+    return {k: v for k, v in data.items() if k != '_id'}
+
+@api_router.get("/motorin-alimlar")
+async def get_motorin_alimlar(
+    baslangic_tarihi: str = None,
+    bitis_tarihi: str = None,
+    tedarikci_id: str = None,
+    current_user: dict = Depends(get_current_user)
+):
+    query = {}
+    if baslangic_tarihi and bitis_tarihi:
+        query['tarih'] = {"$gte": baslangic_tarihi, "$lte": bitis_tarihi}
+    if tedarikci_id:
+        query['tedarikci_id'] = tedarikci_id
+    records = await db.motorin_alimlar.find(query, {"_id": 0}).sort("tarih", -1).to_list(1000)
+    return records
+
+@api_router.get("/motorin-alimlar/{id}")
+async def get_motorin_alim(id: str, current_user: dict = Depends(get_current_user)):
+    record = await db.motorin_alimlar.find_one({"id": id}, {"_id": 0})
+    if not record:
+        raise HTTPException(status_code=404, detail="Kayıt bulunamadı")
+    return record
+
+@api_router.put("/motorin-alimlar/{id}")
+async def update_motorin_alim(id: str, input: MotorinAlimCreate, current_user: dict = Depends(get_current_user)):
+    data = input.model_dump()
+    data['updated_at'] = datetime.now(timezone.utc).isoformat()
+    await db.motorin_alimlar.update_one({"id": id}, {"$set": data})
+    await update_motorin_stok()
+    updated = await db.motorin_alimlar.find_one({"id": id}, {"_id": 0})
+    return updated
+
+@api_router.delete("/motorin-alimlar/{id}")
+async def delete_motorin_alim(id: str, current_user: dict = Depends(get_current_user)):
+    await db.motorin_alimlar.delete_one({"id": id})
+    await update_motorin_stok()
+    return {"message": "Alım kaydı silindi"}
+
+# Araçlara Motorin Verme Kayıtları
+class MotorinVermeCreate(BaseModel):
+    tarih: str
+    arac_id: str
+    arac_plaka: str = ""
+    arac_bilgi: str = ""
+    miktar_litre: float
+    kilometre: float = 0
+    sofor_id: str = ""
+    sofor_adi: str = ""
+    personel_id: str = ""
+    personel_adi: str = ""
+    notlar: str = ""
+
+@api_router.post("/motorin-verme")
+async def create_motorin_verme(input: MotorinVermeCreate, current_user: dict = Depends(get_current_user)):
+    data = input.model_dump()
+    data['id'] = str(datetime.now(timezone.utc).timestamp()).replace(".", "")
+    data['created_at'] = datetime.now(timezone.utc).isoformat()
+    data['created_by'] = current_user['id']
+    data['created_by_name'] = current_user['name']
+    await db.motorin_verme.insert_one(data)
+    
+    # Stok güncelle
+    await update_motorin_stok()
+    
+    return {k: v for k, v in data.items() if k != '_id'}
+
+@api_router.get("/motorin-verme")
+async def get_motorin_verme(
+    baslangic_tarihi: str = None,
+    bitis_tarihi: str = None,
+    arac_id: str = None,
+    current_user: dict = Depends(get_current_user)
+):
+    query = {}
+    if baslangic_tarihi and bitis_tarihi:
+        query['tarih'] = {"$gte": baslangic_tarihi, "$lte": bitis_tarihi}
+    if arac_id:
+        query['arac_id'] = arac_id
+    records = await db.motorin_verme.find(query, {"_id": 0}).sort("tarih", -1).to_list(1000)
+    return records
+
+@api_router.get("/motorin-verme/{id}")
+async def get_motorin_verme_by_id(id: str, current_user: dict = Depends(get_current_user)):
+    record = await db.motorin_verme.find_one({"id": id}, {"_id": 0})
+    if not record:
+        raise HTTPException(status_code=404, detail="Kayıt bulunamadı")
+    return record
+
+@api_router.put("/motorin-verme/{id}")
+async def update_motorin_verme(id: str, input: MotorinVermeCreate, current_user: dict = Depends(get_current_user)):
+    data = input.model_dump()
+    data['updated_at'] = datetime.now(timezone.utc).isoformat()
+    await db.motorin_verme.update_one({"id": id}, {"$set": data})
+    await update_motorin_stok()
+    updated = await db.motorin_verme.find_one({"id": id}, {"_id": 0})
+    return updated
+
+@api_router.delete("/motorin-verme/{id}")
+async def delete_motorin_verme(id: str, current_user: dict = Depends(get_current_user)):
+    await db.motorin_verme.delete_one({"id": id})
+    await update_motorin_stok()
+    return {"message": "Verme kaydı silindi"}
+
+# Stok Hesaplama
+async def update_motorin_stok():
+    # Toplam alım
+    alimlar = await db.motorin_alimlar.find({}, {"miktar_litre": 1}).to_list(10000)
+    toplam_alim = sum([a.get('miktar_litre', 0) for a in alimlar])
+    
+    # Toplam verme
+    vermeler = await db.motorin_verme.find({}, {"miktar_litre": 1}).to_list(10000)
+    toplam_verme = sum([v.get('miktar_litre', 0) for v in vermeler])
+    
+    # Stok güncelle
+    stok = {
+        "toplam_alim": toplam_alim,
+        "toplam_verme": toplam_verme,
+        "mevcut_stok": toplam_alim - toplam_verme,
+        "updated_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.motorin_stok.update_one({}, {"$set": stok}, upsert=True)
+
+@api_router.get("/motorin-stok")
+async def get_motorin_stok(current_user: dict = Depends(get_current_user)):
+    stok = await db.motorin_stok.find_one({}, {"_id": 0})
+    if not stok:
+        return {
+            "toplam_alim": 0,
+            "toplam_verme": 0,
+            "mevcut_stok": 0
+        }
+    return stok
+
+# Motorin Özet İstatistikleri
+@api_router.get("/motorin-ozet")
+async def get_motorin_ozet(current_user: dict = Depends(get_current_user)):
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    month_start = datetime.now(timezone.utc).replace(day=1).strftime("%Y-%m-%d")
+    
+    # Stok
+    stok = await db.motorin_stok.find_one({}, {"_id": 0}) or {"mevcut_stok": 0, "toplam_alim": 0, "toplam_verme": 0}
+    
+    # Bu ayki alımlar
+    ayki_alimlar = await db.motorin_alimlar.find({"tarih": {"$gte": month_start}}, {"_id": 0}).to_list(1000)
+    ayki_alim_toplam = sum([a.get('miktar_litre', 0) for a in ayki_alimlar])
+    ayki_maliyet = sum([a.get('toplam_tutar', 0) for a in ayki_alimlar])
+    
+    # Bu ayki vermeler
+    ayki_vermeler = await db.motorin_verme.find({"tarih": {"$gte": month_start}}, {"_id": 0}).to_list(1000)
+    ayki_verme_toplam = sum([v.get('miktar_litre', 0) for v in ayki_vermeler])
+    
+    # Bugünkü işlemler
+    bugunki_alimlar = await db.motorin_alimlar.find({"tarih": today}, {"_id": 0}).to_list(100)
+    bugunki_vermeler = await db.motorin_verme.find({"tarih": today}, {"_id": 0}).to_list(100)
+    
+    # Tedarikçi ve araç sayısı
+    tedarikci_sayisi = await db.motorin_tedarikciler.count_documents({})
+    
+    return {
+        "mevcut_stok": stok.get("mevcut_stok", 0),
+        "toplam_alim": stok.get("toplam_alim", 0),
+        "toplam_verme": stok.get("toplam_verme", 0),
+        "ayki_alim": ayki_alim_toplam,
+        "ayki_maliyet": ayki_maliyet,
+        "ayki_verme": ayki_verme_toplam,
+        "bugunki_alim_sayisi": len(bugunki_alimlar),
+        "bugunki_verme_sayisi": len(bugunki_vermeler),
+        "tedarikci_sayisi": tedarikci_sayisi
+    }
+
+# Araç Bazlı Tüketim Raporu
+@api_router.get("/motorin-arac-tuketim")
+async def get_motorin_arac_tuketim(
+    baslangic_tarihi: str = None,
+    bitis_tarihi: str = None,
+    current_user: dict = Depends(get_current_user)
+):
+    query = {}
+    if baslangic_tarihi and bitis_tarihi:
+        query['tarih'] = {"$gte": baslangic_tarihi, "$lte": bitis_tarihi}
+    
+    vermeler = await db.motorin_verme.find(query, {"_id": 0}).to_list(10000)
+    
+    # Araç bazlı gruplama
+    arac_tuketim = {}
+    for v in vermeler:
+        arac_id = v.get('arac_id', '')
+        if arac_id not in arac_tuketim:
+            arac_tuketim[arac_id] = {
+                "arac_id": arac_id,
+                "arac_plaka": v.get('arac_plaka', ''),
+                "arac_bilgi": v.get('arac_bilgi', ''),
+                "toplam_litre": 0,
+                "kayit_sayisi": 0,
+                "son_kilometre": 0,
+                "ilk_kilometre": float('inf')
+            }
+        arac_tuketim[arac_id]["toplam_litre"] += v.get('miktar_litre', 0)
+        arac_tuketim[arac_id]["kayit_sayisi"] += 1
+        km = v.get('kilometre', 0)
+        if km > 0:
+            if km > arac_tuketim[arac_id]["son_kilometre"]:
+                arac_tuketim[arac_id]["son_kilometre"] = km
+            if km < arac_tuketim[arac_id]["ilk_kilometre"]:
+                arac_tuketim[arac_id]["ilk_kilometre"] = km
+    
+    # Ortalama tüketim hesapla
+    result = []
+    for arac_id, data in arac_tuketim.items():
+        if data["ilk_kilometre"] == float('inf'):
+            data["ilk_kilometre"] = 0
+        
+        km_fark = data["son_kilometre"] - data["ilk_kilometre"]
+        if km_fark > 0 and data["toplam_litre"] > 0:
+            data["ortalama_tuketim"] = round((data["toplam_litre"] / km_fark) * 100, 2)
+        else:
+            data["ortalama_tuketim"] = 0
+        
+        result.append(data)
+    
+    # Toplam litreye göre sırala
+    result.sort(key=lambda x: x["toplam_litre"], reverse=True)
+    return result
+
 app.include_router(api_router)
 
 app.add_middleware(
