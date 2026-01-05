@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { 
   TrendingUp, 
   TrendingDown, 
@@ -14,13 +15,15 @@ import {
   Edit, 
   Filter,
   Calendar,
-  Fuel
+  Fuel,
+  X,
+  Save
 } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL + '/api';
 
 const MotorinListe = () => {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('alim');
   const [alimlar, setAlimlar] = useState([]);
@@ -32,9 +35,19 @@ const MotorinListe = () => {
     baslangic: '',
     bitis: ''
   });
+  
+  // Düzenleme Modal State
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingAlim, setEditingAlim] = useState(null);
+  const [editingVerme, setEditingVerme] = useState(null);
+  const [tedarikciler, setTedarikciler] = useState([]);
+  const [araclar, setAraclar] = useState([]);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     fetchData();
+    fetchTedarikciler();
+    fetchAraclar();
   }, [dateFilter]);
 
   const fetchData = async () => {
@@ -70,6 +83,28 @@ const MotorinListe = () => {
     }
   };
 
+  const fetchTedarikciler = async () => {
+    try {
+      const res = await axios.get(`${API_URL}/motorin-tedarikciler`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setTedarikciler(res.data);
+    } catch (error) {
+      console.log('Tedarikçiler yüklenemedi');
+    }
+  };
+
+  const fetchAraclar = async () => {
+    try {
+      const res = await axios.get(`${API_URL}/araclar`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setAraclar(res.data);
+    } catch (error) {
+      console.log('Araçlar yüklenemedi');
+    }
+  };
+
   const handleDeleteAlim = async (id) => {
     if (!window.confirm('Bu alım kaydını silmek istediğinize emin misiniz?')) return;
     
@@ -97,6 +132,114 @@ const MotorinListe = () => {
       toast.error('Silinemedi');
     }
   };
+
+  // Düzenleme işlemleri
+  const handleEditAlim = (alim) => {
+    setEditingAlim({
+      ...alim,
+      miktar_litre: alim.miktar_litre?.toString() || '',
+      miktar_kg: alim.miktar_kg?.toString() || '',
+      kesafet: alim.kesafet?.toString() || '',
+      kantar_kg: alim.kantar_kg?.toString() || '',
+      birim_fiyat: alim.birim_fiyat?.toString() || '',
+      toplam_tutar: alim.toplam_tutar?.toString() || ''
+    });
+    setEditingVerme(null);
+    setShowEditModal(true);
+  };
+
+  const handleEditVerme = (verme) => {
+    setEditingVerme({
+      ...verme,
+      miktar_litre: verme.miktar_litre?.toString() || '',
+      kilometre: verme.kilometre?.toString() || ''
+    });
+    setEditingAlim(null);
+    setShowEditModal(true);
+  };
+
+  const handleSaveAlim = async () => {
+    // Zorunlu alan kontrolü
+    if (!editingAlim.tarih || !editingAlim.tedarikci_adi || !editingAlim.cekici_plaka || 
+        !editingAlim.dorse_plaka || !editingAlim.sofor_adi || !editingAlim.sofor_soyadi ||
+        !editingAlim.miktar_litre || !editingAlim.miktar_kg || !editingAlim.kesafet ||
+        !editingAlim.kantar_kg || !editingAlim.birim_fiyat || !editingAlim.teslim_alan ||
+        !editingAlim.bosaltim_tesisi) {
+      toast.error('Tüm alanları doldurunuz!');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const submitData = {
+        ...editingAlim,
+        miktar_litre: parseFloat(editingAlim.miktar_litre) || 0,
+        miktar_kg: parseFloat(editingAlim.miktar_kg) || 0,
+        kesafet: parseFloat(editingAlim.kesafet) || 0,
+        kantar_kg: parseFloat(editingAlim.kantar_kg) || 0,
+        birim_fiyat: parseFloat(editingAlim.birim_fiyat) || 0,
+        toplam_tutar: parseFloat(editingAlim.toplam_tutar) || 0
+      };
+
+      await axios.put(`${API_URL}/motorin-alimlar/${editingAlim.id}`, submitData, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      toast.success('Kayıt güncellendi');
+      setShowEditModal(false);
+      setEditingAlim(null);
+      fetchData();
+    } catch (error) {
+      toast.error('Güncellenemedi');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSaveVerme = async () => {
+    // Zorunlu alan kontrolü
+    if (!editingVerme.tarih || !editingVerme.arac_id || !editingVerme.miktar_litre) {
+      toast.error('Tarih, araç ve miktar zorunludur!');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const submitData = {
+        ...editingVerme,
+        miktar_litre: parseFloat(editingVerme.miktar_litre) || 0,
+        kilometre: parseFloat(editingVerme.kilometre) || 0
+      };
+
+      await axios.put(`${API_URL}/motorin-verme/${editingVerme.id}`, submitData, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      toast.success('Kayıt güncellendi');
+      setShowEditModal(false);
+      setEditingVerme(null);
+      fetchData();
+    } catch (error) {
+      toast.error('Güncellenemedi');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Otomatik hesaplamalar
+  useEffect(() => {
+    if (editingAlim) {
+      const miktar = parseFloat(editingAlim.miktar_litre) || 0;
+      const birim = parseFloat(editingAlim.birim_fiyat) || 0;
+      const kesafet = parseFloat(editingAlim.kesafet) || 0;
+      
+      setEditingAlim(prev => ({
+        ...prev,
+        toplam_tutar: (miktar * birim).toFixed(2),
+        miktar_kg: kesafet > 0 ? (miktar * kesafet).toFixed(2) : prev.miktar_kg
+      }));
+    }
+  }, [editingAlim?.miktar_litre, editingAlim?.birim_fiyat, editingAlim?.kesafet]);
 
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(amount);
@@ -303,7 +446,7 @@ const MotorinListe = () => {
                             )}
                           </div>
 
-                          <div className="flex gap-4 mt-2 text-xs text-slate-500">
+                          <div className="flex flex-wrap gap-4 mt-2 text-xs text-slate-500">
                             {alim.fatura_no && <span>Fatura: {alim.fatura_no}</span>}
                             {alim.irsaliye_no && <span>İrsaliye: {alim.irsaliye_no}</span>}
                             {alim.teslim_alan && <span>Teslim Alan: {alim.teslim_alan}</span>}
@@ -320,6 +463,14 @@ const MotorinListe = () => {
                           <p className="text-xs text-slate-500">₺{parseFloat(alim.birim_fiyat).toFixed(2)}/L</p>
                         </div>
                         <div className="flex gap-2">
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="text-slate-400 hover:text-blue-400"
+                            onClick={() => handleEditAlim(alim)}
+                          >
+                            <Edit className="w-4 h-4" />
+                          </Button>
                           <Button
                             size="icon"
                             variant="ghost"
@@ -380,6 +531,14 @@ const MotorinListe = () => {
                           <Button
                             size="icon"
                             variant="ghost"
+                            className="text-slate-400 hover:text-blue-400"
+                            onClick={() => handleEditVerme(verme)}
+                          >
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="ghost"
                             className="text-slate-400 hover:text-red-400"
                             onClick={() => handleDeleteVerme(verme.id)}
                           >
@@ -406,6 +565,359 @@ const MotorinListe = () => {
             </div>
           )}
         </>
+      )}
+
+      {/* Düzenleme Modal - Alım */}
+      {showEditModal && editingAlim && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+          <div className="bg-slate-900 rounded-xl border border-slate-800 w-full max-w-4xl my-8">
+            <div className="flex items-center justify-between p-4 border-b border-slate-800">
+              <h2 className="text-lg font-semibold text-white">Alım Kaydını Düzenle</h2>
+              <button
+                onClick={() => { setShowEditModal(false); setEditingAlim(null); }}
+                className="text-slate-400 hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-4 space-y-4 max-h-[70vh] overflow-y-auto">
+              {/* Temel Bilgiler */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div>
+                  <Label className="text-slate-300">Tarih *</Label>
+                  <Input
+                    type="date"
+                    value={editingAlim.tarih}
+                    onChange={(e) => setEditingAlim({ ...editingAlim, tarih: e.target.value })}
+                    className="bg-slate-800 border-slate-700 text-white mt-1"
+                    required
+                  />
+                </div>
+                <div>
+                  <Label className="text-slate-300">Tedarikçi *</Label>
+                  <select
+                    value={editingAlim.tedarikci_id}
+                    onChange={(e) => {
+                      const t = tedarikciler.find(x => x.id === e.target.value);
+                      setEditingAlim({ 
+                        ...editingAlim, 
+                        tedarikci_id: e.target.value,
+                        tedarikci_adi: t ? t.name : editingAlim.tedarikci_adi
+                      });
+                    }}
+                    className="w-full bg-slate-800 border border-slate-700 text-white rounded-md px-3 py-2 mt-1"
+                  >
+                    <option value="">Seçin</option>
+                    {tedarikciler.map(t => (
+                      <option key={t.id} value={t.id}>{t.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <Label className="text-slate-300">Teslim Alan *</Label>
+                  <Input
+                    value={editingAlim.teslim_alan}
+                    onChange={(e) => setEditingAlim({ ...editingAlim, teslim_alan: e.target.value })}
+                    className="bg-slate-800 border-slate-700 text-white mt-1"
+                    required
+                  />
+                </div>
+                <div>
+                  <Label className="text-slate-300">Boşaltım Tesisi *</Label>
+                  <Input
+                    value={editingAlim.bosaltim_tesisi}
+                    onChange={(e) => setEditingAlim({ ...editingAlim, bosaltim_tesisi: e.target.value })}
+                    className="bg-slate-800 border-slate-700 text-white mt-1"
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* Araç ve Şoför */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div>
+                  <Label className="text-slate-300">Çekici Plaka *</Label>
+                  <Input
+                    value={editingAlim.cekici_plaka}
+                    onChange={(e) => setEditingAlim({ ...editingAlim, cekici_plaka: e.target.value.toUpperCase() })}
+                    className="bg-slate-800 border-slate-700 text-white mt-1 uppercase"
+                    required
+                  />
+                </div>
+                <div>
+                  <Label className="text-slate-300">Dorse Plaka *</Label>
+                  <Input
+                    value={editingAlim.dorse_plaka}
+                    onChange={(e) => setEditingAlim({ ...editingAlim, dorse_plaka: e.target.value.toUpperCase() })}
+                    className="bg-slate-800 border-slate-700 text-white mt-1 uppercase"
+                    required
+                  />
+                </div>
+                <div>
+                  <Label className="text-slate-300">Şoför Adı *</Label>
+                  <Input
+                    value={editingAlim.sofor_adi}
+                    onChange={(e) => setEditingAlim({ ...editingAlim, sofor_adi: e.target.value })}
+                    className="bg-slate-800 border-slate-700 text-white mt-1"
+                    required
+                  />
+                </div>
+                <div>
+                  <Label className="text-slate-300">Şoför Soyadı *</Label>
+                  <Input
+                    value={editingAlim.sofor_soyadi}
+                    onChange={(e) => setEditingAlim({ ...editingAlim, sofor_soyadi: e.target.value })}
+                    className="bg-slate-800 border-slate-700 text-white mt-1"
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* Miktar ve Ağırlık */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div>
+                  <Label className="text-slate-300">Miktar (Litre) *</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={editingAlim.miktar_litre}
+                    onChange={(e) => setEditingAlim({ ...editingAlim, miktar_litre: e.target.value })}
+                    className="bg-slate-800 border-slate-700 text-white mt-1"
+                    required
+                  />
+                </div>
+                <div>
+                  <Label className="text-slate-300">Kesafet (kg/L) *</Label>
+                  <Input
+                    type="number"
+                    step="0.001"
+                    value={editingAlim.kesafet}
+                    onChange={(e) => setEditingAlim({ ...editingAlim, kesafet: e.target.value })}
+                    className="bg-slate-800 border-slate-700 text-white mt-1"
+                    required
+                  />
+                </div>
+                <div>
+                  <Label className="text-slate-300">Miktar KG *</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={editingAlim.miktar_kg}
+                    onChange={(e) => setEditingAlim({ ...editingAlim, miktar_kg: e.target.value })}
+                    className="bg-slate-800 border-slate-700 text-white mt-1"
+                    required
+                  />
+                </div>
+                <div>
+                  <Label className="text-slate-300">Kantar KG *</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={editingAlim.kantar_kg}
+                    onChange={(e) => setEditingAlim({ ...editingAlim, kantar_kg: e.target.value })}
+                    className="bg-slate-800 border-slate-700 text-white mt-1"
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* Fiyat */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <Label className="text-slate-300">Birim Fiyat (₺/L) *</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={editingAlim.birim_fiyat}
+                    onChange={(e) => setEditingAlim({ ...editingAlim, birim_fiyat: e.target.value })}
+                    className="bg-slate-800 border-slate-700 text-white mt-1"
+                    required
+                  />
+                </div>
+                <div>
+                  <Label className="text-slate-300">Toplam Tutar (₺)</Label>
+                  <Input
+                    type="number"
+                    value={editingAlim.toplam_tutar}
+                    className="bg-slate-800 border-slate-700 text-white mt-1 text-green-400"
+                    readOnly
+                  />
+                </div>
+                <div>
+                  <Label className="text-slate-300">Ödeme Durumu</Label>
+                  <select
+                    value={editingAlim.odeme_durumu}
+                    onChange={(e) => setEditingAlim({ ...editingAlim, odeme_durumu: e.target.value })}
+                    className="w-full bg-slate-800 border border-slate-700 text-white rounded-md px-3 py-2 mt-1"
+                  >
+                    <option value="beklemede">Beklemede</option>
+                    <option value="odendi">Ödendi</option>
+                    <option value="vadeli">Vadeli</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Belgeler */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-slate-300">Fatura No</Label>
+                  <Input
+                    value={editingAlim.fatura_no}
+                    onChange={(e) => setEditingAlim({ ...editingAlim, fatura_no: e.target.value })}
+                    className="bg-slate-800 border-slate-700 text-white mt-1"
+                  />
+                </div>
+                <div>
+                  <Label className="text-slate-300">İrsaliye No</Label>
+                  <Input
+                    value={editingAlim.irsaliye_no}
+                    onChange={(e) => setEditingAlim({ ...editingAlim, irsaliye_no: e.target.value })}
+                    className="bg-slate-800 border-slate-700 text-white mt-1"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <Label className="text-slate-300">Notlar</Label>
+                <textarea
+                  value={editingAlim.notlar}
+                  onChange={(e) => setEditingAlim({ ...editingAlim, notlar: e.target.value })}
+                  className="w-full bg-slate-800 border border-slate-700 text-white rounded-md px-3 py-2 mt-1 min-h-[60px]"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-3 p-4 border-t border-slate-800">
+              <Button
+                variant="outline"
+                onClick={() => { setShowEditModal(false); setEditingAlim(null); }}
+                className="border-slate-700 text-slate-300 flex-1"
+              >
+                İptal
+              </Button>
+              <Button
+                onClick={handleSaveAlim}
+                disabled={saving}
+                className="bg-green-600 hover:bg-green-700 flex-1"
+              >
+                <Save className="w-4 h-4 mr-2" />
+                {saving ? 'Kaydediliyor...' : 'Güncelle'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Düzenleme Modal - Verme */}
+      {showEditModal && editingVerme && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-900 rounded-xl border border-slate-800 w-full max-w-lg">
+            <div className="flex items-center justify-between p-4 border-b border-slate-800">
+              <h2 className="text-lg font-semibold text-white">Verme Kaydını Düzenle</h2>
+              <button
+                onClick={() => { setShowEditModal(false); setEditingVerme(null); }}
+                className="text-slate-400 hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-4 space-y-4">
+              <div>
+                <Label className="text-slate-300">Tarih *</Label>
+                <Input
+                  type="date"
+                  value={editingVerme.tarih}
+                  onChange={(e) => setEditingVerme({ ...editingVerme, tarih: e.target.value })}
+                  className="bg-slate-800 border-slate-700 text-white mt-1"
+                  required
+                />
+              </div>
+
+              <div>
+                <Label className="text-slate-300">Araç *</Label>
+                <select
+                  value={editingVerme.arac_id}
+                  onChange={(e) => {
+                    const a = araclar.find(x => x.id === e.target.value);
+                    setEditingVerme({ 
+                      ...editingVerme, 
+                      arac_id: e.target.value,
+                      arac_plaka: a ? a.plaka : '',
+                      arac_bilgi: a ? `${a.marka || ''} ${a.model || ''}` : ''
+                    });
+                  }}
+                  className="w-full bg-slate-800 border border-slate-700 text-white rounded-md px-3 py-2 mt-1"
+                  required
+                >
+                  <option value="">Seçin</option>
+                  {araclar.map(a => (
+                    <option key={a.id} value={a.id}>{a.plaka} - {a.marka} {a.model}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <Label className="text-slate-300">Miktar (Litre) *</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={editingVerme.miktar_litre}
+                  onChange={(e) => setEditingVerme({ ...editingVerme, miktar_litre: e.target.value })}
+                  className="bg-slate-800 border-slate-700 text-white mt-1"
+                  required
+                />
+              </div>
+
+              <div>
+                <Label className="text-slate-300">Kilometre</Label>
+                <Input
+                  type="number"
+                  value={editingVerme.kilometre}
+                  onChange={(e) => setEditingVerme({ ...editingVerme, kilometre: e.target.value })}
+                  className="bg-slate-800 border-slate-700 text-white mt-1"
+                />
+              </div>
+
+              <div>
+                <Label className="text-slate-300">Şoför Adı</Label>
+                <Input
+                  value={editingVerme.sofor_adi}
+                  onChange={(e) => setEditingVerme({ ...editingVerme, sofor_adi: e.target.value })}
+                  className="bg-slate-800 border-slate-700 text-white mt-1"
+                />
+              </div>
+
+              <div>
+                <Label className="text-slate-300">Notlar</Label>
+                <textarea
+                  value={editingVerme.notlar}
+                  onChange={(e) => setEditingVerme({ ...editingVerme, notlar: e.target.value })}
+                  className="w-full bg-slate-800 border border-slate-700 text-white rounded-md px-3 py-2 mt-1 min-h-[60px]"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-3 p-4 border-t border-slate-800">
+              <Button
+                variant="outline"
+                onClick={() => { setShowEditModal(false); setEditingVerme(null); }}
+                className="border-slate-700 text-slate-300 flex-1"
+              >
+                İptal
+              </Button>
+              <Button
+                onClick={handleSaveVerme}
+                disabled={saving}
+                className="bg-blue-600 hover:bg-blue-700 flex-1"
+              >
+                <Save className="w-4 h-4 mr-2" />
+                {saving ? 'Kaydediliyor...' : 'Güncelle'}
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
