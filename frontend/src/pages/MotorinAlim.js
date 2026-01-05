@@ -15,12 +15,14 @@ const MotorinAlim = () => {
   const navigate = useNavigate();
   const [tedarikciler, setTedarikciler] = useState([]);
   const [tesisler, setTesisler] = useState([]);
+  const [markalar, setMarkalar] = useState([]);
   const [loading, setLoading] = useState(false);
   
   const [formData, setFormData] = useState({
     tarih: new Date().toISOString().split('T')[0],
     tedarikci_id: '',
     tedarikci_adi: '',
+    akaryakit_markasi: '',
     cekici_plaka: '',
     dorse_plaka: '',
     sofor_adi: '',
@@ -43,6 +45,7 @@ const MotorinAlim = () => {
   useEffect(() => {
     fetchTedarikciler();
     fetchTesisler();
+    fetchMarkalar();
   }, []);
 
   useEffect(() => {
