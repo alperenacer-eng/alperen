@@ -113,7 +113,8 @@ const MotorinListe = () => {
     (a.dorse_plaka || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
     (a.sofor_adi || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
     (a.sofor_soyadi || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (a.teslim_alan || '').toLowerCase().includes(searchTerm.toLowerCase())
+    (a.teslim_alan || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (a.bosaltim_tesisi || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const filteredVermeler = vermeler.filter(v => 
