@@ -681,7 +681,7 @@ class MotorinAPITester:
 
 def main():
     """Main test runner"""
-    tester = VehicleAPITester()
+    tester = MotorinAPITester()
     success = tester.run_all_tests()
     
     # Exit with appropriate code
