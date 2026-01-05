@@ -691,6 +691,26 @@ class MotorinAPITester:
         except Exception as e:
             self.log_result("Delete Motorin Alim", False, f"Exception: {str(e)}")
             return False
+
+    def test_delete_motorin_alim_new_fields(self):
+        """Test deleting the motorin alim with new fields"""
+        if not hasattr(self, 'test_new_fields_alim_id') or not self.test_new_fields_alim_id:
+            self.log_result("Delete Motorin Alim (New Fields)", False, "No test new fields alim ID available")
+            return False
+            
+        try:
+            response = self.session.delete(f"{BACKEND_URL}/motorin-alimlar/{self.test_new_fields_alim_id}")
+            
+            if response.status_code == 200:
+                self.log_result("Delete Motorin Alim (New Fields)", True, "New fields alim deleted successfully")
+                return True
+            else:
+                self.log_result("Delete Motorin Alim (New Fields)", False, "Failed to delete new fields alim", response)
+                return False
+                
+        except Exception as e:
+            self.log_result("Delete Motorin Alim (New Fields)", False, f"Exception: {str(e)}")
+            return False
     
     def test_delete_tedarikci(self):
         """Test deleting a motorin tedarikci"""
