@@ -614,7 +614,7 @@ const MotorinListe = () => {
 
             <div className="p-4 space-y-4 max-h-[70vh] overflow-y-auto">
               {/* Temel Bilgiler */}
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
                 <div>
                   <Label className="text-slate-300">Tarih *</Label>
                   <Input
