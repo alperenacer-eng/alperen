@@ -882,6 +882,20 @@ const MotorinListe = () => {
 
             <div className="p-4 space-y-4">
               <div>
+                <Label className="text-slate-300">Boşaltım Tesisi</Label>
+                <select
+                  value={editingVerme.bosaltim_tesisi}
+                  onChange={(e) => setEditingVerme({ ...editingVerme, bosaltim_tesisi: e.target.value })}
+                  className="w-full bg-slate-800 border border-slate-700 text-white rounded-md px-3 py-2 mt-1"
+                >
+                  <option value="">Tesis Seçin</option>
+                  {tesisler.map(t => (
+                    <option key={t.id} value={t.name}>{t.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
                 <Label className="text-slate-300">Tarih *</Label>
                 <Input
                   type="date"
