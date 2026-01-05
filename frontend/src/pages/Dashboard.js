@@ -29,6 +29,11 @@ const Dashboard = () => {
       navigate('/cimento');
       return;
     }
+    // Motorin modülüne özel sayfaya yönlendir
+    if (currentModule.id === 'motorin') {
+      navigate('/motorin');
+      return;
+    }
     fetchData();
   }, [currentModule]);
 
