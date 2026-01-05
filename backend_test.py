@@ -18,7 +18,10 @@ class MotorinAPITester:
         self.session = requests.Session()
         self.token = None
         self.user_data = None
-        self.test_vehicle_id = None
+        self.test_tedarikci_id = None
+        self.test_alim_id = None
+        self.test_verme_id = None
+        self.test_arac_id = None
         self.results = {
             "passed": 0,
             "failed": 0,
