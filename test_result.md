@@ -165,6 +165,66 @@ backend:
         agent: "testing"
         comment: "COMPREHENSIVE PRODUCTION TESTING COMPLETED: Tested login functionality on https://project-upload-12.emergent.host with credentials alperenacer@acerler.com/1234. ALL TESTS PASSED (100% success rate): 1) Login API returns proper access_token and user object, 2) /api/auth/me endpoint validates tokens correctly, 3) Multiple rapid logins work, 4) Login-logout-relogin cycles work flawlessly (3 cycles tested), 5) Session persistence across requests works, 6) CORS headers properly configured (Access-Control-Allow-Origin: *, Allow-Credentials: true), 7) Error handling for invalid credentials works. Backend APIs are functioning correctly. Issue may be frontend-specific, browser cache/cookies, or network-related."
 
+  - task: "Motorin Tedarikçi API'leri (/api/motorin-tedarikciler)"
+    implemented: true
+    working: true
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Motorin tedarikçi firma CRUD API'leri eklendi (POST, GET, PUT, DELETE)"
+
+  - task: "Motorin Alım API'leri (/api/motorin-alimlar)"
+    implemented: true
+    working: true
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Motorin alım kayıtları CRUD API'leri eklendi - tarih, miktar, birim fiyat, toplam tutar, fatura/irsaliye no, ödeme durumu"
+
+  - task: "Motorin Verme API'leri (/api/motorin-verme)"
+    implemented: true
+    working: true
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Araçlara motorin verme CRUD API'leri eklendi - araç seçimi, miktar, kilometre, şoför/personel bilgisi"
+
+  - task: "Motorin Stok ve Özet API'leri (/api/motorin-stok, /api/motorin-ozet)"
+    implemented: true
+    working: true
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Motorin stok hesaplama ve özet istatistikleri API'leri eklendi"
+
+  - task: "Motorin Araç Tüketim Raporu API'si (/api/motorin-arac-tuketim)"
+    implemented: true
+    working: true
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Araç bazlı tüketim raporu API'si eklendi - toplam litre, ortalama tüketim hesaplama"
+
 frontend:
   - task: "Araç Yönetimi Sayfası"
     implemented: true
