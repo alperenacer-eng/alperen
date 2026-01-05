@@ -329,6 +329,7 @@ const MotorinAlim = () => {
                 onChange={(e) => setFormData({ ...formData, kantar_kg: e.target.value })}
                 className="bg-slate-800 border-slate-700 text-white mt-1"
                 placeholder="Kantar ölçümü"
+                required
               />
             </div>
           </div>
