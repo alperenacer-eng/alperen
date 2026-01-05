@@ -847,6 +847,12 @@ class MotorinAPITester:
         self.test_get_single_motorin_alim()
         self.test_update_motorin_alim()
         
+        # NEW FIELDS TESTING (as requested in review)
+        print("🆕 MOTORIN ALIM NEW FIELDS TESTS")
+        print("-" * 30)
+        self.test_create_motorin_alim_with_new_fields()
+        self.test_verify_new_fields_in_list()
+        
         # Motorin Verme tests
         print("🚛 MOTORIN VERME TESTS")
         print("-" * 30)
