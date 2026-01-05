@@ -147,7 +147,7 @@ const MotorinAlim = () => {
             <Fuel className="w-5 h-5 text-green-400" />
             Temel Bilgiler
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             {/* Tarih */}
             <div>
               <Label className="text-slate-300">Tarih *</Label>
