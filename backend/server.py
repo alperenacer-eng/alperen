@@ -2189,6 +2189,38 @@ async def delete_motorin_tedarikci(id: str, current_user: dict = Depends(get_cur
     await db.motorin_tedarikciler.delete_one({"id": id})
     return {"message": "Tedarikçi silindi"}
 
+# Boşaltım Tesisleri
+class BosaltimTesisiCreate(BaseModel):
+    name: str
+    adres: str = ""
+    notlar: str = ""
+
+@api_router.post("/bosaltim-tesisleri")
+async def create_bosaltim_tesisi(input: BosaltimTesisiCreate, current_user: dict = Depends(get_current_user)):
+    data = input.model_dump()
+    data['id'] = str(datetime.now(timezone.utc).timestamp()).replace(".", "")
+    data['created_at'] = datetime.now(timezone.utc).isoformat()
+    await db.bosaltim_tesisleri.insert_one(data)
+    return {k: v for k, v in data.items() if k != '_id'}
+
+@api_router.get("/bosaltim-tesisleri")
+async def get_bosaltim_tesisleri(current_user: dict = Depends(get_current_user)):
+    records = await db.bosaltim_tesisleri.find({}, {"_id": 0}).sort("name", 1).to_list(1000)
+    return records
+
+@api_router.put("/bosaltim-tesisleri/{id}")
+async def update_bosaltim_tesisi(id: str, input: BosaltimTesisiCreate, current_user: dict = Depends(get_current_user)):
+    data = input.model_dump()
+    data['updated_at'] = datetime.now(timezone.utc).isoformat()
+    await db.bosaltim_tesisleri.update_one({"id": id}, {"$set": data})
+    updated = await db.bosaltim_tesisleri.find_one({"id": id}, {"_id": 0})
+    return updated
+
+@api_router.delete("/bosaltim-tesisleri/{id}")
+async def delete_bosaltim_tesisi(id: str, current_user: dict = Depends(get_current_user)):
+    await db.bosaltim_tesisleri.delete_one({"id": id})
+    return {"message": "Tesis silindi"}
+
 # Motorin Alım Kayıtları
 class MotorinAlimCreate(BaseModel):
     tarih: str
