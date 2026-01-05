@@ -41,12 +41,14 @@ const MotorinListe = () => {
   const [editingAlim, setEditingAlim] = useState(null);
   const [editingVerme, setEditingVerme] = useState(null);
   const [tedarikciler, setTedarikciler] = useState([]);
+  const [tesisler, setTesisler] = useState([]);
   const [araclar, setAraclar] = useState([]);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     fetchData();
     fetchTedarikciler();
+    fetchTesisler();
     fetchAraclar();
   }, [dateFilter]);
 
