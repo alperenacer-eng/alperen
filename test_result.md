@@ -347,11 +347,7 @@ metadata:
   run_ui: false
 
 test_plan:
-  current_focus:
-    - "Motorin Tedarikçi API'leri"
-    - "Motorin Alım API'leri"
-    - "Motorin Verme API'leri"
-    - "Motorin Stok ve Özet API'leri"
+  current_focus: []
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
