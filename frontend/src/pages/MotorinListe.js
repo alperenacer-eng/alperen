@@ -108,7 +108,12 @@ const MotorinListe = () => {
 
   const filteredAlimlar = alimlar.filter(a => 
     (a.tedarikci_adi || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (a.fatura_no || '').toLowerCase().includes(searchTerm.toLowerCase())
+    (a.fatura_no || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (a.cekici_plaka || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (a.dorse_plaka || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (a.sofor_adi || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (a.sofor_soyadi || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (a.teslim_alan || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const filteredVermeler = vermeler.filter(v => 
