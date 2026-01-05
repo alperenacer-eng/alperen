@@ -603,7 +603,7 @@ class MotorinAPITester:
     def run_all_tests(self):
         """Run all tests in sequence"""
         print("=" * 60)
-        print("VEHICLE MANAGEMENT API TEST SUITE")
+        print("MOTORIN MANAGEMENT API TEST SUITE")
         print("=" * 60)
         print(f"Testing backend at: {BACKEND_URL}")
         print()
@@ -611,30 +611,56 @@ class MotorinAPITester:
         # Authentication tests
         print("🔐 AUTHENTICATION TESTS")
         print("-" * 30)
-        if not self.test_auth_register():
+        if not self.test_auth_login_existing():
             print("❌ Cannot proceed without authentication")
             return False
         
-        self.test_auth_login()
-        
-        # Vehicle CRUD tests
-        print("🚗 VEHICLE CRUD TESTS")
+        # Motorin Tedarikci tests
+        print("🏢 MOTORIN TEDARİKÇİ TESTS")
         print("-" * 30)
-        self.test_create_vehicle()
-        self.test_get_vehicles()
-        self.test_get_single_vehicle()
-        self.test_update_vehicle()
-        self.test_vehicle_summary()
+        self.test_create_tedarikci()
+        self.test_get_tedarikciler()
+        self.test_update_tedarikci()
         
-        # File upload tests
-        print("📁 FILE UPLOAD TESTS")
+        # Create test vehicle for motorin operations
+        print("🚗 TEST VEHICLE CREATION")
         print("-" * 30)
-        self.test_file_upload_endpoints()
+        self.test_create_arac_for_motorin()
+        
+        # Motorin Alim tests
+        print("⛽ MOTORIN ALIM TESTS")
+        print("-" * 30)
+        self.test_create_motorin_alim()
+        self.test_get_motorin_alimlar()
+        self.test_get_single_motorin_alim()
+        self.test_update_motorin_alim()
+        
+        # Motorin Verme tests
+        print("🚛 MOTORIN VERME TESTS")
+        print("-" * 30)
+        self.test_create_motorin_verme()
+        self.test_get_motorin_verme()
+        self.test_get_single_motorin_verme()
+        self.test_update_motorin_verme()
+        
+        # Motorin Stok and Summary tests
+        print("📊 MOTORIN STOK & ÖZET TESTS")
+        print("-" * 30)
+        self.test_motorin_stok()
+        self.test_motorin_ozet()
+        
+        # Motorin Reports tests
+        print("📈 MOTORIN RAPOR TESTS")
+        print("-" * 30)
+        self.test_motorin_arac_tuketim()
         
         # Cleanup
         print("🧹 CLEANUP")
         print("-" * 30)
-        self.test_delete_vehicle()
+        self.test_delete_motorin_verme()
+        self.test_delete_motorin_alim()
+        self.test_delete_tedarikci()
+        self.test_delete_test_arac()
         
         # Summary
         print("=" * 60)
