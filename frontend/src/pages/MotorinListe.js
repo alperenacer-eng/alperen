@@ -430,6 +430,11 @@ const MotorinListe = () => {
                         <div className="flex-1">
                           <div className="flex items-center gap-2 flex-wrap">
                             <p className="font-semibold text-white">{alim.tedarikci_adi || 'Tedarikçi Belirtilmemiş'}</p>
+                            {alim.akaryakit_markasi && (
+                              <span className="px-2 py-1 bg-red-500/20 text-red-400 rounded text-xs font-medium">
+                                ⛽ {alim.akaryakit_markasi}
+                              </span>
+                            )}
                             {getOdemeDurumuBadge(alim.odeme_durumu)}
                           </div>
                           <p className="text-sm text-slate-400">{alim.tarih}</p>
