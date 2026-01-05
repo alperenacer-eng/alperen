@@ -293,7 +293,7 @@ const MotorinAlim = () => {
 
             {/* Kesafet */}
             <div>
-              <Label className="text-slate-300">Kesafet (kg/L)</Label>
+              <Label className="text-slate-300">Kesafet (kg/L) *</Label>
               <Input
                 type="number"
                 step="0.001"
@@ -301,12 +301,13 @@ const MotorinAlim = () => {
                 onChange={(e) => setFormData({ ...formData, kesafet: e.target.value })}
                 className="bg-slate-800 border-slate-700 text-white mt-1"
                 placeholder="Örn: 0.835"
+                required
               />
             </div>
 
             {/* Miktar KG (Hesaplanmış) */}
             <div>
-              <Label className="text-slate-300">Hesaplanan KG</Label>
+              <Label className="text-slate-300">Miktar KG *</Label>
               <Input
                 type="number"
                 step="0.01"
@@ -314,12 +315,13 @@ const MotorinAlim = () => {
                 onChange={(e) => setFormData({ ...formData, miktar_kg: e.target.value })}
                 className="bg-slate-800 border-slate-700 text-white mt-1 bg-slate-700/50"
                 placeholder="Otomatik hesaplanır"
+                required
               />
             </div>
 
             {/* Kantar KG */}
             <div>
-              <Label className="text-slate-300">Kantar KG</Label>
+              <Label className="text-slate-300">Kantar KG *</Label>
               <Input
                 type="number"
                 step="0.01"
