@@ -2209,6 +2209,7 @@ class MotorinAlimCreate(BaseModel):
     odeme_durumu: str = "beklemede"  # beklemede, odendi, vadeli
     vade_tarihi: str = ""
     teslim_alan: str = ""
+    bosaltim_tesisi: str = ""  # Boşaltım yapılan tesis
     notlar: str = ""
 
 @api_router.post("/motorin-alimlar")
