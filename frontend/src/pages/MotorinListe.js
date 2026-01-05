@@ -96,6 +96,17 @@ const MotorinListe = () => {
     }
   };
 
+  const fetchTesisler = async () => {
+    try {
+      const res = await axios.get(`${API_URL}/bosaltim-tesisleri`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setTesisler(res.data);
+    } catch (error) {
+      console.log('Tesisler yüklenemedi');
+    }
+  };
+
   const fetchAraclar = async () => {
     try {
       const res = await axios.get(`${API_URL}/araclar`, {
