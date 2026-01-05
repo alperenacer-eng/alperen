@@ -2356,6 +2356,61 @@ async def create_motorin_verme(input: MotorinVermeCreate, current_user: dict = D
     
     return {k: v for k, v in data.items() if k != '_id'}
 
+# Toplu Motorin Verme Kaydı (Excel'den)
+class MotorinVermeBulkItem(BaseModel):
+    tarih: str
+    bosaltim_tesisi: str = ""
+    arac_plaka: str
+    miktar_litre: float
+    kilometre: float = 0
+    sofor_adi: str = ""
+    notlar: str = ""
+
+class MotorinVermeBulkCreate(BaseModel):
+    records: list[MotorinVermeBulkItem]
+
+@api_router.post("/motorin-verme/bulk")
+async def create_motorin_verme_bulk(input: MotorinVermeBulkCreate, current_user: dict = Depends(get_current_user)):
+    created_count = 0
+    errors = []
+    
+    for idx, item in enumerate(input.records):
+        try:
+            # Plakaya göre araç bul
+            arac = await db.araclar.find_one({"plaka": item.arac_plaka.upper().strip()}, {"_id": 0})
+            
+            data = {
+                "id": str(datetime.now(timezone.utc).timestamp()).replace(".", "") + str(idx),
+                "tarih": item.tarih,
+                "bosaltim_tesisi": item.bosaltim_tesisi,
+                "arac_id": arac['id'] if arac else "",
+                "arac_plaka": item.arac_plaka.upper().strip(),
+                "arac_bilgi": f"{arac.get('marka', '')} {arac.get('model', '')}".strip() if arac else "",
+                "miktar_litre": item.miktar_litre,
+                "kilometre": item.kilometre,
+                "sofor_adi": item.sofor_adi,
+                "sofor_id": "",
+                "personel_id": "",
+                "personel_adi": "",
+                "notlar": item.notlar,
+                "created_at": datetime.now(timezone.utc).isoformat(),
+                "created_by": current_user['id'],
+                "created_by_name": current_user['name']
+            }
+            await db.motorin_verme.insert_one(data)
+            created_count += 1
+        except Exception as e:
+            errors.append(f"Satır {idx + 1}: {str(e)}")
+    
+    # Stok güncelle
+    await update_motorin_stok()
+    
+    return {
+        "created_count": created_count,
+        "total": len(input.records),
+        "errors": errors
+    }
+
 @api_router.get("/motorin-verme")
 async def get_motorin_verme(
     baslangic_tarihi: str = None,
