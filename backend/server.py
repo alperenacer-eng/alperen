@@ -2257,6 +2257,7 @@ class MotorinAlimCreate(BaseModel):
     tarih: str
     tedarikci_id: str = ""
     tedarikci_adi: str = ""
+    akaryakit_markasi: str = ""  # Akaryakıt markası
     cekici_plaka: str = ""
     dorse_plaka: str = ""
     sofor_adi: str = ""
