@@ -35,6 +35,7 @@ const MotorinAlim = () => {
     odeme_durumu: 'beklemede',
     vade_tarihi: '',
     teslim_alan: user?.name || '',
+    bosaltim_tesisi: '',
     notlar: ''
   });
 
