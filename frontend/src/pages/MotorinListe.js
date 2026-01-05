@@ -186,11 +186,11 @@ const MotorinListe = () => {
 
   const handleSaveAlim = async () => {
     // Zorunlu alan kontrolü
-    if (!editingAlim.tarih || !editingAlim.tedarikci_adi || !editingAlim.cekici_plaka || 
-        !editingAlim.dorse_plaka || !editingAlim.sofor_adi || !editingAlim.sofor_soyadi ||
-        !editingAlim.miktar_litre || !editingAlim.miktar_kg || !editingAlim.kesafet ||
-        !editingAlim.kantar_kg || !editingAlim.birim_fiyat || !editingAlim.teslim_alan ||
-        !editingAlim.bosaltim_tesisi) {
+    if (!editingAlim.tarih || !editingAlim.tedarikci_adi || !editingAlim.akaryakit_markasi ||
+        !editingAlim.cekici_plaka || !editingAlim.dorse_plaka || !editingAlim.sofor_adi || 
+        !editingAlim.sofor_soyadi || !editingAlim.miktar_litre || !editingAlim.miktar_kg || 
+        !editingAlim.kesafet || !editingAlim.kantar_kg || !editingAlim.birim_fiyat || 
+        !editingAlim.teslim_alan || !editingAlim.bosaltim_tesisi) {
       toast.error('Tüm alanları doldurunuz!');
       return;
     }
