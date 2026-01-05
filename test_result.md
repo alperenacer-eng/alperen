@@ -171,11 +171,14 @@ backend:
     file: "backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "Motorin tedarikçi firma CRUD API'leri eklendi (POST, GET, PUT, DELETE)"
+      - working: true
+        agent: "testing"
+        comment: "COMPREHENSIVE TESTING COMPLETED: All motorin tedarikçi API endpoints tested successfully. POST /api/motorin-tedarikciler (tedarikçi oluşturma), GET /api/motorin-tedarikciler (listeleme), PUT /api/motorin-tedarikciler/{id} (güncelleme), DELETE /api/motorin-tedarikciler/{id} (silme) endpoint'leri çalışıyor. Tedarikçi bilgileri (name, yetkili_kisi, telefon, email, adres, vergi_no, notlar) doğru şekilde kaydediliyor ve güncellenebiliyor."
 
   - task: "Motorin Alım API'leri (/api/motorin-alimlar)"
     implemented: true
