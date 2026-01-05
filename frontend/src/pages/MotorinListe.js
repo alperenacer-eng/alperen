@@ -42,6 +42,7 @@ const MotorinListe = () => {
   const [editingVerme, setEditingVerme] = useState(null);
   const [tedarikciler, setTedarikciler] = useState([]);
   const [tesisler, setTesisler] = useState([]);
+  const [markalar, setMarkalar] = useState([]);
   const [araclar, setAraclar] = useState([]);
   const [saving, setSaving] = useState(false);
 
@@ -49,6 +50,7 @@ const MotorinListe = () => {
     fetchData();
     fetchTedarikciler();
     fetchTesisler();
+    fetchMarkalar();
     fetchAraclar();
   }, [dateFilter]);
 
