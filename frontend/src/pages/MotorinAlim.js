@@ -89,8 +89,13 @@ const MotorinAlim = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (!formData.tarih || !formData.miktar_litre || !formData.birim_fiyat) {
-      toast.error('Tarih, miktar ve birim fiyat zorunludur');
+    // Tüm zorunlu alanları kontrol et
+    if (!formData.tarih || !formData.tedarikci_adi || !formData.cekici_plaka || 
+        !formData.dorse_plaka || !formData.sofor_adi || !formData.sofor_soyadi ||
+        !formData.miktar_litre || !formData.miktar_kg || !formData.kesafet ||
+        !formData.kantar_kg || !formData.birim_fiyat || !formData.teslim_alan ||
+        !formData.bosaltim_tesisi) {
+      toast.error('Tüm alanları doldurunuz! (* ile işaretli alanlar zorunludur)');
       return;
     }
 
