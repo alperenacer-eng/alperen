@@ -6,12 +6,12 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ArrowLeft, Save, Fuel } from 'lucide-react';
+import { ArrowLeft, Save, Fuel, Truck, User, Scale } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL + '/api';
 
 const MotorinAlim = () => {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const navigate = useNavigate();
   const [tedarikciler, setTedarikciler] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -20,13 +20,21 @@ const MotorinAlim = () => {
     tarih: new Date().toISOString().split('T')[0],
     tedarikci_id: '',
     tedarikci_adi: '',
+    cekici_plaka: '',
+    dorse_plaka: '',
+    sofor_adi: '',
+    sofor_soyadi: '',
     miktar_litre: '',
+    miktar_kg: '',
+    kesafet: '',
+    kantar_kg: '',
     birim_fiyat: '',
     toplam_tutar: '',
     fatura_no: '',
     irsaliye_no: '',
     odeme_durumu: 'beklemede',
     vade_tarihi: '',
+    teslim_alan: user?.name || '',
     notlar: ''
   });
 
@@ -43,6 +51,18 @@ const MotorinAlim = () => {
       toplam_tutar: (miktar * birim).toFixed(2)
     }));
   }, [formData.miktar_litre, formData.birim_fiyat]);
+
+  useEffect(() => {
+    // Kesafet ile kg hesaplama
+    const litre = parseFloat(formData.miktar_litre) || 0;
+    const kesafet = parseFloat(formData.kesafet) || 0;
+    if (litre > 0 && kesafet > 0) {
+      setFormData(prev => ({
+        ...prev,
+        miktar_kg: (litre * kesafet).toFixed(2)
+      }));
+    }
+  }, [formData.miktar_litre, formData.kesafet]);
 
   const fetchTedarikciler = async () => {
     try {
@@ -77,9 +97,12 @@ const MotorinAlim = () => {
     try {
       const submitData = {
         ...formData,
-        miktar_litre: parseFloat(formData.miktar_litre),
-        birim_fiyat: parseFloat(formData.birim_fiyat),
-        toplam_tutar: parseFloat(formData.toplam_tutar)
+        miktar_litre: parseFloat(formData.miktar_litre) || 0,
+        miktar_kg: parseFloat(formData.miktar_kg) || 0,
+        kesafet: parseFloat(formData.kesafet) || 0,
+        kantar_kg: parseFloat(formData.kantar_kg) || 0,
+        birim_fiyat: parseFloat(formData.birim_fiyat) || 0,
+        toplam_tutar: parseFloat(formData.toplam_tutar) || 0
       };
 
       await axios.post(`${API_URL}/motorin-alimlar`, submitData, {
@@ -116,161 +139,311 @@ const MotorinAlim = () => {
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="glass-effect rounded-xl border border-slate-800 p-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Tarih */}
-          <div>
-            <Label className="text-slate-300">Tarih *</Label>
-            <Input
-              type="date"
-              value={formData.tarih}
-              onChange={(e) => setFormData({ ...formData, tarih: e.target.value })}
-              className="bg-slate-800 border-slate-700 text-white mt-1"
-              required
-            />
-          </div>
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Temel Bilgiler */}
+        <div className="glass-effect rounded-xl border border-slate-800 p-6">
+          <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+            <Fuel className="w-5 h-5 text-green-400" />
+            Temel Bilgiler
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Tarih */}
+            <div>
+              <Label className="text-slate-300">Tarih *</Label>
+              <Input
+                type="date"
+                value={formData.tarih}
+                onChange={(e) => setFormData({ ...formData, tarih: e.target.value })}
+                className="bg-slate-800 border-slate-700 text-white mt-1"
+                required
+              />
+            </div>
 
-          {/* Tedarikçi */}
-          <div>
-            <Label className="text-slate-300">Tedarikçi</Label>
-            <select
-              value={formData.tedarikci_id}
-              onChange={handleTedarikciChange}
-              className="w-full bg-slate-800 border border-slate-700 text-white rounded-md px-3 py-2 mt-1"
-            >
-              <option value="">Tedarikçi Seçin</option>
-              {tedarikciler.map(t => (
-                <option key={t.id} value={t.id}>{t.name}</option>
-              ))}
-            </select>
-          </div>
+            {/* Tedarikçi */}
+            <div>
+              <Label className="text-slate-300">Tedarikçi</Label>
+              <select
+                value={formData.tedarikci_id}
+                onChange={handleTedarikciChange}
+                className="w-full bg-slate-800 border border-slate-700 text-white rounded-md px-3 py-2 mt-1"
+              >
+                <option value="">Tedarikçi Seçin</option>
+                {tedarikciler.map(t => (
+                  <option key={t.id} value={t.id}>{t.name}</option>
+                ))}
+              </select>
+            </div>
 
-          {/* Miktar */}
-          <div>
-            <Label className="text-slate-300">Miktar (Litre) *</Label>
-            <Input
-              type="number"
-              step="0.01"
-              value={formData.miktar_litre}
-              onChange={(e) => setFormData({ ...formData, miktar_litre: e.target.value })}
-              className="bg-slate-800 border-slate-700 text-white mt-1"
-              placeholder="Örn: 1000"
-              required
-            />
+            {/* Teslim Alan */}
+            <div>
+              <Label className="text-slate-300">Teslim Alan</Label>
+              <Input
+                type="text"
+                value={formData.teslim_alan}
+                onChange={(e) => setFormData({ ...formData, teslim_alan: e.target.value })}
+                className="bg-slate-800 border-slate-700 text-white mt-1"
+                placeholder="Teslim alan kişi"
+              />
+            </div>
           </div>
+        </div>
 
-          {/* Birim Fiyat */}
-          <div>
-            <Label className="text-slate-300">Birim Fiyat (₺/Litre) *</Label>
-            <Input
-              type="number"
-              step="0.01"
-              value={formData.birim_fiyat}
-              onChange={(e) => setFormData({ ...formData, birim_fiyat: e.target.value })}
-              className="bg-slate-800 border-slate-700 text-white mt-1"
-              placeholder="Örn: 42.50"
-              required
-            />
+        {/* Araç ve Şoför Bilgileri */}
+        <div className="glass-effect rounded-xl border border-slate-800 p-6">
+          <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+            <Truck className="w-5 h-5 text-blue-400" />
+            Araç ve Şoför Bilgileri
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            {/* Çekici Plaka */}
+            <div>
+              <Label className="text-slate-300">Çekici Plaka</Label>
+              <Input
+                type="text"
+                value={formData.cekici_plaka}
+                onChange={(e) => setFormData({ ...formData, cekici_plaka: e.target.value.toUpperCase() })}
+                className="bg-slate-800 border-slate-700 text-white mt-1 uppercase"
+                placeholder="34 ABC 123"
+              />
+            </div>
+
+            {/* Dorse Plaka */}
+            <div>
+              <Label className="text-slate-300">Dorse Plaka</Label>
+              <Input
+                type="text"
+                value={formData.dorse_plaka}
+                onChange={(e) => setFormData({ ...formData, dorse_plaka: e.target.value.toUpperCase() })}
+                className="bg-slate-800 border-slate-700 text-white mt-1 uppercase"
+                placeholder="34 DEF 456"
+              />
+            </div>
+
+            {/* Şoför Adı */}
+            <div>
+              <Label className="text-slate-300">Şoför Adı</Label>
+              <Input
+                type="text"
+                value={formData.sofor_adi}
+                onChange={(e) => setFormData({ ...formData, sofor_adi: e.target.value })}
+                className="bg-slate-800 border-slate-700 text-white mt-1"
+                placeholder="Şoför adı"
+              />
+            </div>
+
+            {/* Şoför Soyadı */}
+            <div>
+              <Label className="text-slate-300">Şoför Soyadı</Label>
+              <Input
+                type="text"
+                value={formData.sofor_soyadi}
+                onChange={(e) => setFormData({ ...formData, sofor_soyadi: e.target.value })}
+                className="bg-slate-800 border-slate-700 text-white mt-1"
+                placeholder="Şoför soyadı"
+              />
+            </div>
           </div>
+        </div>
 
-          {/* Toplam Tutar */}
-          <div>
-            <Label className="text-slate-300">Toplam Tutar (₺)</Label>
-            <Input
-              type="number"
-              step="0.01"
-              value={formData.toplam_tutar}
-              onChange={(e) => setFormData({ ...formData, toplam_tutar: e.target.value })}
-              className="bg-slate-800 border-slate-700 text-white mt-1 font-semibold"
-              readOnly
-            />
+        {/* Miktar ve Ağırlık Bilgileri */}
+        <div className="glass-effect rounded-xl border border-slate-800 p-6">
+          <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+            <Scale className="w-5 h-5 text-amber-400" />
+            Miktar ve Ağırlık Bilgileri
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            {/* Miktar Litre */}
+            <div>
+              <Label className="text-slate-300">Miktar (Litre) *</Label>
+              <Input
+                type="number"
+                step="0.01"
+                value={formData.miktar_litre}
+                onChange={(e) => setFormData({ ...formData, miktar_litre: e.target.value })}
+                className="bg-slate-800 border-slate-700 text-white mt-1"
+                placeholder="Örn: 10000"
+                required
+              />
+            </div>
+
+            {/* Kesafet */}
+            <div>
+              <Label className="text-slate-300">Kesafet (kg/L)</Label>
+              <Input
+                type="number"
+                step="0.001"
+                value={formData.kesafet}
+                onChange={(e) => setFormData({ ...formData, kesafet: e.target.value })}
+                className="bg-slate-800 border-slate-700 text-white mt-1"
+                placeholder="Örn: 0.835"
+              />
+            </div>
+
+            {/* Miktar KG (Hesaplanmış) */}
+            <div>
+              <Label className="text-slate-300">Hesaplanan KG</Label>
+              <Input
+                type="number"
+                step="0.01"
+                value={formData.miktar_kg}
+                onChange={(e) => setFormData({ ...formData, miktar_kg: e.target.value })}
+                className="bg-slate-800 border-slate-700 text-white mt-1 bg-slate-700/50"
+                placeholder="Otomatik hesaplanır"
+              />
+            </div>
+
+            {/* Kantar KG */}
+            <div>
+              <Label className="text-slate-300">Kantar KG</Label>
+              <Input
+                type="number"
+                step="0.01"
+                value={formData.kantar_kg}
+                onChange={(e) => setFormData({ ...formData, kantar_kg: e.target.value })}
+                className="bg-slate-800 border-slate-700 text-white mt-1"
+                placeholder="Kantar ölçümü"
+              />
+            </div>
           </div>
+        </div>
 
-          {/* Ödeme Durumu */}
-          <div>
-            <Label className="text-slate-300">Ödeme Durumu</Label>
-            <select
-              value={formData.odeme_durumu}
-              onChange={(e) => setFormData({ ...formData, odeme_durumu: e.target.value })}
-              className="w-full bg-slate-800 border border-slate-700 text-white rounded-md px-3 py-2 mt-1"
-            >
-              <option value="beklemede">Beklemede</option>
-              <option value="odendi">Ödendi</option>
-              <option value="vadeli">Vadeli</option>
-            </select>
+        {/* Fiyat Bilgileri */}
+        <div className="glass-effect rounded-xl border border-slate-800 p-6">
+          <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+            💰 Fiyat Bilgileri
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Birim Fiyat */}
+            <div>
+              <Label className="text-slate-300">Birim Fiyat (₺/Litre) *</Label>
+              <Input
+                type="number"
+                step="0.01"
+                value={formData.birim_fiyat}
+                onChange={(e) => setFormData({ ...formData, birim_fiyat: e.target.value })}
+                className="bg-slate-800 border-slate-700 text-white mt-1"
+                placeholder="Örn: 42.50"
+                required
+              />
+            </div>
+
+            {/* Toplam Tutar */}
+            <div>
+              <Label className="text-slate-300">Toplam Tutar (₺)</Label>
+              <Input
+                type="number"
+                step="0.01"
+                value={formData.toplam_tutar}
+                onChange={(e) => setFormData({ ...formData, toplam_tutar: e.target.value })}
+                className="bg-slate-800 border-slate-700 text-white mt-1 font-semibold text-green-400"
+                readOnly
+              />
+            </div>
+
+            {/* Ödeme Durumu */}
+            <div>
+              <Label className="text-slate-300">Ödeme Durumu</Label>
+              <select
+                value={formData.odeme_durumu}
+                onChange={(e) => setFormData({ ...formData, odeme_durumu: e.target.value })}
+                className="w-full bg-slate-800 border border-slate-700 text-white rounded-md px-3 py-2 mt-1"
+              >
+                <option value="beklemede">Beklemede</option>
+                <option value="odendi">Ödendi</option>
+                <option value="vadeli">Vadeli</option>
+              </select>
+            </div>
           </div>
 
           {/* Vade Tarihi */}
           {formData.odeme_durumu === 'vadeli' && (
-            <div>
+            <div className="mt-4">
               <Label className="text-slate-300">Vade Tarihi</Label>
               <Input
                 type="date"
                 value={formData.vade_tarihi}
                 onChange={(e) => setFormData({ ...formData, vade_tarihi: e.target.value })}
-                className="bg-slate-800 border-slate-700 text-white mt-1"
+                className="bg-slate-800 border-slate-700 text-white mt-1 max-w-xs"
               />
             </div>
           )}
+        </div>
 
-          {/* Fatura No */}
-          <div>
-            <Label className="text-slate-300">Fatura No</Label>
-            <Input
-              type="text"
-              value={formData.fatura_no}
-              onChange={(e) => setFormData({ ...formData, fatura_no: e.target.value })}
-              className="bg-slate-800 border-slate-700 text-white mt-1"
-              placeholder="Fatura numarası"
-            />
-          </div>
+        {/* Belge Bilgileri */}
+        <div className="glass-effect rounded-xl border border-slate-800 p-6">
+          <h2 className="text-lg font-semibold text-white mb-4">📄 Belge Bilgileri</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Fatura No */}
+            <div>
+              <Label className="text-slate-300">Fatura No</Label>
+              <Input
+                type="text"
+                value={formData.fatura_no}
+                onChange={(e) => setFormData({ ...formData, fatura_no: e.target.value })}
+                className="bg-slate-800 border-slate-700 text-white mt-1"
+                placeholder="Fatura numarası"
+              />
+            </div>
 
-          {/* İrsaliye No */}
-          <div>
-            <Label className="text-slate-300">İrsaliye No</Label>
-            <Input
-              type="text"
-              value={formData.irsaliye_no}
-              onChange={(e) => setFormData({ ...formData, irsaliye_no: e.target.value })}
-              className="bg-slate-800 border-slate-700 text-white mt-1"
-              placeholder="İrsaliye numarası"
-            />
-          </div>
+            {/* İrsaliye No */}
+            <div>
+              <Label className="text-slate-300">İrsaliye No</Label>
+              <Input
+                type="text"
+                value={formData.irsaliye_no}
+                onChange={(e) => setFormData({ ...formData, irsaliye_no: e.target.value })}
+                className="bg-slate-800 border-slate-700 text-white mt-1"
+                placeholder="İrsaliye numarası"
+              />
+            </div>
 
-          {/* Notlar */}
-          <div className="md:col-span-2">
-            <Label className="text-slate-300">Notlar</Label>
-            <textarea
-              value={formData.notlar}
-              onChange={(e) => setFormData({ ...formData, notlar: e.target.value })}
-              className="w-full bg-slate-800 border border-slate-700 text-white rounded-md px-3 py-2 mt-1 min-h-[80px]"
-              placeholder="Ek notlar..."
-            />
+            {/* Notlar */}
+            <div className="md:col-span-2">
+              <Label className="text-slate-300">Notlar</Label>
+              <textarea
+                value={formData.notlar}
+                onChange={(e) => setFormData({ ...formData, notlar: e.target.value })}
+                className="w-full bg-slate-800 border border-slate-700 text-white rounded-md px-3 py-2 mt-1 min-h-[80px]"
+                placeholder="Ek notlar..."
+              />
+            </div>
           </div>
         </div>
 
         {/* Özet Kartı */}
         {formData.miktar_litre && formData.birim_fiyat && (
-          <div className="mt-6 p-4 bg-green-500/10 border border-green-500/30 rounded-lg">
-            <h3 className="text-green-400 font-semibold mb-2">Alım Özeti</h3>
-            <div className="grid grid-cols-3 gap-4 text-center">
-              <div>
-                <p className="text-2xl font-bold text-white">{parseFloat(formData.miktar_litre).toLocaleString('tr-TR')} L</p>
-                <p className="text-xs text-slate-400">Miktar</p>
+          <div className="p-6 bg-green-500/10 border border-green-500/30 rounded-xl">
+            <h3 className="text-green-400 font-semibold mb-4 text-lg">📊 Alım Özeti</h3>
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-center">
+              <div className="bg-slate-800/50 rounded-lg p-3">
+                <p className="text-2xl font-bold text-white">{parseFloat(formData.miktar_litre).toLocaleString('tr-TR')}</p>
+                <p className="text-xs text-slate-400">Litre</p>
               </div>
-              <div>
+              {formData.miktar_kg && (
+                <div className="bg-slate-800/50 rounded-lg p-3">
+                  <p className="text-2xl font-bold text-white">{parseFloat(formData.miktar_kg).toLocaleString('tr-TR')}</p>
+                  <p className="text-xs text-slate-400">KG</p>
+                </div>
+              )}
+              <div className="bg-slate-800/50 rounded-lg p-3">
                 <p className="text-2xl font-bold text-white">₺{parseFloat(formData.birim_fiyat).toFixed(2)}</p>
                 <p className="text-xs text-slate-400">Birim Fiyat</p>
               </div>
-              <div>
+              <div className="bg-slate-800/50 rounded-lg p-3">
                 <p className="text-2xl font-bold text-green-400">₺{parseFloat(formData.toplam_tutar).toLocaleString('tr-TR')}</p>
-                <p className="text-xs text-slate-400">Toplam</p>
+                <p className="text-xs text-slate-400">Toplam Tutar</p>
               </div>
+              {formData.cekici_plaka && (
+                <div className="bg-slate-800/50 rounded-lg p-3">
+                  <p className="text-lg font-bold text-blue-400">{formData.cekici_plaka}</p>
+                  <p className="text-xs text-slate-400">Çekici</p>
+                </div>
+              )}
             </div>
           </div>
         )}
 
-        <div className="mt-6 flex gap-3">
+        <div className="flex gap-3">
           <Button
             type="button"
             variant="outline"
