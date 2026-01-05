@@ -21,7 +21,10 @@ import {
   DollarSign,
   Car,
   Truck,
-  ClipboardCheck
+  ClipboardCheck,
+  Fuel,
+  TrendingUp,
+  TrendingDown
 } from 'lucide-react';
 
 const Layout = () => {
