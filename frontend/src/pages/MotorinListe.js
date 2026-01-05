@@ -543,7 +543,14 @@ const MotorinListe = () => {
                           <TrendingDown className="w-5 h-5 text-blue-400" />
                         </div>
                         <div>
-                          <p className="font-semibold text-white">{verme.arac_plaka || 'Araç'}</p>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="font-semibold text-white">{verme.arac_plaka || 'Araç'}</p>
+                            {verme.bosaltim_tesisi && (
+                              <span className="px-2 py-1 bg-cyan-500/20 text-cyan-400 rounded text-xs">
+                                🏭 {verme.bosaltim_tesisi}
+                              </span>
+                            )}
+                          </div>
                           <p className="text-sm text-slate-400">{verme.arac_bilgi}</p>
                           <p className="text-sm text-slate-400">{verme.tarih}</p>
                           <div className="flex gap-4 mt-1 text-xs text-slate-500">
