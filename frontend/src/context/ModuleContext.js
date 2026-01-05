@@ -32,6 +32,13 @@ const MODULES = [
     description: 'Araç takip ve yönetimi'
   },
   { 
+    id: 'motorin', 
+    name: 'Motorin',
+    icon: '⛽',
+    color: 'from-amber-500 to-orange-600',
+    description: 'Motorin stok ve tüketim takibi'
+  },
+  { 
     id: 'personel', 
     name: 'Personel',
     icon: '👥',
