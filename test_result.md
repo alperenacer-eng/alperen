@@ -194,6 +194,9 @@ backend:
       - working: true
         agent: "testing"
         comment: "COMPREHENSIVE TESTING COMPLETED: All motorin alım API endpoints tested successfully. POST /api/motorin-alimlar (alım oluşturma), GET /api/motorin-alimlar (listeleme), GET /api/motorin-alimlar/{id} (tekil alım), PUT /api/motorin-alimlar/{id} (güncelleme), DELETE /api/motorin-alimlar/{id} (silme) endpoint'leri çalışıyor. Alım bilgileri (tarih, tedarikci_id, tedarikci_adi, miktar_litre, birim_fiyat, toplam_tutar, fatura_no, irsaliye_no, odeme_durumu, vade_tarihi, notlar) doğru şekilde işleniyor. Stok hesaplaması otomatik güncelleniyor."
+      - working: true
+        agent: "testing"
+        comment: "NEW FIELDS TESTING COMPLETED: Tested all newly added fields in Motorin Alım API as requested. Successfully tested POST /api/motorin-alimlar with new fields: cekici_plaka (34 ABC 123), dorse_plaka (34 DEF 456), sofor_adi (Ahmet), sofor_soyadi (Yılmaz), miktar_kg (8350), kesafet (0.835), kantar_kg (8400), teslim_alan (Mehmet Demir). All new fields are properly stored and returned in both create and list operations. Test scenario completed: Login with alperenacer@acerler.com/1234, created motorin alım record with all new fields using test data from review request, verified fields are returned correctly in list response. All 23 tests passed (100% success rate)."
 
   - task: "Motorin Verme API'leri (/api/motorin-verme)"
     implemented: true
