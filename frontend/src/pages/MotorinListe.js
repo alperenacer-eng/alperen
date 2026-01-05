@@ -306,6 +306,9 @@ const MotorinListe = () => {
                             {alim.fatura_no && <span>Fatura: {alim.fatura_no}</span>}
                             {alim.irsaliye_no && <span>İrsaliye: {alim.irsaliye_no}</span>}
                             {alim.teslim_alan && <span>Teslim Alan: {alim.teslim_alan}</span>}
+                            {alim.bosaltim_tesisi && (
+                              <span className="text-cyan-400">📍 Tesis: {alim.bosaltim_tesisi}</span>
+                            )}
                           </div>
                         </div>
                       </div>
