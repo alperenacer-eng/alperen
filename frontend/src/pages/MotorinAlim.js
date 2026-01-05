@@ -186,6 +186,18 @@ const MotorinAlim = () => {
                 placeholder="Teslim alan kişi"
               />
             </div>
+
+            {/* Boşaltım Yapılan Tesis */}
+            <div>
+              <Label className="text-slate-300">Boşaltım Yapılan Tesis</Label>
+              <Input
+                type="text"
+                value={formData.bosaltim_tesisi}
+                onChange={(e) => setFormData({ ...formData, bosaltim_tesisi: e.target.value })}
+                className="bg-slate-800 border-slate-700 text-white mt-1"
+                placeholder="Tesis adı veya lokasyon"
+              />
+            </div>
           </div>
         </div>
 
