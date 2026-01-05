@@ -78,6 +78,17 @@ const MotorinAlim = () => {
     }
   };
 
+  const fetchTesisler = async () => {
+    try {
+      const res = await axios.get(`${API_URL}/bosaltim-tesisleri`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setTesisler(res.data);
+    } catch (error) {
+      console.log('Tesisler yüklenemedi');
+    }
+  };
+
   const handleTedarikciChange = (e) => {
     const tedarikciId = e.target.value;
     const tedarikci = tedarikciler.find(t => t.id === tedarikciId);
@@ -85,6 +96,15 @@ const MotorinAlim = () => {
       ...formData,
       tedarikci_id: tedarikciId,
       tedarikci_adi: tedarikci ? tedarikci.name : ''
+    });
+  };
+
+  const handleTesisChange = (e) => {
+    const tesisId = e.target.value;
+    const tesis = tesisler.find(t => t.id === tesisId);
+    setFormData({
+      ...formData,
+      bosaltim_tesisi: tesis ? tesis.name : ''
     });
   };
 
