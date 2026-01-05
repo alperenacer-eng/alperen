@@ -877,6 +877,7 @@ class MotorinAPITester:
         print("-" * 30)
         self.test_delete_motorin_verme()
         self.test_delete_motorin_alim()
+        self.test_delete_motorin_alim_new_fields()
         self.test_delete_tedarikci()
         self.test_delete_test_arac()
         
