@@ -258,6 +258,81 @@ class MotorinAPITester:
         except Exception as e:
             self.log_result("Create Motorin Alim", False, f"Exception: {str(e)}")
             return False
+
+    def test_create_motorin_alim_with_new_fields(self):
+        """Test motorin alim creation with new fields as requested in review"""
+        if not self.test_tedarikci_id:
+            self.log_result("Create Motorin Alim with New Fields", False, "No test tedarikci ID available")
+            return False
+            
+        today = datetime.now().strftime("%Y-%m-%d")
+        alim_data = {
+            "tarih": today,
+            "tedarikci_adi": "Test Petrol",
+            "cekici_plaka": "34 ABC 123",
+            "dorse_plaka": "34 DEF 456",
+            "sofor_adi": "Ahmet",
+            "sofor_soyadi": "Yılmaz",
+            "miktar_litre": 10000,
+            "miktar_kg": 8350,
+            "kesafet": 0.835,
+            "kantar_kg": 8400,
+            "birim_fiyat": 42.50,
+            "toplam_tutar": 425000,
+            "fatura_no": "FTR-2025-001",
+            "irsaliye_no": "IRS-2025-001",
+            "odeme_durumu": "vadeli",
+            "vade_tarihi": "2025-08-15",
+            "teslim_alan": "Mehmet Demir"
+        }
+        
+        try:
+            response = self.session.post(f"{BACKEND_URL}/motorin-alimlar", json=alim_data)
+            
+            if response.status_code == 200:
+                data = response.json()
+                new_alim_id = data.get("id")
+                
+                # Verify all new fields are present in response
+                new_fields_check = {
+                    "cekici_plaka": "34 ABC 123",
+                    "dorse_plaka": "34 DEF 456", 
+                    "sofor_adi": "Ahmet",
+                    "sofor_soyadi": "Yılmaz",
+                    "miktar_kg": 8350,
+                    "kesafet": 0.835,
+                    "kantar_kg": 8400,
+                    "teslim_alan": "Mehmet Demir"
+                }
+                
+                missing_fields = []
+                incorrect_values = []
+                
+                for field, expected_value in new_fields_check.items():
+                    if field not in data:
+                        missing_fields.append(field)
+                    elif data[field] != expected_value:
+                        incorrect_values.append(f"{field}: expected {expected_value}, got {data[field]}")
+                
+                if missing_fields:
+                    self.log_result("Create Motorin Alim with New Fields", False, f"Missing fields: {', '.join(missing_fields)}")
+                    return False
+                elif incorrect_values:
+                    self.log_result("Create Motorin Alim with New Fields", False, f"Incorrect values: {', '.join(incorrect_values)}")
+                    return False
+                else:
+                    self.log_result("Create Motorin Alim with New Fields", True, f"Alim created with all new fields. ID: {new_alim_id}")
+                    
+                    # Store this ID for verification test
+                    self.test_new_fields_alim_id = new_alim_id
+                    return True
+            else:
+                self.log_result("Create Motorin Alim with New Fields", False, "Alim creation failed", response)
+                return False
+                
+        except Exception as e:
+            self.log_result("Create Motorin Alim with New Fields", False, f"Exception: {str(e)}")
+            return False
     
     def test_get_motorin_alimlar(self):
         """Test getting all motorin alimlar"""
