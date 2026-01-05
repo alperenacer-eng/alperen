@@ -356,7 +356,7 @@ async def register(user_data: UserCreate):
         "email": user_data.email,
         "password": hash_password(user_data.password),
         "role": "admin" if is_first_user else user_data.role,
-        "permissions": ["bims", "cimento", "parke", "araclar", "personel"] if is_first_user else user_data.permissions,
+        "permissions": ["bims", "cimento", "parke", "araclar", "personel", "motorin"] if is_first_user else user_data.permissions,
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     
