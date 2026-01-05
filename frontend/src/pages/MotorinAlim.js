@@ -167,11 +167,12 @@ const MotorinAlim = () => {
 
             {/* Tedarikçi */}
             <div>
-              <Label className="text-slate-300">Tedarikçi</Label>
+              <Label className="text-slate-300">Tedarikçi *</Label>
               <select
                 value={formData.tedarikci_id}
                 onChange={handleTedarikciChange}
                 className="w-full bg-slate-800 border border-slate-700 text-white rounded-md px-3 py-2 mt-1"
+                required
               >
                 <option value="">Tedarikçi Seçin</option>
                 {tedarikciler.map(t => (
@@ -182,25 +183,27 @@ const MotorinAlim = () => {
 
             {/* Teslim Alan */}
             <div>
-              <Label className="text-slate-300">Teslim Alan</Label>
+              <Label className="text-slate-300">Teslim Alan *</Label>
               <Input
                 type="text"
                 value={formData.teslim_alan}
                 onChange={(e) => setFormData({ ...formData, teslim_alan: e.target.value })}
                 className="bg-slate-800 border-slate-700 text-white mt-1"
                 placeholder="Teslim alan kişi"
+                required
               />
             </div>
 
             {/* Boşaltım Yapılan Tesis */}
             <div>
-              <Label className="text-slate-300">Boşaltım Yapılan Tesis</Label>
+              <Label className="text-slate-300">Boşaltım Yapılan Tesis *</Label>
               <Input
                 type="text"
                 value={formData.bosaltim_tesisi}
                 onChange={(e) => setFormData({ ...formData, bosaltim_tesisi: e.target.value })}
                 className="bg-slate-800 border-slate-700 text-white mt-1"
                 placeholder="Tesis adı veya lokasyon"
+                required
               />
             </div>
           </div>
