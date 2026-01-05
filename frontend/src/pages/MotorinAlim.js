@@ -14,6 +14,7 @@ const MotorinAlim = () => {
   const { token, user } = useAuth();
   const navigate = useNavigate();
   const [tedarikciler, setTedarikciler] = useState([]);
+  const [tesisler, setTesisler] = useState([]);
   const [loading, setLoading] = useState(false);
   
   const [formData, setFormData] = useState({
@@ -41,6 +42,7 @@ const MotorinAlim = () => {
 
   useEffect(() => {
     fetchTedarikciler();
+    fetchTesisler();
   }, []);
 
   useEffect(() => {
