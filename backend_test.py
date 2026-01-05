@@ -75,15 +75,11 @@ class MotorinAPITester:
             self.log_result("Auth Registration", False, f"Exception: {str(e)}")
             return False
     
-    def test_auth_login(self):
+    def test_auth_login_existing(self):
         """Test user login with existing credentials"""
-        if not self.user_data:
-            self.log_result("Auth Login", False, "No user data from registration")
-            return False
-            
         login_data = {
-            "email": self.user_data.get("email"),
-            "password": "testpassword123"
+            "email": "alperenacer@acerler.com",
+            "password": "1234"
         }
         
         try:
@@ -91,17 +87,20 @@ class MotorinAPITester:
             
             if response.status_code == 200:
                 data = response.json()
-                token = data.get("access_token")
-                user = data.get("user")
+                self.token = data.get("access_token")
+                self.user_data = data.get("user")
                 
-                self.log_result("Auth Login", True, f"Login successful for: {user.get('name')}")
+                # Set authorization header for future requests
+                self.session.headers.update({"Authorization": f"Bearer {self.token}"})
+                
+                self.log_result("Auth Login (Existing User)", True, f"Login successful for: {self.user_data.get('name')}")
                 return True
             else:
-                self.log_result("Auth Login", False, "Login failed", response)
+                self.log_result("Auth Login (Existing User)", False, "Login failed", response)
                 return False
                 
         except Exception as e:
-            self.log_result("Auth Login", False, f"Exception: {str(e)}")
+            self.log_result("Auth Login (Existing User)", False, f"Exception: {str(e)}")
             return False
     
     def test_create_vehicle(self):
