@@ -333,8 +333,10 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Araç CRUD API'leri"
-    - "Dosya yükleme API'leri"
+    - "Motorin Tedarikçi API'leri"
+    - "Motorin Alım API'leri"
+    - "Motorin Verme API'leri"
+    - "Motorin Stok ve Özet API'leri"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
@@ -346,3 +348,5 @@ agent_communication:
     message: "Araç modülü backend API'leri kapsamlı olarak test edildi. Tüm CRUD operasyonları (oluşturma, listeleme, güncelleme, silme) başarıyla çalışıyor. Dosya yükleme endpoint'leri (ruhsat, kasko, sigorta PDF'leri) test edildi ve çalışıyor. Araç özet istatistikleri API'si de doğru veri döndürüyor. Kimlik doğrulama sistemi sorunsuz çalışıyor. Bir minor fix uygulandı: MongoDB ObjectId serialization hatası düzeltildi."
   - agent: "testing"
     message: "PRODUCTION LOGIN TESTING COMPLETED: Comprehensive testing of login functionality on production URL (https://project-upload-12.emergent.host) with credentials alperenacer@acerler.com/1234. ALL TESTS PASSED (100% success rate). Login API works correctly, /api/auth/me endpoint validates tokens properly, logout/re-login cycles work flawlessly, CORS headers are properly configured. The reported issue could not be reproduced through backend API testing. Issue may be frontend-specific, browser cache-related, or network connectivity related."
+  - agent: "main"
+    message: "MOTORİN MODÜLÜ EKLENDİ: Backend API'leri (tedarikçi, alım, verme, stok, özet, araç tüketim raporu) ve Frontend sayfaları (Dashboard, Alım, Verme, Liste, Kaynaklar, Raporlar) oluşturuldu. Modül seçici ve menüye entegre edildi. Backend API'lerini test etmesi gerekiyor."
