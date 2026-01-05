@@ -2330,6 +2330,7 @@ async def delete_motorin_alim(id: str, current_user: dict = Depends(get_current_
 # Araçlara Motorin Verme Kayıtları
 class MotorinVermeCreate(BaseModel):
     tarih: str
+    bosaltim_tesisi: str = ""  # Hangi tesisten verildi
     arac_id: str
     arac_plaka: str = ""
     arac_bilgi: str = ""
