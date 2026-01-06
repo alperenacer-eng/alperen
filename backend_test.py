@@ -13,16 +13,13 @@ from datetime import datetime
 # Backend URL from environment
 BACKEND_URL = "https://project-finder-50.preview.emergentagent.com/api"
 
-class MotorinAPITester:
+class TeklifAPITester:
     def __init__(self):
         self.session = requests.Session()
         self.token = None
         self.user_data = None
-        self.test_tedarikci_id = None
-        self.test_alim_id = None
-        self.test_new_fields_alim_id = None  # For testing new fields
-        self.test_verme_id = None
-        self.test_arac_id = None
+        self.test_musteri_id = None
+        self.test_teklif_id = None
         self.results = {
             "passed": 0,
             "failed": 0,
