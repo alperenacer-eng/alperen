@@ -75,6 +75,12 @@ const Layout = () => {
     { path: '/motorin-kaynaklar', icon: Database, label: 'Kaynaklar', testId: 'nav-motorin-kaynaklar' },
   ];
 
+  const teklifMenuItems = [
+    { path: '/teklif-olustur', icon: FilePlus, label: 'Yeni Teklif', testId: 'nav-teklif-olustur' },
+    { path: '/teklif-liste', icon: List, label: 'Teklif Listesi', testId: 'nav-teklif-liste' },
+    { path: '/teklif-kaynaklar', icon: Building, label: 'Müşteriler', testId: 'nav-teklif-kaynaklar' },
+  ];
+
   const menuItems = currentModule?.id === 'bims' 
     ? [...baseMenuItems, ...bimsMenuItems]
     : currentModule?.id === 'cimento'
