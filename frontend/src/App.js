@@ -108,6 +108,11 @@ function App() {
               <Route path="motorin-liste" element={<MotorinListe />} />
               <Route path="motorin-kaynaklar" element={<MotorinKaynaklar />} />
               <Route path="motorin-raporlar" element={<MotorinRaporlar />} />
+              <Route path="teklif" element={<TeklifDashboard />} />
+              <Route path="teklif-olustur" element={<TeklifOlustur />} />
+              <Route path="teklif-duzenle/:id" element={<TeklifOlustur />} />
+              <Route path="teklif-liste" element={<TeklifListe />} />
+              <Route path="teklif-kaynaklar" element={<TeklifKaynaklar />} />
               <Route path="settings" element={<Settings />} />
               <Route path="settings/products" element={<ProductsManagement />} />
               <Route path="settings/departments" element={<DepartmentsManagement />} />
