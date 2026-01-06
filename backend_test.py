@@ -234,12 +234,14 @@ class TeklifAPITester:
                 self.test_teklif_id = data.get("id")
                 teklif_no = data.get("teklif_no")
                 
-                # Verify teklif_no format (TKL-2025-xxxx)
-                if teklif_no and teklif_no.startswith("TKL-2025-"):
+                # Verify teklif_no format (TKL-YYYY-xxxx)
+                current_year = datetime.now().year
+                expected_prefix = f"TKL-{current_year}-"
+                if teklif_no and teklif_no.startswith(expected_prefix):
                     self.log_result("Create Teklif", True, f"Teklif created with ID: {self.test_teklif_id}, No: {teklif_no}")
                     return True
                 else:
-                    self.log_result("Create Teklif", False, f"Invalid teklif_no format: {teklif_no}")
+                    self.log_result("Create Teklif", False, f"Invalid teklif_no format: {teklif_no}, expected to start with {expected_prefix}")
                     return False
             else:
                 self.log_result("Create Teklif", False, "Teklif creation failed", response)
