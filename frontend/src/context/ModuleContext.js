@@ -46,6 +46,13 @@ const MODULES = [
     description: 'Personel yönetimi ve takibi'
   },
   { 
+    id: 'teklif', 
+    name: 'Teklif',
+    icon: '📋',
+    color: 'from-teal-500 to-cyan-600',
+    description: 'Satış teklifleri yönetimi'
+  },
+  { 
     id: 'ayarlar', 
     name: 'Ayarlar',
     icon: '⚙️',
