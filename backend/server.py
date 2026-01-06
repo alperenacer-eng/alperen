@@ -2617,6 +2617,41 @@ async def delete_teklif_musteri(id: str, current_user: dict = Depends(get_curren
     await db.teklif_musteriler.delete_one({"id": id})
     return {"message": "Müşteri silindi"}
 
+# Teklif Ürünleri
+class TeklifUrunCreate(BaseModel):
+    urun_adi: str
+    aciklama: str = ""
+    birim: str = "adet"
+    birim_fiyat: float = 0
+    kdv_orani: float = 20
+    aktif: bool = True
+
+@api_router.post("/teklif-urunler")
+async def create_teklif_urun(input: TeklifUrunCreate, current_user: dict = Depends(get_current_user)):
+    data = input.model_dump()
+    data['id'] = str(datetime.now(timezone.utc).timestamp()).replace(".", "")
+    data['created_at'] = datetime.now(timezone.utc).isoformat()
+    await db.teklif_urunler.insert_one(data)
+    return {k: v for k, v in data.items() if k != '_id'}
+
+@api_router.get("/teklif-urunler")
+async def get_teklif_urunler(current_user: dict = Depends(get_current_user)):
+    records = await db.teklif_urunler.find({}, {"_id": 0}).sort("urun_adi", 1).to_list(1000)
+    return records
+
+@api_router.put("/teklif-urunler/{id}")
+async def update_teklif_urun(id: str, input: TeklifUrunCreate, current_user: dict = Depends(get_current_user)):
+    data = input.model_dump()
+    data['updated_at'] = datetime.now(timezone.utc).isoformat()
+    await db.teklif_urunler.update_one({"id": id}, {"$set": data})
+    updated = await db.teklif_urunler.find_one({"id": id}, {"_id": 0})
+    return updated
+
+@api_router.delete("/teklif-urunler/{id}")
+async def delete_teklif_urun(id: str, current_user: dict = Depends(get_current_user)):
+    await db.teklif_urunler.delete_one({"id": id})
+    return {"message": "Ürün silindi"}
+
 # Teklif Kalemleri Modeli
 class TeklifKalem(BaseModel):
     urun_hizmet: str
