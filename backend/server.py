@@ -2569,6 +2569,258 @@ async def get_motorin_arac_tuketim(
     result.sort(key=lambda x: x["toplam_litre"], reverse=True)
     return result
 
+# =====================================================
+# TEKLİF MODÜLÜ API'LERİ
+# =====================================================
+
+# Teklif Müşterileri
+class TeklifMusteriCreate(BaseModel):
+    firma_adi: str
+    yetkili_kisi: str = ""
+    telefon: str = ""
+    email: str = ""
+    adres: str = ""
+    vergi_no: str = ""
+    vergi_dairesi: str = ""
+    notlar: str = ""
+
+@api_router.post("/teklif-musteriler")
+async def create_teklif_musteri(input: TeklifMusteriCreate, current_user: dict = Depends(get_current_user)):
+    data = input.model_dump()
+    data['id'] = str(datetime.now(timezone.utc).timestamp()).replace(".", "")
+    data['created_at'] = datetime.now(timezone.utc).isoformat()
+    await db.teklif_musteriler.insert_one(data)
+    return {k: v for k, v in data.items() if k != '_id'}
+
+@api_router.get("/teklif-musteriler")
+async def get_teklif_musteriler(current_user: dict = Depends(get_current_user)):
+    records = await db.teklif_musteriler.find({}, {"_id": 0}).sort("firma_adi", 1).to_list(1000)
+    return records
+
+@api_router.get("/teklif-musteriler/{id}")
+async def get_teklif_musteri(id: str, current_user: dict = Depends(get_current_user)):
+    record = await db.teklif_musteriler.find_one({"id": id}, {"_id": 0})
+    if not record:
+        raise HTTPException(status_code=404, detail="Müşteri bulunamadı")
+    return record
+
+@api_router.put("/teklif-musteriler/{id}")
+async def update_teklif_musteri(id: str, input: TeklifMusteriCreate, current_user: dict = Depends(get_current_user)):
+    data = input.model_dump()
+    data['updated_at'] = datetime.now(timezone.utc).isoformat()
+    await db.teklif_musteriler.update_one({"id": id}, {"$set": data})
+    updated = await db.teklif_musteriler.find_one({"id": id}, {"_id": 0})
+    return updated
+
+@api_router.delete("/teklif-musteriler/{id}")
+async def delete_teklif_musteri(id: str, current_user: dict = Depends(get_current_user)):
+    await db.teklif_musteriler.delete_one({"id": id})
+    return {"message": "Müşteri silindi"}
+
+# Teklif Kalemleri Modeli
+class TeklifKalem(BaseModel):
+    urun_hizmet: str
+    aciklama: str = ""
+    miktar: float = 1
+    birim: str = "adet"
+    birim_fiyat: float = 0
+    kdv_orani: float = 20
+    iskonto_orani: float = 0
+    toplam: float = 0
+
+# Teklif Modeli
+class TeklifCreate(BaseModel):
+    musteri_id: str = ""
+    musteri_adi: str = ""
+    musteri_adres: str = ""
+    musteri_vergi_no: str = ""
+    musteri_vergi_dairesi: str = ""
+    teklif_tarihi: str
+    gecerlilik_tarihi: str = ""
+    konu: str = ""
+    kalemler: List[TeklifKalem] = []
+    ara_toplam: float = 0
+    toplam_iskonto: float = 0
+    toplam_kdv: float = 0
+    genel_toplam: float = 0
+    para_birimi: str = "TRY"
+    odeme_kosullari: str = ""
+    teslim_suresi: str = ""
+    notlar: str = ""
+    durum: str = "taslak"  # taslak, gonderildi, beklemede, kabul_edildi, reddedildi, iptal
+
+class TeklifUpdate(BaseModel):
+    musteri_id: Optional[str] = None
+    musteri_adi: Optional[str] = None
+    musteri_adres: Optional[str] = None
+    musteri_vergi_no: Optional[str] = None
+    musteri_vergi_dairesi: Optional[str] = None
+    teklif_tarihi: Optional[str] = None
+    gecerlilik_tarihi: Optional[str] = None
+    konu: Optional[str] = None
+    kalemler: Optional[List[TeklifKalem]] = None
+    ara_toplam: Optional[float] = None
+    toplam_iskonto: Optional[float] = None
+    toplam_kdv: Optional[float] = None
+    genel_toplam: Optional[float] = None
+    para_birimi: Optional[str] = None
+    odeme_kosullari: Optional[str] = None
+    teslim_suresi: Optional[str] = None
+    notlar: Optional[str] = None
+    durum: Optional[str] = None
+
+# Teklif numarası oluşturma fonksiyonu
+async def generate_teklif_no():
+    """TKL-2025-0001 formatında teklif numarası oluştur"""
+    current_year = datetime.now().year
+    
+    # Bu yılın son teklif numarasını bul
+    last_teklif = await db.teklifler.find(
+        {"teklif_no": {"$regex": f"^TKL-{current_year}-"}}
+    ).sort("teklif_no", -1).limit(1).to_list(1)
+    
+    if last_teklif:
+        # Son numarayı al ve bir artır
+        last_no = last_teklif[0]['teklif_no']
+        last_num = int(last_no.split('-')[-1])
+        new_num = last_num + 1
+    else:
+        new_num = 1
+    
+    return f"TKL-{current_year}-{str(new_num).zfill(4)}"
+
+@api_router.post("/teklifler")
+async def create_teklif(input: TeklifCreate, current_user: dict = Depends(get_current_user)):
+    data = input.model_dump()
+    data['id'] = str(datetime.now(timezone.utc).timestamp()).replace(".", "")
+    data['teklif_no'] = await generate_teklif_no()
+    data['created_at'] = datetime.now(timezone.utc).isoformat()
+    data['created_by'] = current_user['id']
+    data['created_by_name'] = current_user['name']
+    
+    # Kalemler listesini dict olarak kaydet
+    if data.get('kalemler'):
+        data['kalemler'] = [k if isinstance(k, dict) else k.model_dump() if hasattr(k, 'model_dump') else dict(k) for k in data['kalemler']]
+    
+    await db.teklifler.insert_one(data)
+    return {k: v for k, v in data.items() if k != '_id'}
+
+@api_router.get("/teklifler")
+async def get_teklifler(
+    durum: str = None,
+    musteri_id: str = None,
+    baslangic_tarihi: str = None,
+    bitis_tarihi: str = None,
+    current_user: dict = Depends(get_current_user)
+):
+    query = {}
+    if durum:
+        query['durum'] = durum
+    if musteri_id:
+        query['musteri_id'] = musteri_id
+    if baslangic_tarihi and bitis_tarihi:
+        query['teklif_tarihi'] = {"$gte": baslangic_tarihi, "$lte": bitis_tarihi}
+    
+    records = await db.teklifler.find(query, {"_id": 0}).sort("created_at", -1).to_list(1000)
+    return records
+
+@api_router.get("/teklifler/{id}")
+async def get_teklif(id: str, current_user: dict = Depends(get_current_user)):
+    record = await db.teklifler.find_one({"id": id}, {"_id": 0})
+    if not record:
+        raise HTTPException(status_code=404, detail="Teklif bulunamadı")
+    return record
+
+@api_router.put("/teklifler/{id}")
+async def update_teklif(id: str, input: TeklifUpdate, current_user: dict = Depends(get_current_user)):
+    existing = await db.teklifler.find_one({"id": id}, {"_id": 0})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Teklif bulunamadı")
+    
+    update_data = {k: v for k, v in input.model_dump().items() if v is not None}
+    
+    # Kalemler listesini dict olarak kaydet
+    if update_data.get('kalemler'):
+        update_data['kalemler'] = [k if isinstance(k, dict) else k.model_dump() if hasattr(k, 'model_dump') else dict(k) for k in update_data['kalemler']]
+    
+    update_data['updated_at'] = datetime.now(timezone.utc).isoformat()
+    
+    await db.teklifler.update_one({"id": id}, {"$set": update_data})
+    updated = await db.teklifler.find_one({"id": id}, {"_id": 0})
+    return updated
+
+@api_router.delete("/teklifler/{id}")
+async def delete_teklif(id: str, current_user: dict = Depends(get_current_user)):
+    result = await db.teklifler.delete_one({"id": id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Teklif bulunamadı")
+    return {"message": "Teklif silindi"}
+
+# Teklif Durumu Güncelleme
+@api_router.put("/teklifler/{id}/durum")
+async def update_teklif_durum(id: str, durum: str, current_user: dict = Depends(get_current_user)):
+    existing = await db.teklifler.find_one({"id": id}, {"_id": 0})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Teklif bulunamadı")
+    
+    valid_durumlar = ["taslak", "gonderildi", "beklemede", "kabul_edildi", "reddedildi", "iptal"]
+    if durum not in valid_durumlar:
+        raise HTTPException(status_code=400, detail=f"Geçersiz durum. Geçerli durumlar: {valid_durumlar}")
+    
+    update_data = {
+        "durum": durum,
+        "updated_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.teklifler.update_one({"id": id}, {"$set": update_data})
+    updated = await db.teklifler.find_one({"id": id}, {"_id": 0})
+    return updated
+
+# Teklif Özet İstatistikleri
+@api_router.get("/teklif-ozet")
+async def get_teklif_ozet(current_user: dict = Depends(get_current_user)):
+    today = datetime.now().strftime("%Y-%m-%d")
+    month_start = datetime.now().strftime("%Y-%m-01")
+    
+    # Toplam teklif sayısı
+    toplam_teklif = await db.teklifler.count_documents({})
+    
+    # Durum bazında sayılar
+    taslak = await db.teklifler.count_documents({"durum": "taslak"})
+    gonderildi = await db.teklifler.count_documents({"durum": "gonderildi"})
+    beklemede = await db.teklifler.count_documents({"durum": "beklemede"})
+    kabul_edildi = await db.teklifler.count_documents({"durum": "kabul_edildi"})
+    reddedildi = await db.teklifler.count_documents({"durum": "reddedildi"})
+    
+    # Bu ayki teklifler
+    ayki_teklifler = await db.teklifler.find({"teklif_tarihi": {"$gte": month_start}}, {"_id": 0}).to_list(1000)
+    ayki_teklif_sayisi = len(ayki_teklifler)
+    ayki_toplam_tutar = sum([t.get('genel_toplam', 0) for t in ayki_teklifler])
+    
+    # Kabul edilen tekliflerin toplam tutarı
+    kabul_edilen_teklifler = await db.teklifler.find({"durum": "kabul_edildi"}, {"_id": 0}).to_list(1000)
+    kabul_toplam_tutar = sum([t.get('genel_toplam', 0) for t in kabul_edilen_teklifler])
+    
+    # Müşteri sayısı
+    musteri_sayisi = await db.teklif_musteriler.count_documents({})
+    
+    # Son 5 teklif
+    son_teklifler = await db.teklifler.find({}, {"_id": 0}).sort("created_at", -1).limit(5).to_list(5)
+    
+    return {
+        "toplam_teklif": toplam_teklif,
+        "taslak": taslak,
+        "gonderildi": gonderildi,
+        "beklemede": beklemede,
+        "kabul_edildi": kabul_edildi,
+        "reddedildi": reddedildi,
+        "ayki_teklif_sayisi": ayki_teklif_sayisi,
+        "ayki_toplam_tutar": ayki_toplam_tutar,
+        "kabul_toplam_tutar": kabul_toplam_tutar,
+        "musteri_sayisi": musteri_sayisi,
+        "son_teklifler": son_teklifler
+    }
+
 app.include_router(api_router)
 
 app.add_middleware(
