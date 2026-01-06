@@ -24,7 +24,9 @@ import {
   ClipboardCheck,
   Fuel,
   TrendingUp,
-  TrendingDown
+  TrendingDown,
+  FilePlus,
+  Building
 } from 'lucide-react';
 
 const Layout = () => {
