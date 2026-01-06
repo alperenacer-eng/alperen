@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Backend API Test Suite for Motorin Management System
-Tests authentication and motorin module CRUD operations
+Backend API Test Suite for Teklif (Offer) Management System
+Tests authentication and teklif module CRUD operations
 """
 
 import requests
