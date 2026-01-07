@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -11,7 +11,9 @@ import {
   Trash2,
   ArrowLeft,
   Calculator,
-  Search
+  Search,
+  Package,
+  Grid3X3
 } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
@@ -20,14 +22,23 @@ const TeklifOlustur = () => {
   const { token } = useAuth();
   const navigate = useNavigate();
   const { id } = useParams();
+  const [searchParams] = useSearchParams();
   const isEdit = Boolean(id);
 
+  // Sekme durumu - URL'den veya varsayılan
+  const initialTuru = searchParams.get('turu') || 'bims';
+  const [teklifTuru, setTeklifTuru] = useState(initialTuru);
+
   const [musteriler, setMusteriler] = useState([]);
+  const [urunler, setUrunler] = useState([]);
   const [showMusteriSelect, setShowMusteriSelect] = useState(false);
+  const [showUrunSelect, setShowUrunSelect] = useState(null); // Hangi kalem için ürün seçiliyor
   const [musteriSearch, setMusteriSearch] = useState('');
+  const [urunSearch, setUrunSearch] = useState('');
   const [loading, setLoading] = useState(false);
 
   const [formData, setFormData] = useState({
+    teklif_turu: initialTuru,
     musteri_id: '',
     musteri_adi: '',
     musteri_adres: '',
@@ -59,10 +70,17 @@ const TeklifOlustur = () => {
 
   useEffect(() => {
     fetchMusteriler();
+    fetchUrunler();
     if (isEdit) {
       fetchTeklif();
     }
   }, [id]);
+
+  useEffect(() => {
+    // Teklif türü değiştiğinde ürünleri yeniden yükle
+    fetchUrunler();
+    setFormData(prev => ({ ...prev, teklif_turu: teklifTuru }));
+  }, [teklifTuru]);
 
   const fetchMusteriler = async () => {
     try {
@@ -78,6 +96,21 @@ const TeklifOlustur = () => {
     }
   };
 
+  const fetchUrunler = async () => {
+    try {
+      const endpoint = teklifTuru === 'bims' ? 'bims-urunler' : 'parke-urunler';
+      const response = await fetch(`${API_URL}/api/${endpoint}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setUrunler(data);
+      }
+    } catch (error) {
+      console.error('Ürünler yüklenirken hata:', error);
+    }
+  };
+
   const fetchTeklif = async () => {
     try {
       const response = await fetch(`${API_URL}/api/teklifler/${id}`, {
@@ -86,6 +119,7 @@ const TeklifOlustur = () => {
       if (response.ok) {
         const data = await response.json();
         setFormData(data);
+        setTeklifTuru(data.teklif_turu || 'bims');
       }
     } catch (error) {
       console.error('Teklif yüklenirken hata:', error);
@@ -106,6 +140,32 @@ const TeklifOlustur = () => {
     setMusteriSearch('');
   };
 
+  const selectUrun = (index, urun) => {
+    setFormData(prev => {
+      const newKalemler = [...prev.kalemler];
+      newKalemler[index] = {
+        ...newKalemler[index],
+        urun_hizmet: urun.urun_adi,
+        aciklama: urun.aciklama || (urun.ebat ? `${urun.ebat} ${urun.renk || ''}`.trim() : ''),
+        birim: urun.birim,
+        birim_fiyat: urun.birim_fiyat
+      };
+      
+      // Toplam hesapla
+      const kalem = newKalemler[index];
+      const subtotal = kalem.miktar * kalem.birim_fiyat;
+      const iskonto = subtotal * (kalem.iskonto_orani / 100);
+      const afterIskonto = subtotal - iskonto;
+      const kdv = afterIskonto * (kalem.kdv_orani / 100);
+      newKalemler[index].toplam = afterIskonto + kdv;
+      
+      return { ...prev, kalemler: newKalemler };
+    });
+    setShowUrunSelect(null);
+    setUrunSearch('');
+    setTimeout(calculateTotals, 0);
+  };
+
   const addKalem = () => {
     setFormData(prev => ({
       ...prev,
@@ -113,7 +173,7 @@ const TeklifOlustur = () => {
         urun_hizmet: '',
         aciklama: '',
         miktar: 1,
-        birim: 'adet',
+        birim: teklifTuru === 'parke' ? 'm²' : 'adet',
         birim_fiyat: 0,
         kdv_orani: 20,
         iskonto_orani: 0,
@@ -205,7 +265,7 @@ const TeklifOlustur = () => {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(formData)
+        body: JSON.stringify({ ...formData, teklif_turu: teklifTuru })
       });
       
       if (response.ok) {
@@ -232,6 +292,35 @@ const TeklifOlustur = () => {
     m.firma_adi.toLowerCase().includes(musteriSearch.toLowerCase())
   );
 
+  const filteredUrunler = urunler.filter(u =>
+    u.urun_adi.toLowerCase().includes(urunSearch.toLowerCase())
+  );
+
+  // Sekme değiştiğinde formu sıfırla (sadece yeni teklif için)
+  const handleTuruChange = (yeniTuru) => {
+    if (!isEdit && teklifTuru !== yeniTuru) {
+      setTeklifTuru(yeniTuru);
+      setFormData(prev => ({
+        ...prev,
+        teklif_turu: yeniTuru,
+        kalemler: [{
+          urun_hizmet: '',
+          aciklama: '',
+          miktar: 1,
+          birim: yeniTuru === 'parke' ? 'm²' : 'adet',
+          birim_fiyat: 0,
+          kdv_orani: 20,
+          iskonto_orani: 0,
+          toplam: 0
+        }],
+        ara_toplam: 0,
+        toplam_iskonto: 0,
+        toplam_kdv: 0,
+        genel_toplam: 0
+      }));
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Başlık */}
@@ -249,6 +338,46 @@ const TeklifOlustur = () => {
           <p className="text-slate-400 text-sm">Teklif bilgilerini doldurun</p>
         </div>
       </div>
+
+      {/* BIMS / Parke Sekmeleri */}
+      {!isEdit && (
+        <div className="flex gap-2 p-1 bg-slate-800/50 rounded-xl w-fit">
+          <button
+            type="button"
+            onClick={() => handleTuruChange('bims')}
+            className={`flex items-center gap-2 px-6 py-3 rounded-lg font-medium transition-all ${
+              teklifTuru === 'bims'
+                ? 'bg-teal-500 text-white shadow-lg'
+                : 'text-slate-400 hover:text-white hover:bg-slate-700'
+            }`}
+          >
+            <Package className="w-5 h-5" />
+            BIMS Teklif
+          </button>
+          <button
+            type="button"
+            onClick={() => handleTuruChange('parke')}
+            className={`flex items-center gap-2 px-6 py-3 rounded-lg font-medium transition-all ${
+              teklifTuru === 'parke'
+                ? 'bg-orange-500 text-white shadow-lg'
+                : 'text-slate-400 hover:text-white hover:bg-slate-700'
+            }`}
+          >
+            <Grid3X3 className="w-5 h-5" />
+            Parke Teklif
+          </button>
+        </div>
+      )}
+
+      {/* Edit modunda teklif türünü göster */}
+      {isEdit && (
+        <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg ${
+          teklifTuru === 'bims' ? 'bg-teal-500/20 text-teal-400' : 'bg-orange-500/20 text-orange-400'
+        }`}>
+          {teklifTuru === 'bims' ? <Package className="w-5 h-5" /> : <Grid3X3 className="w-5 h-5" />}
+          <span className="font-medium">{teklifTuru === 'bims' ? 'BIMS Teklif' : 'Parke Teklif'}</span>
+        </div>
+      )}
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Müşteri Bilgileri */}
@@ -344,7 +473,7 @@ const TeklifOlustur = () => {
             <Button
               type="button"
               onClick={addKalem}
-              className="bg-teal-500 hover:bg-teal-600"
+              className={teklifTuru === 'bims' ? 'bg-teal-500 hover:bg-teal-600' : 'bg-orange-500 hover:bg-orange-600'}
             >
               <Plus className="w-4 h-4 mr-2" /> Kalem Ekle
             </Button>
@@ -354,14 +483,62 @@ const TeklifOlustur = () => {
             {formData.kalemler.map((kalem, index) => (
               <div key={index} className="p-4 bg-slate-800/50 rounded-lg border border-slate-700">
                 <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
-                  <div className="md:col-span-2">
+                  <div className="md:col-span-2 relative">
                     <Label className="text-slate-400 text-xs">Ürün/Hizmet *</Label>
-                    <Input
-                      value={kalem.urun_hizmet}
-                      onChange={(e) => updateKalem(index, 'urun_hizmet', e.target.value)}
-                      placeholder="Ürün veya hizmet adı"
-                      className="mt-1 bg-slate-700 border-slate-600 text-white"
-                    />
+                    <div
+                      onClick={() => setShowUrunSelect(index)}
+                      className="mt-1 w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white cursor-pointer flex items-center justify-between"
+                    >
+                      <span className={kalem.urun_hizmet ? 'text-white' : 'text-slate-400'}>
+                        {kalem.urun_hizmet || 'Ürün seçin veya yazın...'}
+                      </span>
+                      <Search className="w-4 h-4 text-slate-400" />
+                    </div>
+                    
+                    {showUrunSelect === index && (
+                      <div className="absolute z-10 mt-1 w-full bg-slate-800 border border-slate-700 rounded-lg shadow-xl max-h-60 overflow-auto">
+                        <div className="p-2 border-b border-slate-700">
+                          <Input
+                            placeholder="Ürün ara veya yeni girin..."
+                            value={urunSearch}
+                            onChange={(e) => {
+                              setUrunSearch(e.target.value);
+                              updateKalem(index, 'urun_hizmet', e.target.value);
+                            }}
+                            className="bg-slate-700 border-slate-600"
+                            autoFocus
+                          />
+                        </div>
+                        {filteredUrunler.length > 0 ? (
+                          filteredUrunler.map(urun => (
+                            <div
+                              key={urun.id}
+                              onClick={() => selectUrun(index, urun)}
+                              className="p-3 hover:bg-slate-700 cursor-pointer border-b border-slate-700/50"
+                            >
+                              <div className="text-white font-medium">{urun.urun_adi}</div>
+                              <div className="text-slate-400 text-sm flex justify-between">
+                                <span>{urun.birim}</span>
+                                <span>{formatCurrency(urun.birim_fiyat)}</span>
+                              </div>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="p-3 text-slate-400 text-center">
+                            {urunSearch ? 'Ürün bulunamadı - manuel giriş yapabilirsiniz' : 'Ürün listesi boş'}
+                          </div>
+                        )}
+                        <div
+                          onClick={() => {
+                            setShowUrunSelect(null);
+                            setUrunSearch('');
+                          }}
+                          className="p-3 hover:bg-slate-700 cursor-pointer text-slate-400 text-center"
+                        >
+                          Kapat
+                        </div>
+                      </div>
+                    )}
                   </div>
                   
                   <div>
@@ -457,7 +634,9 @@ const TeklifOlustur = () => {
                   
                   <div>
                     <Label className="text-slate-400 text-xs">Toplam</Label>
-                    <div className="mt-1 px-3 py-2 bg-slate-700 border border-slate-600 rounded-md text-teal-500 font-semibold">
+                    <div className={`mt-1 px-3 py-2 bg-slate-700 border border-slate-600 rounded-md font-semibold ${
+                      teklifTuru === 'bims' ? 'text-teal-500' : 'text-orange-500'
+                    }`}>
                       {formatCurrency(kalem.toplam)}
                     </div>
                   </div>
@@ -470,7 +649,7 @@ const TeklifOlustur = () => {
         {/* Toplamlar */}
         <div className="glass-effect rounded-xl p-6 border border-slate-800">
           <div className="flex items-center gap-2 mb-4">
-            <Calculator className="w-5 h-5 text-teal-500" />
+            <Calculator className={`w-5 h-5 ${teklifTuru === 'bims' ? 'text-teal-500' : 'text-orange-500'}`} />
             <h3 className="text-lg font-semibold text-white">Toplamlar</h3>
           </div>
           
@@ -524,7 +703,9 @@ const TeklifOlustur = () => {
               <div className="border-t border-slate-700 pt-3">
                 <div className="flex justify-between text-xl font-bold">
                   <span className="text-white">Genel Toplam</span>
-                  <span className="text-teal-500">{formatCurrency(formData.genel_toplam)}</span>
+                  <span className={teklifTuru === 'bims' ? 'text-teal-500' : 'text-orange-500'}>
+                    {formatCurrency(formData.genel_toplam)}
+                  </span>
                 </div>
               </div>
             </div>
@@ -543,7 +724,7 @@ const TeklifOlustur = () => {
           <Button
             type="submit"
             disabled={loading}
-            className="bg-teal-500 hover:bg-teal-600"
+            className={teklifTuru === 'bims' ? 'bg-teal-500 hover:bg-teal-600' : 'bg-orange-500 hover:bg-orange-600'}
           >
             <Save className="w-4 h-4 mr-2" />
             {loading ? 'Kaydediliyor...' : (isEdit ? 'Güncelle' : 'Kaydet')}
@@ -556,6 +737,17 @@ const TeklifOlustur = () => {
         <div
           className="fixed inset-0 z-0"
           onClick={() => setShowMusteriSelect(false)}
+        />
+      )}
+      
+      {/* Ürün seçim overlay kapatma */}
+      {showUrunSelect !== null && (
+        <div
+          className="fixed inset-0 z-0"
+          onClick={() => {
+            setShowUrunSelect(null);
+            setUrunSearch('');
+          }}
         />
       )}
     </div>
