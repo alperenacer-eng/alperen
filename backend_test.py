@@ -11,7 +11,7 @@ import os
 from datetime import datetime
 
 # Backend URL from environment
-BACKEND_URL = "https://project-finder-50.preview.emergentagent.com/api"
+BACKEND_URL = "https://getir-project.preview.emergentagent.com/api"
 
 class TeklifAPITester:
     def __init__(self):
