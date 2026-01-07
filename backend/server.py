@@ -110,6 +110,29 @@ class MoldResponse(BaseModel):
     description: Optional[str]
     created_at: str
 
+# BIMS Stok Modeli
+class BimsStokUrunCreate(BaseModel):
+    urun_adi: str
+    birim: str = "adet"  # adet, palet, m², m³
+    aciklama: str = ""
+    acilis_miktari: float = 0  # Açılış fişi miktarı
+    acilis_tarihi: str = ""
+
+class BimsStokUrunUpdate(BaseModel):
+    urun_adi: Optional[str] = None
+    birim: Optional[str] = None
+    aciklama: Optional[str] = None
+    acilis_miktari: Optional[float] = None
+    acilis_tarihi: Optional[str] = None
+
+class BimsStokHareketCreate(BaseModel):
+    urun_id: str
+    urun_adi: str = ""
+    hareket_tipi: str  # giris, cikis, acilis
+    miktar: float
+    tarih: str
+    aciklama: str = ""
+
 # Çimento Modülü Modelleri
 class CimentoFirmaCreate(BaseModel):
     name: str
