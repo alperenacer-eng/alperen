@@ -2716,6 +2716,7 @@ class TeklifCreate(BaseModel):
     durum: str = "taslak"  # taslak, gonderildi, beklemede, kabul_edildi, reddedildi, iptal
 
 class TeklifUpdate(BaseModel):
+    teklif_turu: Optional[str] = None
     musteri_id: Optional[str] = None
     musteri_adi: Optional[str] = None
     musteri_adres: Optional[str] = None
