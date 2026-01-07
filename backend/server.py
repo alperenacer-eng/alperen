@@ -2848,34 +2848,40 @@ async def update_teklif_durum(id: str, durum: str, current_user: dict = Depends(
 
 # Teklif Özet İstatistikleri
 @api_router.get("/teklif-ozet")
-async def get_teklif_ozet(current_user: dict = Depends(get_current_user)):
+async def get_teklif_ozet(teklif_turu: str = None, current_user: dict = Depends(get_current_user)):
     today = datetime.now().strftime("%Y-%m-%d")
     month_start = datetime.now().strftime("%Y-%m-01")
     
+    base_query = {}
+    if teklif_turu:
+        base_query['teklif_turu'] = teklif_turu
+    
     # Toplam teklif sayısı
-    toplam_teklif = await db.teklifler.count_documents({})
+    toplam_teklif = await db.teklifler.count_documents(base_query)
     
     # Durum bazında sayılar
-    taslak = await db.teklifler.count_documents({"durum": "taslak"})
-    gonderildi = await db.teklifler.count_documents({"durum": "gonderildi"})
-    beklemede = await db.teklifler.count_documents({"durum": "beklemede"})
-    kabul_edildi = await db.teklifler.count_documents({"durum": "kabul_edildi"})
-    reddedildi = await db.teklifler.count_documents({"durum": "reddedildi"})
+    taslak = await db.teklifler.count_documents({**base_query, "durum": "taslak"})
+    gonderildi = await db.teklifler.count_documents({**base_query, "durum": "gonderildi"})
+    beklemede = await db.teklifler.count_documents({**base_query, "durum": "beklemede"})
+    kabul_edildi = await db.teklifler.count_documents({**base_query, "durum": "kabul_edildi"})
+    reddedildi = await db.teklifler.count_documents({**base_query, "durum": "reddedildi"})
     
     # Bu ayki teklifler
-    ayki_teklifler = await db.teklifler.find({"teklif_tarihi": {"$gte": month_start}}, {"_id": 0}).to_list(1000)
+    ayki_query = {**base_query, "teklif_tarihi": {"$gte": month_start}}
+    ayki_teklifler = await db.teklifler.find(ayki_query, {"_id": 0}).to_list(1000)
     ayki_teklif_sayisi = len(ayki_teklifler)
     ayki_toplam_tutar = sum([t.get('genel_toplam', 0) for t in ayki_teklifler])
     
     # Kabul edilen tekliflerin toplam tutarı
-    kabul_edilen_teklifler = await db.teklifler.find({"durum": "kabul_edildi"}, {"_id": 0}).to_list(1000)
+    kabul_query = {**base_query, "durum": "kabul_edildi"}
+    kabul_edilen_teklifler = await db.teklifler.find(kabul_query, {"_id": 0}).to_list(1000)
     kabul_toplam_tutar = sum([t.get('genel_toplam', 0) for t in kabul_edilen_teklifler])
     
     # Müşteri sayısı
     musteri_sayisi = await db.teklif_musteriler.count_documents({})
     
     # Son 5 teklif
-    son_teklifler = await db.teklifler.find({}, {"_id": 0}).sort("created_at", -1).limit(5).to_list(5)
+    son_teklifler = await db.teklifler.find(base_query, {"_id": 0}).sort("created_at", -1).limit(5).to_list(5)
     
     return {
         "toplam_teklif": toplam_teklif,
@@ -2890,6 +2896,94 @@ async def get_teklif_ozet(current_user: dict = Depends(get_current_user)):
         "musteri_sayisi": musteri_sayisi,
         "son_teklifler": son_teklifler
     }
+
+# =====================================================
+# BIMS ÜRÜN API'LERİ
+# =====================================================
+
+@api_router.post("/bims-urunler")
+async def create_bims_urun(input: BimsUrunCreate, current_user: dict = Depends(get_current_user)):
+    data = input.model_dump()
+    data['id'] = str(datetime.now(timezone.utc).timestamp()).replace(".", "")
+    data['created_at'] = datetime.now(timezone.utc).isoformat()
+    await db.bims_urunler.insert_one(data)
+    return {k: v for k, v in data.items() if k != '_id'}
+
+@api_router.get("/bims-urunler")
+async def get_bims_urunler(current_user: dict = Depends(get_current_user)):
+    records = await db.bims_urunler.find({}, {"_id": 0}).sort("urun_adi", 1).to_list(1000)
+    return records
+
+@api_router.get("/bims-urunler/{id}")
+async def get_bims_urun(id: str, current_user: dict = Depends(get_current_user)):
+    record = await db.bims_urunler.find_one({"id": id}, {"_id": 0})
+    if not record:
+        raise HTTPException(status_code=404, detail="BIMS ürün bulunamadı")
+    return record
+
+@api_router.put("/bims-urunler/{id}")
+async def update_bims_urun(id: str, input: BimsUrunUpdate, current_user: dict = Depends(get_current_user)):
+    existing = await db.bims_urunler.find_one({"id": id}, {"_id": 0})
+    if not existing:
+        raise HTTPException(status_code=404, detail="BIMS ürün bulunamadı")
+    
+    update_data = {k: v for k, v in input.model_dump().items() if v is not None}
+    update_data['updated_at'] = datetime.now(timezone.utc).isoformat()
+    
+    await db.bims_urunler.update_one({"id": id}, {"$set": update_data})
+    updated = await db.bims_urunler.find_one({"id": id}, {"_id": 0})
+    return updated
+
+@api_router.delete("/bims-urunler/{id}")
+async def delete_bims_urun(id: str, current_user: dict = Depends(get_current_user)):
+    result = await db.bims_urunler.delete_one({"id": id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="BIMS ürün bulunamadı")
+    return {"message": "BIMS ürün silindi"}
+
+# =====================================================
+# PARKE ÜRÜN API'LERİ
+# =====================================================
+
+@api_router.post("/parke-urunler")
+async def create_parke_urun(input: ParkeUrunCreate, current_user: dict = Depends(get_current_user)):
+    data = input.model_dump()
+    data['id'] = str(datetime.now(timezone.utc).timestamp()).replace(".", "")
+    data['created_at'] = datetime.now(timezone.utc).isoformat()
+    await db.parke_urunler.insert_one(data)
+    return {k: v for k, v in data.items() if k != '_id'}
+
+@api_router.get("/parke-urunler")
+async def get_parke_urunler(current_user: dict = Depends(get_current_user)):
+    records = await db.parke_urunler.find({}, {"_id": 0}).sort("urun_adi", 1).to_list(1000)
+    return records
+
+@api_router.get("/parke-urunler/{id}")
+async def get_parke_urun(id: str, current_user: dict = Depends(get_current_user)):
+    record = await db.parke_urunler.find_one({"id": id}, {"_id": 0})
+    if not record:
+        raise HTTPException(status_code=404, detail="Parke ürün bulunamadı")
+    return record
+
+@api_router.put("/parke-urunler/{id}")
+async def update_parke_urun(id: str, input: ParkeUrunUpdate, current_user: dict = Depends(get_current_user)):
+    existing = await db.parke_urunler.find_one({"id": id}, {"_id": 0})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Parke ürün bulunamadı")
+    
+    update_data = {k: v for k, v in input.model_dump().items() if v is not None}
+    update_data['updated_at'] = datetime.now(timezone.utc).isoformat()
+    
+    await db.parke_urunler.update_one({"id": id}, {"$set": update_data})
+    updated = await db.parke_urunler.find_one({"id": id}, {"_id": 0})
+    return updated
+
+@api_router.delete("/parke-urunler/{id}")
+async def delete_parke_urun(id: str, current_user: dict = Depends(get_current_user)):
+    result = await db.parke_urunler.delete_one({"id": id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Parke ürün bulunamadı")
+    return {"message": "Parke ürün silindi"}
 
 app.include_router(api_router)
 
