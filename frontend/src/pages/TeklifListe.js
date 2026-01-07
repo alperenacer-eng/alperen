@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -14,7 +14,9 @@ import {
   Send,
   CheckCircle,
   XCircle,
-  MoreVertical
+  MoreVertical,
+  Package,
+  Grid3X3
 } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
@@ -22,6 +24,12 @@ const API_URL = process.env.REACT_APP_BACKEND_URL;
 const TeklifListe = () => {
   const { token } = useAuth();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  
+  // Sekme durumu - URL'den veya varsayılan
+  const initialTuru = searchParams.get('turu') || 'bims';
+  const [teklifTuru, setTeklifTuru] = useState(initialTuru);
+  
   const [teklifler, setTeklifler] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -30,13 +38,14 @@ const TeklifListe = () => {
 
   useEffect(() => {
     fetchTeklifler();
-  }, [durumFilter]);
+  }, [durumFilter, teklifTuru]);
 
   const fetchTeklifler = async () => {
     try {
-      let url = `${API_URL}/api/teklifler`;
+      setLoading(true);
+      let url = `${API_URL}/api/teklifler?teklif_turu=${teklifTuru}`;
       if (durumFilter) {
-        url += `?durum=${durumFilter}`;
+        url += `&durum=${durumFilter}`;
       }
       
       const response = await fetch(url, {
@@ -112,19 +121,18 @@ const TeklifListe = () => {
     return <span className={`px-2 py-1 rounded text-xs ${d.color} ${d.textColor}`}>{d.label}</span>;
   };
 
+  const handleTuruChange = (yeniTuru) => {
+    setTeklifTuru(yeniTuru);
+    setSearchParams({ turu: yeniTuru });
+  };
+
   const filteredTeklifler = teklifler.filter(t =>
     t.teklif_no?.toLowerCase().includes(search.toLowerCase()) ||
     t.musteri_adi?.toLowerCase().includes(search.toLowerCase()) ||
     t.konu?.toLowerCase().includes(search.toLowerCase())
   );
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-slate-400">Yükleniyor...</div>
-      </div>
-    );
-  }
+  const accentColor = teklifTuru === 'bims' ? 'teal' : 'orange';
 
   return (
     <div className="space-y-6">
@@ -135,12 +143,44 @@ const TeklifListe = () => {
           <p className="text-slate-400 text-sm">Tüm tekliflerinizi görüntüleyin</p>
         </div>
         <Link
-          to="/teklif-olustur"
-          className="flex items-center gap-2 px-4 py-2 bg-teal-500 hover:bg-teal-600 text-white rounded-lg transition-colors"
+          to={`/teklif-olustur?turu=${teklifTuru}`}
+          className={`flex items-center gap-2 px-4 py-2 text-white rounded-lg transition-colors ${
+            teklifTuru === 'bims' 
+              ? 'bg-teal-500 hover:bg-teal-600' 
+              : 'bg-orange-500 hover:bg-orange-600'
+          }`}
         >
           <Plus className="w-5 h-5" />
           Yeni Teklif
         </Link>
+      </div>
+
+      {/* BIMS / Parke Sekmeleri */}
+      <div className="flex gap-2 p-1 bg-slate-800/50 rounded-xl w-fit">
+        <button
+          type="button"
+          onClick={() => handleTuruChange('bims')}
+          className={`flex items-center gap-2 px-6 py-3 rounded-lg font-medium transition-all ${
+            teklifTuru === 'bims'
+              ? 'bg-teal-500 text-white shadow-lg'
+              : 'text-slate-400 hover:text-white hover:bg-slate-700'
+          }`}
+        >
+          <Package className="w-5 h-5" />
+          BIMS Teklifler
+        </button>
+        <button
+          type="button"
+          onClick={() => handleTuruChange('parke')}
+          className={`flex items-center gap-2 px-6 py-3 rounded-lg font-medium transition-all ${
+            teklifTuru === 'parke'
+              ? 'bg-orange-500 text-white shadow-lg'
+              : 'text-slate-400 hover:text-white hover:bg-slate-700'
+          }`}
+        >
+          <Grid3X3 className="w-5 h-5" />
+          Parke Teklifler
+        </button>
       </div>
 
       {/* Filtreler */}
@@ -172,7 +212,11 @@ const TeklifListe = () => {
 
       {/* Tablo */}
       <div className="glass-effect rounded-xl border border-slate-800 overflow-hidden">
-        {filteredTeklifler.length > 0 ? (
+        {loading ? (
+          <div className="flex items-center justify-center h-64">
+            <div className="text-slate-400">Yükleniyor...</div>
+          </div>
+        ) : filteredTeklifler.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
@@ -190,7 +234,9 @@ const TeklifListe = () => {
                 {filteredTeklifler.map((teklif) => (
                   <tr key={teklif.id} className="border-t border-slate-800 hover:bg-slate-800/30">
                     <td className="py-4 px-4">
-                      <span className="text-teal-500 font-medium">{teklif.teklif_no}</span>
+                      <span className={`font-medium ${teklifTuru === 'bims' ? 'text-teal-500' : 'text-orange-500'}`}>
+                        {teklif.teklif_no}
+                      </span>
                     </td>
                     <td className="py-4 px-4">
                       <div className="text-white">{teklif.musteri_adi}</div>
@@ -278,8 +324,22 @@ const TeklifListe = () => {
           </div>
         ) : (
           <div className="text-center py-12">
-            <div className="text-slate-400 mb-2">Henüz teklif bulunmuyor</div>
-            <Link to="/teklif-olustur" className="text-teal-500 hover:text-teal-400">
+            <div className={`w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center ${
+              teklifTuru === 'bims' ? 'bg-teal-500/20' : 'bg-orange-500/20'
+            }`}>
+              {teklifTuru === 'bims' ? (
+                <Package className={`w-8 h-8 ${teklifTuru === 'bims' ? 'text-teal-500' : 'text-orange-500'}`} />
+              ) : (
+                <Grid3X3 className={`w-8 h-8 ${teklifTuru === 'bims' ? 'text-teal-500' : 'text-orange-500'}`} />
+              )}
+            </div>
+            <div className="text-slate-400 mb-2">
+              Henüz {teklifTuru === 'bims' ? 'BIMS' : 'Parke'} teklifi bulunmuyor
+            </div>
+            <Link 
+              to={`/teklif-olustur?turu=${teklifTuru}`} 
+              className={`${teklifTuru === 'bims' ? 'text-teal-500 hover:text-teal-400' : 'text-orange-500 hover:text-orange-400'}`}
+            >
               İlk teklifinizi oluşturun
             </Link>
           </div>
