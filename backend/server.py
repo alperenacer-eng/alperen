@@ -2775,6 +2775,7 @@ async def create_teklif(input: TeklifCreate, current_user: dict = Depends(get_cu
 @api_router.get("/teklifler")
 async def get_teklifler(
     durum: str = None,
+    teklif_turu: str = None,
     musteri_id: str = None,
     baslangic_tarihi: str = None,
     bitis_tarihi: str = None,
@@ -2783,6 +2784,8 @@ async def get_teklifler(
     query = {}
     if durum:
         query['durum'] = durum
+    if teklif_turu:
+        query['teklif_turu'] = teklif_turu
     if musteri_id:
         query['musteri_id'] = musteri_id
     if baslangic_tarihi and bitis_tarihi:
