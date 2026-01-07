@@ -16,7 +16,7 @@ import {
   Mail,
   MapPin,
   Package,
-  DollarSign
+  Grid3X3
 } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
@@ -41,23 +41,36 @@ const TeklifKaynaklar = () => {
     notlar: ''
   });
 
-  // Ürünler
-  const [urunler, setUrunler] = useState([]);
-  const [loadingUrunler, setLoadingUrunler] = useState(true);
-  const [showUrunModal, setShowUrunModal] = useState(false);
-  const [editingUrun, setEditingUrun] = useState(null);
-  const [urunForm, setUrunForm] = useState({
+  // BIMS Ürünleri
+  const [bimsUrunler, setBimsUrunler] = useState([]);
+  const [loadingBims, setLoadingBims] = useState(true);
+  const [showBimsModal, setShowBimsModal] = useState(false);
+  const [editingBims, setEditingBims] = useState(null);
+  const [bimsForm, setBimsForm] = useState({
     urun_adi: '',
-    aciklama: '',
     birim: 'adet',
     birim_fiyat: 0,
-    kdv_orani: 20,
-    aktif: true
+    aciklama: ''
+  });
+
+  // Parke Ürünleri
+  const [parkeUrunler, setParkeUrunler] = useState([]);
+  const [loadingParke, setLoadingParke] = useState(true);
+  const [showParkeModal, setShowParkeModal] = useState(false);
+  const [editingParke, setEditingParke] = useState(null);
+  const [parkeForm, setParkeForm] = useState({
+    urun_adi: '',
+    birim: 'm²',
+    birim_fiyat: 0,
+    ebat: '',
+    renk: '',
+    aciklama: ''
   });
 
   useEffect(() => {
     fetchMusteriler();
-    fetchUrunler();
+    fetchBimsUrunler();
+    fetchParkeUrunler();
   }, []);
 
   // ============ MÜŞTERİ İŞLEMLERİ ============
@@ -72,7 +85,6 @@ const TeklifKaynaklar = () => {
       }
     } catch (error) {
       console.error('Müşteriler yüklenirken hata:', error);
-      toast.error('Veriler yüklenirken hata oluştu');
     } finally {
       setLoadingMusteriler(false);
     }
@@ -170,65 +182,61 @@ const TeklifKaynaklar = () => {
     }
   };
 
-  // ============ ÜRÜN İŞLEMLERİ ============
-  const fetchUrunler = async () => {
+  // ============ BIMS ÜRÜN İŞLEMLERİ ============
+  const fetchBimsUrunler = async () => {
     try {
-      const response = await fetch(`${API_URL}/api/teklif-urunler`, {
+      const response = await fetch(`${API_URL}/api/bims-urunler`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (response.ok) {
         const data = await response.json();
-        setUrunler(data);
+        setBimsUrunler(data);
       }
     } catch (error) {
-      console.error('Ürünler yüklenirken hata:', error);
+      console.error('BIMS ürünleri yüklenirken hata:', error);
     } finally {
-      setLoadingUrunler(false);
+      setLoadingBims(false);
     }
   };
 
-  const resetUrunForm = () => {
-    setUrunForm({
+  const resetBimsForm = () => {
+    setBimsForm({
       urun_adi: '',
-      aciklama: '',
       birim: 'adet',
       birim_fiyat: 0,
-      kdv_orani: 20,
-      aktif: true
+      aciklama: ''
     });
-    setEditingUrun(null);
+    setEditingBims(null);
   };
 
-  const openUrunModal = (urun = null) => {
+  const openBimsModal = (urun = null) => {
     if (urun) {
-      setEditingUrun(urun);
-      setUrunForm({
+      setEditingBims(urun);
+      setBimsForm({
         urun_adi: urun.urun_adi || '',
-        aciklama: urun.aciklama || '',
         birim: urun.birim || 'adet',
         birim_fiyat: urun.birim_fiyat || 0,
-        kdv_orani: urun.kdv_orani || 20,
-        aktif: urun.aktif !== false
+        aciklama: urun.aciklama || ''
       });
     } else {
-      resetUrunForm();
+      resetBimsForm();
     }
-    setShowUrunModal(true);
+    setShowBimsModal(true);
   };
 
-  const handleUrunSubmit = async (e) => {
+  const handleBimsSubmit = async (e) => {
     e.preventDefault();
     
-    if (!urunForm.urun_adi.trim()) {
+    if (!bimsForm.urun_adi.trim()) {
       toast.error('Ürün adı zorunludur');
       return;
     }
     
     try {
-      const url = editingUrun
-        ? `${API_URL}/api/teklif-urunler/${editingUrun.id}`
-        : `${API_URL}/api/teklif-urunler`;
-      const method = editingUrun ? 'PUT' : 'POST';
+      const url = editingBims
+        ? `${API_URL}/api/bims-urunler/${editingBims.id}`
+        : `${API_URL}/api/bims-urunler`;
+      const method = editingBims ? 'PUT' : 'POST';
       
       const response = await fetch(url, {
         method,
@@ -236,14 +244,14 @@ const TeklifKaynaklar = () => {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(urunForm)
+        body: JSON.stringify(bimsForm)
       });
       
       if (response.ok) {
-        toast.success(editingUrun ? 'Ürün güncellendi' : 'Ürün eklendi');
-        fetchUrunler();
-        setShowUrunModal(false);
-        resetUrunForm();
+        toast.success(editingBims ? 'BIMS ürün güncellendi' : 'BIMS ürün eklendi');
+        fetchBimsUrunler();
+        setShowBimsModal(false);
+        resetBimsForm();
       } else {
         const error = await response.json();
         toast.error(error.detail || 'İşlem başarısız');
@@ -254,18 +262,123 @@ const TeklifKaynaklar = () => {
     }
   };
 
-  const handleUrunDelete = async (id) => {
-    if (!window.confirm('Bu ürünü silmek istediğinizden emin misiniz?')) return;
+  const handleBimsDelete = async (id) => {
+    if (!window.confirm('Bu BIMS ürünü silmek istediğinizden emin misiniz?')) return;
     
     try {
-      const response = await fetch(`${API_URL}/api/teklif-urunler/${id}`, {
+      const response = await fetch(`${API_URL}/api/bims-urunler/${id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
       
       if (response.ok) {
-        toast.success('Ürün silindi');
-        fetchUrunler();
+        toast.success('BIMS ürün silindi');
+        fetchBimsUrunler();
+      } else {
+        toast.error('Silme işlemi başarısız');
+      }
+    } catch (error) {
+      console.error('Silme hatası:', error);
+      toast.error('Bir hata oluştu');
+    }
+  };
+
+  // ============ PARKE ÜRÜN İŞLEMLERİ ============
+  const fetchParkeUrunler = async () => {
+    try {
+      const response = await fetch(`${API_URL}/api/parke-urunler`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setParkeUrunler(data);
+      }
+    } catch (error) {
+      console.error('Parke ürünleri yüklenirken hata:', error);
+    } finally {
+      setLoadingParke(false);
+    }
+  };
+
+  const resetParkeForm = () => {
+    setParkeForm({
+      urun_adi: '',
+      birim: 'm²',
+      birim_fiyat: 0,
+      ebat: '',
+      renk: '',
+      aciklama: ''
+    });
+    setEditingParke(null);
+  };
+
+  const openParkeModal = (urun = null) => {
+    if (urun) {
+      setEditingParke(urun);
+      setParkeForm({
+        urun_adi: urun.urun_adi || '',
+        birim: urun.birim || 'm²',
+        birim_fiyat: urun.birim_fiyat || 0,
+        ebat: urun.ebat || '',
+        renk: urun.renk || '',
+        aciklama: urun.aciklama || ''
+      });
+    } else {
+      resetParkeForm();
+    }
+    setShowParkeModal(true);
+  };
+
+  const handleParkeSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (!parkeForm.urun_adi.trim()) {
+      toast.error('Ürün adı zorunludur');
+      return;
+    }
+    
+    try {
+      const url = editingParke
+        ? `${API_URL}/api/parke-urunler/${editingParke.id}`
+        : `${API_URL}/api/parke-urunler`;
+      const method = editingParke ? 'PUT' : 'POST';
+      
+      const response = await fetch(url, {
+        method,
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(parkeForm)
+      });
+      
+      if (response.ok) {
+        toast.success(editingParke ? 'Parke ürün güncellendi' : 'Parke ürün eklendi');
+        fetchParkeUrunler();
+        setShowParkeModal(false);
+        resetParkeForm();
+      } else {
+        const error = await response.json();
+        toast.error(error.detail || 'İşlem başarısız');
+      }
+    } catch (error) {
+      console.error('Kayıt hatası:', error);
+      toast.error('Bir hata oluştu');
+    }
+  };
+
+  const handleParkeDelete = async (id) => {
+    if (!window.confirm('Bu Parke ürünü silmek istediğinizden emin misiniz?')) return;
+    
+    try {
+      const response = await fetch(`${API_URL}/api/parke-urunler/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      
+      if (response.ok) {
+        toast.success('Parke ürün silindi');
+        fetchParkeUrunler();
       } else {
         toast.error('Silme işlemi başarısız');
       }
@@ -293,7 +406,7 @@ const TeklifKaynaklar = () => {
           onClick={() => setActiveTab('musteriler')}
           className={`px-4 py-2 rounded-t-lg font-medium transition-colors flex items-center gap-2 ${
             activeTab === 'musteriler'
-              ? 'bg-teal-500/20 text-teal-500 border-b-2 border-teal-500'
+              ? 'bg-purple-500/20 text-purple-400 border-b-2 border-purple-500'
               : 'text-slate-400 hover:text-white'
           }`}
         >
@@ -301,15 +414,26 @@ const TeklifKaynaklar = () => {
           Müşteriler ({musteriler.length})
         </button>
         <button
-          onClick={() => setActiveTab('urunler')}
+          onClick={() => setActiveTab('bims')}
           className={`px-4 py-2 rounded-t-lg font-medium transition-colors flex items-center gap-2 ${
-            activeTab === 'urunler'
-              ? 'bg-teal-500/20 text-teal-500 border-b-2 border-teal-500'
+            activeTab === 'bims'
+              ? 'bg-teal-500/20 text-teal-400 border-b-2 border-teal-500'
               : 'text-slate-400 hover:text-white'
           }`}
         >
           <Package className="w-4 h-4" />
-          Ürünler ({urunler.length})
+          BIMS Ürünleri ({bimsUrunler.length})
+        </button>
+        <button
+          onClick={() => setActiveTab('parke')}
+          className={`px-4 py-2 rounded-t-lg font-medium transition-colors flex items-center gap-2 ${
+            activeTab === 'parke'
+              ? 'bg-orange-500/20 text-orange-400 border-b-2 border-orange-500'
+              : 'text-slate-400 hover:text-white'
+          }`}
+        >
+          <Grid3X3 className="w-4 h-4" />
+          Parke Ürünleri ({parkeUrunler.length})
         </button>
       </div>
 
@@ -328,7 +452,7 @@ const TeklifKaynaklar = () => {
             </div>
             <Button
               onClick={() => openMusteriModal()}
-              className="bg-teal-500 hover:bg-teal-600"
+              className="bg-purple-500 hover:bg-purple-600"
             >
               <Plus className="w-4 h-4 mr-2" /> Müşteri Ekle
             </Button>
@@ -400,7 +524,7 @@ const TeklifKaynaklar = () => {
               Henüz müşteri tanımlanmamış.
               <button
                 onClick={() => openMusteriModal()}
-                className="block mx-auto mt-2 text-teal-500 hover:text-teal-400"
+                className="block mx-auto mt-2 text-purple-500 hover:text-purple-400"
               >
                 İlk müşterinizi ekleyin
               </button>
@@ -409,30 +533,30 @@ const TeklifKaynaklar = () => {
         </div>
       )}
 
-      {/* Ürünler Tab */}
-      {activeTab === 'urunler' && (
+      {/* BIMS Ürünleri Tab */}
+      {activeTab === 'bims' && (
         <div className="glass-effect rounded-xl p-6 border border-slate-800">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-orange-500/20 rounded-lg flex items-center justify-center">
-                <Package className="w-5 h-5 text-orange-500" />
+              <div className="w-10 h-10 bg-teal-500/20 rounded-lg flex items-center justify-center">
+                <Package className="w-5 h-5 text-teal-500" />
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-white">Ürünler</h3>
-                <p className="text-slate-400 text-sm">{urunler.length} ürün</p>
+                <h3 className="text-lg font-semibold text-white">BIMS Ürünleri</h3>
+                <p className="text-slate-400 text-sm">{bimsUrunler.length} ürün</p>
               </div>
             </div>
             <Button
-              onClick={() => openUrunModal()}
+              onClick={() => openBimsModal()}
               className="bg-teal-500 hover:bg-teal-600"
             >
-              <Plus className="w-4 h-4 mr-2" /> Ürün Ekle
+              <Plus className="w-4 h-4 mr-2" /> BIMS Ürün Ekle
             </Button>
           </div>
 
-          {loadingUrunler ? (
+          {loadingBims ? (
             <div className="text-center py-8 text-slate-400">Yükleniyor...</div>
-          ) : urunler.length > 0 ? (
+          ) : bimsUrunler.length > 0 ? (
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
@@ -441,13 +565,11 @@ const TeklifKaynaklar = () => {
                     <th className="text-left py-3 px-2">Açıklama</th>
                     <th className="text-center py-3 px-2">Birim</th>
                     <th className="text-right py-3 px-2">Birim Fiyat</th>
-                    <th className="text-center py-3 px-2">KDV %</th>
-                    <th className="text-center py-3 px-2">Durum</th>
                     <th className="text-center py-3 px-2">İşlemler</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {urunler.map((urun) => (
+                  {bimsUrunler.map((urun) => (
                     <tr key={urun.id} className="border-b border-slate-800/50 hover:bg-slate-800/30">
                       <td className="py-3 px-2">
                         <span className="text-white font-medium">{urun.urun_adi}</span>
@@ -456,29 +578,21 @@ const TeklifKaynaklar = () => {
                         <span className="text-slate-400 text-sm">{urun.aciklama || '-'}</span>
                       </td>
                       <td className="py-3 px-2 text-center">
-                        <span className="px-2 py-1 bg-slate-700 text-slate-300 text-xs rounded">{urun.birim}</span>
+                        <span className="px-2 py-1 bg-teal-500/20 text-teal-400 text-xs rounded">{urun.birim}</span>
                       </td>
                       <td className="py-3 px-2 text-right">
                         <span className="text-teal-500 font-medium">{formatCurrency(urun.birim_fiyat)}</span>
                       </td>
-                      <td className="py-3 px-2 text-center">
-                        <span className="text-slate-400">%{urun.kdv_orani}</span>
-                      </td>
-                      <td className="py-3 px-2 text-center">
-                        <span className={`px-2 py-1 text-xs rounded ${urun.aktif !== false ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
-                          {urun.aktif !== false ? 'Aktif' : 'Pasif'}
-                        </span>
-                      </td>
                       <td className="py-3 px-2">
                         <div className="flex items-center justify-center gap-2">
                           <button
-                            onClick={() => openUrunModal(urun)}
+                            onClick={() => openBimsModal(urun)}
                             className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-700 rounded transition-colors"
                           >
                             <Edit className="w-4 h-4" />
                           </button>
                           <button
-                            onClick={() => handleUrunDelete(urun.id)}
+                            onClick={() => handleBimsDelete(urun.id)}
                             className="p-1.5 text-red-400 hover:text-red-300 hover:bg-red-500/20 rounded transition-colors"
                           >
                             <Trash2 className="w-4 h-4" />
@@ -492,12 +606,104 @@ const TeklifKaynaklar = () => {
             </div>
           ) : (
             <div className="text-center py-8 text-slate-400">
-              Henüz ürün tanımlanmamış.
+              Henüz BIMS ürünü tanımlanmamış.
               <button
-                onClick={() => openUrunModal()}
+                onClick={() => openBimsModal()}
                 className="block mx-auto mt-2 text-teal-500 hover:text-teal-400"
               >
-                İlk ürününüzü ekleyin
+                İlk BIMS ürününüzü ekleyin
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Parke Ürünleri Tab */}
+      {activeTab === 'parke' && (
+        <div className="glass-effect rounded-xl p-6 border border-slate-800">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-orange-500/20 rounded-lg flex items-center justify-center">
+                <Grid3X3 className="w-5 h-5 text-orange-500" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-white">Parke Ürünleri</h3>
+                <p className="text-slate-400 text-sm">{parkeUrunler.length} ürün</p>
+              </div>
+            </div>
+            <Button
+              onClick={() => openParkeModal()}
+              className="bg-orange-500 hover:bg-orange-600"
+            >
+              <Plus className="w-4 h-4 mr-2" /> Parke Ürün Ekle
+            </Button>
+          </div>
+
+          {loadingParke ? (
+            <div className="text-center py-8 text-slate-400">Yükleniyor...</div>
+          ) : parkeUrunler.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="text-slate-400 text-sm border-b border-slate-700">
+                    <th className="text-left py-3 px-2">Ürün Adı</th>
+                    <th className="text-left py-3 px-2">Ebat</th>
+                    <th className="text-left py-3 px-2">Renk</th>
+                    <th className="text-center py-3 px-2">Birim</th>
+                    <th className="text-right py-3 px-2">Birim Fiyat</th>
+                    <th className="text-center py-3 px-2">İşlemler</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {parkeUrunler.map((urun) => (
+                    <tr key={urun.id} className="border-b border-slate-800/50 hover:bg-slate-800/30">
+                      <td className="py-3 px-2">
+                        <span className="text-white font-medium">{urun.urun_adi}</span>
+                        {urun.aciklama && (
+                          <p className="text-slate-500 text-xs mt-0.5">{urun.aciklama}</p>
+                        )}
+                      </td>
+                      <td className="py-3 px-2">
+                        <span className="text-slate-300">{urun.ebat || '-'}</span>
+                      </td>
+                      <td className="py-3 px-2">
+                        <span className="text-slate-300">{urun.renk || '-'}</span>
+                      </td>
+                      <td className="py-3 px-2 text-center">
+                        <span className="px-2 py-1 bg-orange-500/20 text-orange-400 text-xs rounded">{urun.birim}</span>
+                      </td>
+                      <td className="py-3 px-2 text-right">
+                        <span className="text-orange-500 font-medium">{formatCurrency(urun.birim_fiyat)}</span>
+                      </td>
+                      <td className="py-3 px-2">
+                        <div className="flex items-center justify-center gap-2">
+                          <button
+                            onClick={() => openParkeModal(urun)}
+                            className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-700 rounded transition-colors"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleParkeDelete(urun.id)}
+                            className="p-1.5 text-red-400 hover:text-red-300 hover:bg-red-500/20 rounded transition-colors"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="text-center py-8 text-slate-400">
+              Henüz Parke ürünü tanımlanmamış.
+              <button
+                onClick={() => openParkeModal()}
+                className="block mx-auto mt-2 text-orange-500 hover:text-orange-400"
+              >
+                İlk Parke ürününüzü ekleyin
               </button>
             </div>
           )}
@@ -617,7 +823,7 @@ const TeklifKaynaklar = () => {
                 </Button>
                 <Button
                   type="submit"
-                  className="bg-teal-500 hover:bg-teal-600"
+                  className="bg-purple-500 hover:bg-purple-600"
                 >
                   <Save className="w-4 h-4 mr-2" />
                   {editingMusteri ? 'Güncelle' : 'Kaydet'}
@@ -628,41 +834,32 @@ const TeklifKaynaklar = () => {
         </div>
       )}
 
-      {/* Ürün Modal */}
-      {showUrunModal && (
+      {/* BIMS Ürün Modal */}
+      {showBimsModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-slate-900 rounded-xl border border-slate-800 w-full max-w-md">
             <div className="flex items-center justify-between p-4 border-b border-slate-800">
-              <h3 className="text-lg font-semibold text-white">
-                {editingUrun ? 'Ürün Düzenle' : 'Yeni Ürün'}
+              <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                <Package className="w-5 h-5 text-teal-500" />
+                {editingBims ? 'BIMS Ürün Düzenle' : 'Yeni BIMS Ürün'}
               </h3>
               <button
-                onClick={() => { setShowUrunModal(false); resetUrunForm(); }}
+                onClick={() => { setShowBimsModal(false); resetBimsForm(); }}
                 className="text-slate-400 hover:text-white"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
             
-            <form onSubmit={handleUrunSubmit} className="p-4 space-y-4">
+            <form onSubmit={handleBimsSubmit} className="p-4 space-y-4">
               <div>
                 <Label className="text-slate-300">Ürün Adı *</Label>
                 <Input
-                  value={urunForm.urun_adi}
-                  onChange={(e) => setUrunForm(prev => ({ ...prev, urun_adi: e.target.value }))}
-                  placeholder="Ürün/Hizmet adı"
+                  value={bimsForm.urun_adi}
+                  onChange={(e) => setBimsForm(prev => ({ ...prev, urun_adi: e.target.value }))}
+                  placeholder="BIMS ürün adı"
                   className="mt-1 bg-slate-800 border-slate-700 text-white"
                   required
-                />
-              </div>
-              
-              <div>
-                <Label className="text-slate-300">Açıklama</Label>
-                <Input
-                  value={urunForm.aciklama}
-                  onChange={(e) => setUrunForm(prev => ({ ...prev, aciklama: e.target.value }))}
-                  placeholder="Ürün açıklaması"
-                  className="mt-1 bg-slate-800 border-slate-700 text-white"
                 />
               </div>
               
@@ -670,8 +867,8 @@ const TeklifKaynaklar = () => {
                 <div>
                   <Label className="text-slate-300">Birim</Label>
                   <select
-                    value={urunForm.birim}
-                    onChange={(e) => setUrunForm(prev => ({ ...prev, birim: e.target.value }))}
+                    value={bimsForm.birim}
+                    onChange={(e) => setBimsForm(prev => ({ ...prev, birim: e.target.value }))}
                     className="mt-1 w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-md text-white"
                   >
                     <option value="adet">Adet</option>
@@ -680,9 +877,6 @@ const TeklifKaynaklar = () => {
                     <option value="m2">m²</option>
                     <option value="m3">m³</option>
                     <option value="metre">Metre</option>
-                    <option value="saat">Saat</option>
-                    <option value="gun">Gün</option>
-                    <option value="ay">Ay</option>
                     <option value="paket">Paket</option>
                   </select>
                 </div>
@@ -690,8 +884,8 @@ const TeklifKaynaklar = () => {
                   <Label className="text-slate-300">Birim Fiyat (₺)</Label>
                   <Input
                     type="number"
-                    value={urunForm.birim_fiyat}
-                    onChange={(e) => setUrunForm(prev => ({ ...prev, birim_fiyat: parseFloat(e.target.value) || 0 }))}
+                    value={bimsForm.birim_fiyat}
+                    onChange={(e) => setBimsForm(prev => ({ ...prev, birim_fiyat: parseFloat(e.target.value) || 0 }))}
                     placeholder="0.00"
                     className="mt-1 bg-slate-800 border-slate-700 text-white"
                     min="0"
@@ -700,37 +894,21 @@ const TeklifKaynaklar = () => {
                 </div>
               </div>
               
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-slate-300">KDV Oranı</Label>
-                  <select
-                    value={urunForm.kdv_orani}
-                    onChange={(e) => setUrunForm(prev => ({ ...prev, kdv_orani: parseFloat(e.target.value) }))}
-                    className="mt-1 w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-md text-white"
-                  >
-                    <option value="0">%0</option>
-                    <option value="1">%1</option>
-                    <option value="10">%10</option>
-                    <option value="20">%20</option>
-                  </select>
-                </div>
-                <div>
-                  <Label className="text-slate-300">Durum</Label>
-                  <select
-                    value={urunForm.aktif ? 'true' : 'false'}
-                    onChange={(e) => setUrunForm(prev => ({ ...prev, aktif: e.target.value === 'true' }))}
-                    className="mt-1 w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-md text-white"
-                  >
-                    <option value="true">Aktif</option>
-                    <option value="false">Pasif</option>
-                  </select>
-                </div>
+              <div>
+                <Label className="text-slate-300">Açıklama</Label>
+                <textarea
+                  value={bimsForm.aciklama}
+                  onChange={(e) => setBimsForm(prev => ({ ...prev, aciklama: e.target.value }))}
+                  placeholder="Ürün açıklaması..."
+                  rows={2}
+                  className="mt-1 w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-md text-white"
+                />
               </div>
               
               <div className="flex justify-end gap-3 pt-4">
                 <Button
                   type="button"
-                  onClick={() => { setShowUrunModal(false); resetUrunForm(); }}
+                  onClick={() => { setShowBimsModal(false); resetBimsForm(); }}
                   className="bg-slate-700 hover:bg-slate-600"
                 >
                   İptal
@@ -740,7 +918,116 @@ const TeklifKaynaklar = () => {
                   className="bg-teal-500 hover:bg-teal-600"
                 >
                   <Save className="w-4 h-4 mr-2" />
-                  {editingUrun ? 'Güncelle' : 'Kaydet'}
+                  {editingBims ? 'Güncelle' : 'Kaydet'}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Parke Ürün Modal */}
+      {showParkeModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-900 rounded-xl border border-slate-800 w-full max-w-md">
+            <div className="flex items-center justify-between p-4 border-b border-slate-800">
+              <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                <Grid3X3 className="w-5 h-5 text-orange-500" />
+                {editingParke ? 'Parke Ürün Düzenle' : 'Yeni Parke Ürün'}
+              </h3>
+              <button
+                onClick={() => { setShowParkeModal(false); resetParkeForm(); }}
+                className="text-slate-400 hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <form onSubmit={handleParkeSubmit} className="p-4 space-y-4">
+              <div>
+                <Label className="text-slate-300">Ürün Adı *</Label>
+                <Input
+                  value={parkeForm.urun_adi}
+                  onChange={(e) => setParkeForm(prev => ({ ...prev, urun_adi: e.target.value }))}
+                  placeholder="Parke ürün adı"
+                  className="mt-1 bg-slate-800 border-slate-700 text-white"
+                  required
+                />
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-slate-300">Ebat</Label>
+                  <Input
+                    value={parkeForm.ebat}
+                    onChange={(e) => setParkeForm(prev => ({ ...prev, ebat: e.target.value }))}
+                    placeholder="Örn: 40x40"
+                    className="mt-1 bg-slate-800 border-slate-700 text-white"
+                  />
+                </div>
+                <div>
+                  <Label className="text-slate-300">Renk</Label>
+                  <Input
+                    value={parkeForm.renk}
+                    onChange={(e) => setParkeForm(prev => ({ ...prev, renk: e.target.value }))}
+                    placeholder="Örn: Gri"
+                    className="mt-1 bg-slate-800 border-slate-700 text-white"
+                  />
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-slate-300">Birim</Label>
+                  <select
+                    value={parkeForm.birim}
+                    onChange={(e) => setParkeForm(prev => ({ ...prev, birim: e.target.value }))}
+                    className="mt-1 w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-md text-white"
+                  >
+                    <option value="m²">m²</option>
+                    <option value="adet">Adet</option>
+                    <option value="paket">Paket</option>
+                  </select>
+                </div>
+                <div>
+                  <Label className="text-slate-300">Birim Fiyat (₺)</Label>
+                  <Input
+                    type="number"
+                    value={parkeForm.birim_fiyat}
+                    onChange={(e) => setParkeForm(prev => ({ ...prev, birim_fiyat: parseFloat(e.target.value) || 0 }))}
+                    placeholder="0.00"
+                    className="mt-1 bg-slate-800 border-slate-700 text-white"
+                    min="0"
+                    step="0.01"
+                  />
+                </div>
+              </div>
+              
+              <div>
+                <Label className="text-slate-300">Açıklama</Label>
+                <textarea
+                  value={parkeForm.aciklama}
+                  onChange={(e) => setParkeForm(prev => ({ ...prev, aciklama: e.target.value }))}
+                  placeholder="Ürün açıklaması..."
+                  rows={2}
+                  className="mt-1 w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-md text-white"
+                />
+              </div>
+              
+              <div className="flex justify-end gap-3 pt-4">
+                <Button
+                  type="button"
+                  onClick={() => { setShowParkeModal(false); resetParkeForm(); }}
+                  className="bg-slate-700 hover:bg-slate-600"
+                >
+                  İptal
+                </Button>
+                <Button
+                  type="submit"
+                  className="bg-orange-500 hover:bg-orange-600"
+                >
+                  <Save className="w-4 h-4 mr-2" />
+                  {editingParke ? 'Güncelle' : 'Kaydet'}
                 </Button>
               </div>
             </form>
