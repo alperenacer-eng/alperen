@@ -625,7 +625,7 @@ const AracYonetimi = () => {
               <div className="space-y-2">
                 <Label htmlFor="marka" className="text-slate-300">Marka</Label>
                 <Select
-                  value={formData.marka}
+                  value={formData.marka || undefined}
                   onValueChange={(value) => setFormData({...formData, marka: value})}
                 >
                   <SelectTrigger className="bg-slate-800/50 border-slate-700">
@@ -633,7 +633,7 @@ const AracYonetimi = () => {
                   </SelectTrigger>
                   <SelectContent className="bg-slate-800 border-slate-700">
                     {markalar.length === 0 ? (
-                      <SelectItem value="" disabled>Önce Kaynaklar'dan ekleyin</SelectItem>
+                      <SelectItem value="_empty" disabled>Önce Kaynaklar'dan ekleyin</SelectItem>
                     ) : (
                       markalar.map(m => (
                         <SelectItem key={m.id} value={m.name}>{m.name}</SelectItem>
