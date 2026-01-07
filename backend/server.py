@@ -2663,8 +2663,39 @@ class TeklifKalem(BaseModel):
     iskonto_orani: float = 0
     toplam: float = 0
 
+# BIMS Ürün Modeli
+class BimsUrunCreate(BaseModel):
+    urun_adi: str
+    birim: str = "adet"  # adet, m², m³, kg, ton
+    birim_fiyat: float = 0
+    aciklama: str = ""
+
+class BimsUrunUpdate(BaseModel):
+    urun_adi: Optional[str] = None
+    birim: Optional[str] = None
+    birim_fiyat: Optional[float] = None
+    aciklama: Optional[str] = None
+
+# Parke Ürün Modeli
+class ParkeUrunCreate(BaseModel):
+    urun_adi: str
+    birim: str = "m²"  # m², adet
+    birim_fiyat: float = 0
+    ebat: str = ""  # örn: 40x40, 50x50
+    renk: str = ""
+    aciklama: str = ""
+
+class ParkeUrunUpdate(BaseModel):
+    urun_adi: Optional[str] = None
+    birim: Optional[str] = None
+    birim_fiyat: Optional[float] = None
+    ebat: Optional[str] = None
+    renk: Optional[str] = None
+    aciklama: Optional[str] = None
+
 # Teklif Modeli
 class TeklifCreate(BaseModel):
+    teklif_turu: str = "bims"  # bims veya parke
     musteri_id: str = ""
     musteri_adi: str = ""
     musteri_adres: str = ""
