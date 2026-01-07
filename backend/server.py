@@ -517,6 +517,144 @@ async def delete_product(product_id: str, current_user: dict = Depends(get_curre
         raise HTTPException(status_code=404, detail="Product not found")
     return {"message": "Product deleted"}
 
+# =====================================================
+# BIMS STOK API'LERİ
+# =====================================================
+
+@api_router.post("/bims-stok-urunler")
+async def create_bims_stok_urun(input: BimsStokUrunCreate, current_user: dict = Depends(get_current_user)):
+    data = input.model_dump()
+    data['id'] = str(datetime.now(timezone.utc).timestamp()).replace(".", "")
+    data['mevcut_stok'] = data.get('acilis_miktari', 0)  # Açılış miktarı ile başla
+    data['created_at'] = datetime.now(timezone.utc).isoformat()
+    
+    await db.bims_stok_urunler.insert_one(data)
+    
+    # Açılış fişi hareketi oluştur
+    if data.get('acilis_miktari', 0) > 0:
+        hareket = {
+            'id': str(datetime.now(timezone.utc).timestamp()).replace(".", "") + "h",
+            'urun_id': data['id'],
+            'urun_adi': data['urun_adi'],
+            'hareket_tipi': 'acilis',
+            'miktar': data['acilis_miktari'],
+            'tarih': data.get('acilis_tarihi') or datetime.now().strftime('%Y-%m-%d'),
+            'aciklama': 'Açılış fişi',
+            'created_at': datetime.now(timezone.utc).isoformat()
+        }
+        await db.bims_stok_hareketler.insert_one(hareket)
+    
+    return {k: v for k, v in data.items() if k != '_id'}
+
+@api_router.get("/bims-stok-urunler")
+async def get_bims_stok_urunler(current_user: dict = Depends(get_current_user)):
+    records = await db.bims_stok_urunler.find({}, {"_id": 0}).sort("urun_adi", 1).to_list(1000)
+    return records
+
+@api_router.get("/bims-stok-urunler/{id}")
+async def get_bims_stok_urun(id: str, current_user: dict = Depends(get_current_user)):
+    record = await db.bims_stok_urunler.find_one({"id": id}, {"_id": 0})
+    if not record:
+        raise HTTPException(status_code=404, detail="Stok ürün bulunamadı")
+    return record
+
+@api_router.put("/bims-stok-urunler/{id}")
+async def update_bims_stok_urun(id: str, input: BimsStokUrunUpdate, current_user: dict = Depends(get_current_user)):
+    existing = await db.bims_stok_urunler.find_one({"id": id}, {"_id": 0})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Stok ürün bulunamadı")
+    
+    update_data = {k: v for k, v in input.model_dump().items() if v is not None}
+    update_data['updated_at'] = datetime.now(timezone.utc).isoformat()
+    
+    await db.bims_stok_urunler.update_one({"id": id}, {"$set": update_data})
+    updated = await db.bims_stok_urunler.find_one({"id": id}, {"_id": 0})
+    return updated
+
+@api_router.delete("/bims-stok-urunler/{id}")
+async def delete_bims_stok_urun(id: str, current_user: dict = Depends(get_current_user)):
+    result = await db.bims_stok_urunler.delete_one({"id": id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Stok ürün bulunamadı")
+    # İlgili hareketleri de sil
+    await db.bims_stok_hareketler.delete_many({"urun_id": id})
+    return {"message": "Stok ürün silindi"}
+
+# Stok Hareketleri
+@api_router.post("/bims-stok-hareketler")
+async def create_bims_stok_hareket(input: BimsStokHareketCreate, current_user: dict = Depends(get_current_user)):
+    # Ürünü kontrol et
+    urun = await db.bims_stok_urunler.find_one({"id": input.urun_id}, {"_id": 0})
+    if not urun:
+        raise HTTPException(status_code=404, detail="Ürün bulunamadı")
+    
+    data = input.model_dump()
+    data['id'] = str(datetime.now(timezone.utc).timestamp()).replace(".", "")
+    data['urun_adi'] = urun['urun_adi']
+    data['created_at'] = datetime.now(timezone.utc).isoformat()
+    
+    await db.bims_stok_hareketler.insert_one(data)
+    
+    # Stok miktarını güncelle
+    mevcut_stok = urun.get('mevcut_stok', 0)
+    if data['hareket_tipi'] in ['giris', 'acilis']:
+        yeni_stok = mevcut_stok + data['miktar']
+    else:  # cikis
+        yeni_stok = mevcut_stok - data['miktar']
+    
+    await db.bims_stok_urunler.update_one(
+        {"id": input.urun_id},
+        {"$set": {"mevcut_stok": yeni_stok, "updated_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    
+    return {k: v for k, v in data.items() if k != '_id'}
+
+@api_router.get("/bims-stok-hareketler")
+async def get_bims_stok_hareketler(urun_id: str = None, current_user: dict = Depends(get_current_user)):
+    query = {}
+    if urun_id:
+        query['urun_id'] = urun_id
+    records = await db.bims_stok_hareketler.find(query, {"_id": 0}).sort("created_at", -1).to_list(1000)
+    return records
+
+@api_router.delete("/bims-stok-hareketler/{id}")
+async def delete_bims_stok_hareket(id: str, current_user: dict = Depends(get_current_user)):
+    # Hareketi bul
+    hareket = await db.bims_stok_hareketler.find_one({"id": id}, {"_id": 0})
+    if not hareket:
+        raise HTTPException(status_code=404, detail="Hareket bulunamadı")
+    
+    # Stok miktarını geri al
+    urun = await db.bims_stok_urunler.find_one({"id": hareket['urun_id']}, {"_id": 0})
+    if urun:
+        mevcut_stok = urun.get('mevcut_stok', 0)
+        if hareket['hareket_tipi'] in ['giris', 'acilis']:
+            yeni_stok = mevcut_stok - hareket['miktar']
+        else:  # cikis
+            yeni_stok = mevcut_stok + hareket['miktar']
+        
+        await db.bims_stok_urunler.update_one(
+            {"id": hareket['urun_id']},
+            {"$set": {"mevcut_stok": yeni_stok, "updated_at": datetime.now(timezone.utc).isoformat()}}
+        )
+    
+    await db.bims_stok_hareketler.delete_one({"id": id})
+    return {"message": "Hareket silindi"}
+
+# Stok Özeti
+@api_router.get("/bims-stok-ozet")
+async def get_bims_stok_ozet(current_user: dict = Depends(get_current_user)):
+    urunler = await db.bims_stok_urunler.find({}, {"_id": 0}).to_list(1000)
+    toplam_urun = len(urunler)
+    toplam_stok = sum([u.get('mevcut_stok', 0) for u in urunler])
+    dusuk_stok = len([u for u in urunler if u.get('mevcut_stok', 0) < 10])
+    
+    return {
+        "toplam_urun": toplam_urun,
+        "toplam_stok": toplam_stok,
+        "dusuk_stok": dusuk_stok
+    }
+
 # Department routes
 @api_router.post("/departments", response_model=DepartmentResponse)
 async def create_department(department: DepartmentCreate, current_user: dict = Depends(get_current_user)):
