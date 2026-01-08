@@ -26,7 +26,8 @@ import {
   TrendingUp,
   TrendingDown,
   FilePlus,
-  Building
+  Building,
+  Boxes
 } from 'lucide-react';
 
 const Layout = () => {
