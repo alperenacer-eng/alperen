@@ -118,7 +118,14 @@ const BimsResources = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
       toast.success('Ürün eklendi');
-      setNewProduct({ name: '', unit: 'adet' });
+      setNewProduct({ 
+        name: '', 
+        unit: 'adet',
+        sevk_agirligi: 0,
+        adet_basi_cimento: 0,
+        paket_adet_7_boy: 0,
+        paket_adet_5_boy: 0
+      });
       fetchProducts();
     } catch (error) {
       toast.error('Ürün eklenemedi');
