@@ -503,6 +503,20 @@ async def create_product(product: ProductCreate, current_user: dict = Depends(ge
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     await db.products.insert_one(product_dict)
+    
+    # Otomatik olarak stoka da ekle
+    stok_dict = {
+        "id": product_dict["id"] + "_stok",
+        "urun_adi": product.name,
+        "birim": product.unit,
+        "aciklama": "",
+        "acilis_miktari": 0,
+        "acilis_tarihi": datetime.now().strftime('%Y-%m-%d'),
+        "mevcut_stok": 0,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.bims_stok_urunler.insert_one(stok_dict)
+    
     return ProductResponse(**product_dict)
 
 @api_router.get("/products", response_model=List[ProductResponse])
@@ -515,6 +529,8 @@ async def delete_product(product_id: str, current_user: dict = Depends(get_curre
     result = await db.products.delete_one({"id": product_id})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Product not found")
+    # Stoktan da sil
+    await db.bims_stok_urunler.delete_one({"id": product_id + "_stok"})
     return {"message": "Product deleted"}
 
 # =====================================================
