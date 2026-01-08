@@ -242,11 +242,28 @@ const ProductionEntry = () => {
         if (product) {
           updated.product_name = product.name;
           updated.unit = product.unit;
+          // İşletme seçiliyse palet adetini getir
+          if (prev.department_id && product.uretim_palet_adetleri) {
+            const paletAdet = product.uretim_palet_adetleri[prev.department_id];
+            if (paletAdet) {
+              updated.pieces_per_pallet = String(paletAdet);
+            }
+          }
         }
       }
       if (field === 'department_id') {
         const dept = departments.find(d => d.id === value);
         updated.department_name = dept ? dept.name : '';
+        // Ürün seçiliyse palet adetini getir
+        if (prev.product_id) {
+          const product = products.find(p => p.id === prev.product_id);
+          if (product && product.uretim_palet_adetleri) {
+            const paletAdet = product.uretim_palet_adetleri[value];
+            if (paletAdet) {
+              updated.pieces_per_pallet = String(paletAdet);
+            }
+          }
+        }
       }
       if (field === 'operator_id') {
         const op = operators.find(o => o.id === value);
