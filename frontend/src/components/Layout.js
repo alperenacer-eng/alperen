@@ -44,6 +44,7 @@ const Layout = () => {
   const bimsMenuItems = [
     { path: '/production-entry', icon: FileText, label: 'Üretim Girişi', testId: 'nav-production-entry' },
     { path: '/production-list', icon: List, label: 'Kayıtlar', testId: 'nav-production-list' },
+    { path: '/bims-stok', icon: Boxes, label: 'Stok', testId: 'nav-bims-stok' },
     { path: '/reports', icon: BarChart3, label: 'Raporlar', testId: 'nav-reports' },
     { path: '/bims-resources', icon: Database, label: 'Kaynaklar', testId: 'nav-bims-resources' },
   ];
