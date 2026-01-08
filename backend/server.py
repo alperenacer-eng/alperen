@@ -505,10 +505,16 @@ async def delete_user(user_id: str, current_user: dict = Depends(require_admin))
 # Product routes
 @api_router.post("/products", response_model=ProductResponse)
 async def create_product(product: ProductCreate, current_user: dict = Depends(get_current_user)):
+    harcanan_hisir = product.sevk_agirligi - product.adet_basi_cimento
     product_dict = {
         "id": str(datetime.now(timezone.utc).timestamp()).replace(".", ""),
         "name": product.name,
         "unit": product.unit,
+        "sevk_agirligi": product.sevk_agirligi,
+        "adet_basi_cimento": product.adet_basi_cimento,
+        "harcanan_hisir": harcanan_hisir,
+        "paket_adet_7_boy": product.paket_adet_7_boy,
+        "paket_adet_5_boy": product.paket_adet_5_boy,
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     await db.products.insert_one(product_dict)
