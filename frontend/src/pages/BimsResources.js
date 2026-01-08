@@ -331,7 +331,7 @@ const BimsResources = () => {
                     <Input
                       type="number"
                       value={newProduct.sevk_agirligi}
-                      onChange={(e) => setNewProduct({ ...newProduct, sevk_agirligi: parseFloat(e.target.value) || 0 })}
+                      onChange={(e) => setNewProduct({ ...newProduct, sevk_agirligi: e.target.value })}
                       placeholder="0"
                       step="0.01"
                       className="h-12 bg-slate-950 border-slate-800 text-white"
@@ -342,7 +342,7 @@ const BimsResources = () => {
                     <Input
                       type="number"
                       value={newProduct.adet_basi_cimento}
-                      onChange={(e) => setNewProduct({ ...newProduct, adet_basi_cimento: parseFloat(e.target.value) || 0 })}
+                      onChange={(e) => setNewProduct({ ...newProduct, adet_basi_cimento: e.target.value })}
                       placeholder="0"
                       step="0.01"
                       className="h-12 bg-slate-950 border-slate-800 text-white"
@@ -352,7 +352,7 @@ const BimsResources = () => {
                 <div className="space-y-2">
                   <Label>Harcanan Hışır (Otomatik)</Label>
                   <div className="h-12 px-4 bg-slate-800 border border-slate-700 rounded-md flex items-center text-teal-400 font-semibold">
-                    {((newProduct.sevk_agirligi || 0) - (newProduct.adet_basi_cimento || 0)).toFixed(2)} kg
+                    {((parseFloat(newProduct.sevk_agirligi) || 0) - (parseFloat(newProduct.adet_basi_cimento) || 0)).toFixed(2)} kg
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
@@ -361,7 +361,7 @@ const BimsResources = () => {
                     <Input
                       type="number"
                       value={newProduct.paket_adet_7_boy}
-                      onChange={(e) => setNewProduct({ ...newProduct, paket_adet_7_boy: parseInt(e.target.value) || 0 })}
+                      onChange={(e) => setNewProduct({ ...newProduct, paket_adet_7_boy: e.target.value })}
                       placeholder="0"
                       className="h-12 bg-slate-950 border-slate-800 text-white"
                     />
@@ -371,7 +371,7 @@ const BimsResources = () => {
                     <Input
                       type="number"
                       value={newProduct.paket_adet_5_boy}
-                      onChange={(e) => setNewProduct({ ...newProduct, paket_adet_5_boy: parseInt(e.target.value) || 0 })}
+                      onChange={(e) => setNewProduct({ ...newProduct, paket_adet_5_boy: e.target.value })}
                       placeholder="0"
                       className="h-12 bg-slate-950 border-slate-800 text-white"
                     />
