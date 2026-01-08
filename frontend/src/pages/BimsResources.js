@@ -36,6 +36,7 @@ const BimsResources = () => {
     uretim_palet_adetleri: {}
   });
   const [deleteProductId, setDeleteProductId] = useState(null);
+  const [editingProduct, setEditingProduct] = useState(null);
   
   // Molds
   const [molds, setMolds] = useState([]);
