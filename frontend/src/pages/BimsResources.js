@@ -29,10 +29,10 @@ const BimsResources = () => {
   const [newProduct, setNewProduct] = useState({ 
     name: '', 
     unit: 'adet',
-    sevk_agirligi: 0,
-    adet_basi_cimento: 0,
-    paket_adet_7_boy: 0,
-    paket_adet_5_boy: 0
+    sevk_agirligi: '',
+    adet_basi_cimento: '',
+    paket_adet_7_boy: '',
+    paket_adet_5_boy: ''
   });
   const [deleteProductId, setDeleteProductId] = useState(null);
   
