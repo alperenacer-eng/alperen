@@ -5,10 +5,8 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
-import { Plus, Trash2, ArrowLeft, Edit, History, Boxes, TrendingUp, TrendingDown, FileText, X } from 'lucide-react';
+import { Trash2, ArrowLeft, Edit, History, Boxes, TrendingUp, TrendingDown, Plus, X } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL + '/api';
@@ -17,18 +15,9 @@ const BimsStok = () => {
   const { token } = useAuth();
   const navigate = useNavigate();
   
-  // Stok Ürünleri
   const [stokUrunler, setStokUrunler] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [newStokUrun, setNewStokUrun] = useState({
-    urun_adi: '',
-    birim: 'adet',
-    aciklama: '',
-    acilis_miktari: 0,
-    acilis_tarihi: new Date().toISOString().split('T')[0]
-  });
   const [deleteStokId, setDeleteStokId] = useState(null);
-  const [editingStok, setEditingStok] = useState(null);
   
   // Stok Hareketleri
   const [showStokHareket, setShowStokHareket] = useState(null);
@@ -74,55 +63,6 @@ const BimsStok = () => {
     } catch (error) {
       console.error('Özet yüklenemedi:', error);
     }
-  };
-
-  const handleAddStokUrun = async (e) => {
-    e.preventDefault();
-    if (!newStokUrun.urun_adi.trim()) return;
-    
-    try {
-      if (editingStok) {
-        await axios.put(`${API_URL}/bims-stok-urunler/${editingStok.id}`, newStokUrun, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        toast.success('Stok ürünü güncellendi');
-        setEditingStok(null);
-      } else {
-        await axios.post(`${API_URL}/bims-stok-urunler`, newStokUrun, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        toast.success('Stok ürünü eklendi');
-      }
-      resetForm();
-      fetchStokUrunler();
-      fetchOzet();
-    } catch (error) {
-      toast.error('İşlem başarısız');
-    }
-  };
-
-  const resetForm = () => {
-    setNewStokUrun({
-      urun_adi: '',
-      birim: 'adet',
-      aciklama: '',
-      acilis_miktari: 0,
-      acilis_tarihi: new Date().toISOString().split('T')[0]
-    });
-    setEditingStok(null);
-  };
-
-  const handleEditStok = (urun) => {
-    setEditingStok(urun);
-    setNewStokUrun({
-      urun_adi: urun.urun_adi,
-      birim: urun.birim,
-      aciklama: urun.aciklama || '',
-      acilis_miktari: urun.acilis_miktari || 0,
-      acilis_tarihi: urun.acilis_tarihi || new Date().toISOString().split('T')[0]
-    });
-    // Scroll to form
-    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleDeleteStok = async () => {
@@ -236,204 +176,75 @@ const BimsStok = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Ürün Ekleme Formu */}
-        <div className="glass-effect rounded-xl p-6 border border-slate-800">
-          <h2 className="text-xl font-semibold text-white mb-6 flex items-center gap-2">
-            <FileText className="w-5 h-5 text-teal-500" />
-            {editingStok ? 'Ürün Düzenle' : 'Yeni Ürün / Açılış Fişi'}
-          </h2>
-          <form onSubmit={handleAddStokUrun} className="space-y-4">
-            <div className="space-y-2">
-              <Label>Ürün Adı *</Label>
-              <Input
-                value={newStokUrun.urun_adi}
-                onChange={(e) => setNewStokUrun({ ...newStokUrun, urun_adi: e.target.value })}
-                placeholder="Örn: Bims Blok 20x20x40"
-                required
-                className="h-12 bg-slate-950 border-slate-800 text-white"
-              />
-            </div>
-            
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Birim</Label>
-                <Select 
-                  value={newStokUrun.birim} 
-                  onValueChange={(value) => setNewStokUrun({ ...newStokUrun, birim: value })}
-                >
-                  <SelectTrigger className="h-12 bg-slate-950 border-slate-800 text-white">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="bg-slate-900 border-slate-800 text-white">
-                    <SelectItem value="adet">Adet</SelectItem>
-                    <SelectItem value="palet">Palet</SelectItem>
-                    <SelectItem value="m2">m²</SelectItem>
-                    <SelectItem value="m3">m³</SelectItem>
-                    <SelectItem value="kg">Kg</SelectItem>
-                    <SelectItem value="ton">Ton</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="space-y-2">
-                <Label>Açılış Miktarı</Label>
-                <Input
-                  type="number"
-                  value={newStokUrun.acilis_miktari}
-                  onChange={(e) => setNewStokUrun({ ...newStokUrun, acilis_miktari: parseFloat(e.target.value) || 0 })}
-                  placeholder="0"
-                  min="0"
-                  step="0.01"
-                  className="h-12 bg-slate-950 border-slate-800 text-white"
-                />
-              </div>
-            </div>
-            
-            <div className="space-y-2">
-              <Label>Açılış Tarihi</Label>
-              <Input
-                type="date"
-                value={newStokUrun.acilis_tarihi}
-                onChange={(e) => setNewStokUrun({ ...newStokUrun, acilis_tarihi: e.target.value })}
-                className="h-12 bg-slate-950 border-slate-800 text-white"
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label>Açıklama</Label>
-              <Textarea
-                value={newStokUrun.aciklama}
-                onChange={(e) => setNewStokUrun({ ...newStokUrun, aciklama: e.target.value })}
-                placeholder="Ürün hakkında notlar..."
-                rows={2}
-                className="bg-slate-950 border-slate-800 text-white resize-none"
-              />
-            </div>
-            
-            <div className="flex gap-2">
-              {editingStok && (
-                <Button type="button" onClick={resetForm} className="flex-1 h-12 bg-slate-700 hover:bg-slate-600 text-white">
-                  İptal
-                </Button>
-              )}
-              <Button type="submit" className={`flex-1 h-12 ${editingStok ? 'bg-blue-500 hover:bg-blue-600' : 'bg-teal-500 hover:bg-teal-600'} text-white`}>
-                <Plus className="w-5 h-5 mr-2" />
-                {editingStok ? 'Güncelle' : 'Ekle'}
-              </Button>
-            </div>
-          </form>
-        </div>
-
-        {/* Stok Listesi */}
-        <div className="lg:col-span-2 glass-effect rounded-xl p-6 border border-slate-800">
-          <h2 className="text-xl font-semibold text-white mb-6 flex items-center gap-2">
-            <Boxes className="w-5 h-5 text-teal-500" />
-            Stok Listesi ({stokUrunler.length})
-          </h2>
-          
-          {loading ? (
-            <div className="text-center py-12 text-slate-400">Yükleniyor...</div>
-          ) : stokUrunler.length > 0 ? (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-slate-700">
-                    <th className="text-left py-3 px-2 text-slate-400 font-medium">Ürün Adı</th>
-                    <th className="text-center py-3 px-2 text-slate-400 font-medium">Birim</th>
-                    <th className="text-right py-3 px-2 text-slate-400 font-medium">Mevcut Stok</th>
-                    <th className="text-center py-3 px-2 text-slate-400 font-medium">İşlemler</th>
+      {/* Stok Listesi */}
+      <div className="glass-effect rounded-xl p-6 border border-slate-800">
+        <h2 className="text-xl font-semibold text-white mb-6 flex items-center gap-2">
+          <Boxes className="w-5 h-5 text-teal-500" />
+          Stok Listesi ({stokUrunler.length})
+        </h2>
+        
+        {loading ? (
+          <div className="text-center py-12 text-slate-400">Yükleniyor...</div>
+        ) : stokUrunler.length > 0 ? (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-slate-700">
+                  <th className="text-left py-3 px-2 text-slate-400 font-medium">Ürün Adı</th>
+                  <th className="text-center py-3 px-2 text-slate-400 font-medium">Birim</th>
+                  <th className="text-right py-3 px-2 text-slate-400 font-medium">Mevcut Stok</th>
+                  <th className="text-center py-3 px-2 text-slate-400 font-medium">İşlemler</th>
+                </tr>
+              </thead>
+              <tbody>
+                {stokUrunler.map((urun) => (
+                  <tr key={urun.id} className="border-b border-slate-800/50 hover:bg-slate-800/30">
+                    <td className="py-4 px-2">
+                      <span className="text-white font-medium">{urun.urun_adi}</span>
+                    </td>
+                    <td className="py-4 px-2 text-center">
+                      <span className="px-2 py-1 bg-slate-700 text-slate-300 text-xs rounded">{urun.birim}</span>
+                    </td>
+                    <td className="py-4 px-2 text-right">
+                      <span className={`text-lg font-bold ${(urun.mevcut_stok || 0) > 10 ? 'text-teal-400' : (urun.mevcut_stok || 0) > 0 ? 'text-yellow-400' : 'text-red-400'}`}>
+                        {urun.mevcut_stok || 0}
+                      </span>
+                    </td>
+                    <td className="py-4 px-2">
+                      <div className="flex items-center justify-center gap-1">
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={() => setShowHareketModal(urun)}
+                          className="text-green-400 hover:text-green-300 hover:bg-green-400/10"
+                          title="Giriş/Çıkış Ekle"
+                        >
+                          <Plus className="w-4 h-4" />
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={() => handleShowHareketler(urun)} 
+                          className="text-slate-400 hover:text-white hover:bg-slate-700"
+                          title="Hareketler"
+                        >
+                          <History className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </td>
                   </tr>
-                </thead>
-                <tbody>
-                  {stokUrunler.map((urun) => (
-                    <tr key={urun.id} className="border-b border-slate-800/50 hover:bg-slate-800/30">
-                      <td className="py-4 px-2">
-                        <div>
-                          <span className="text-white font-medium">{urun.urun_adi}</span>
-                          {urun.aciklama && (
-                            <p className="text-xs text-slate-500 mt-0.5">{urun.aciklama}</p>
-                          )}
-                        </div>
-                      </td>
-                      <td className="py-4 px-2 text-center">
-                        <span className="px-2 py-1 bg-slate-700 text-slate-300 text-xs rounded">{urun.birim}</span>
-                      </td>
-                      <td className="py-4 px-2 text-right">
-                        <span className={`text-lg font-bold ${(urun.mevcut_stok || 0) > 10 ? 'text-teal-400' : (urun.mevcut_stok || 0) > 0 ? 'text-yellow-400' : 'text-red-400'}`}>
-                          {urun.mevcut_stok || 0}
-                        </span>
-                      </td>
-                      <td className="py-4 px-2">
-                        <div className="flex items-center justify-center gap-1">
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            onClick={() => setShowHareketModal(urun)}
-                            className="text-green-400 hover:text-green-300 hover:bg-green-400/10"
-                            title="Giriş/Çıkış Ekle"
-                          >
-                            <Plus className="w-4 h-4" />
-                          </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            onClick={() => handleShowHareketler(urun)} 
-                            className="text-slate-400 hover:text-white hover:bg-slate-700"
-                            title="Hareketler"
-                          >
-                            <History className="w-4 h-4" />
-                          </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            onClick={() => handleEditStok(urun)} 
-                            className="text-blue-400 hover:text-blue-300 hover:bg-blue-400/10"
-                            title="Düzenle"
-                          >
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            onClick={() => setDeleteStokId(urun.id)} 
-                            className="text-red-400 hover:text-red-300 hover:bg-red-400/10"
-                            title="Sil"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <div className="text-center py-12 text-slate-500">
-              <Boxes className="w-12 h-12 mx-auto mb-4 opacity-50" />
-              <p>Henüz stok ürünü eklenmedi</p>
-              <p className="text-sm mt-1">Soldan yeni ürün ekleyerek başlayın</p>
-            </div>
-          )}
-        </div>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="text-center py-12 text-slate-500">
+            <Boxes className="w-12 h-12 mx-auto mb-4 opacity-50" />
+            <p>Henüz stok ürünü yok</p>
+            <p className="text-sm mt-1">Kaynaklar → Ürünler'den ürün ekleyin</p>
+          </div>
+        )}
       </div>
-
-      {/* Silme Dialog */}
-      <AlertDialog open={!!deleteStokId} onOpenChange={() => setDeleteStokId(null)}>
-        <AlertDialogContent className="bg-slate-900 border-slate-800 text-white">
-          <AlertDialogHeader>
-            <AlertDialogTitle>Emin misiniz?</AlertDialogTitle>
-            <AlertDialogDescription className="text-slate-400">
-              Bu stok ürününü silmek istediğinize emin misiniz? Tüm hareketleri de silinecektir.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700">İptal</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteStok} className="bg-red-500 hover:bg-red-600 text-white">Sil</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
 
       {/* Stok Hareketleri Modal */}
       <AlertDialog open={!!showStokHareket} onOpenChange={() => setShowStokHareket(null)}>
@@ -486,12 +297,9 @@ const BimsStok = () => {
           <div className="bg-slate-900 rounded-xl border border-slate-800 w-full max-w-md">
             <div className="flex items-center justify-between p-4 border-b border-slate-800">
               <h3 className="text-lg font-semibold text-white">
-                Stok Hareketi Ekle - {showHareketModal.urun_adi}
+                Stok Hareketi - {showHareketModal.urun_adi}
               </h3>
-              <button
-                onClick={() => setShowHareketModal(null)}
-                className="text-slate-400 hover:text-white"
-              >
+              <button onClick={() => setShowHareketModal(null)} className="text-slate-400 hover:text-white">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -534,7 +342,6 @@ const BimsStok = () => {
                     type="number"
                     value={yeniHareket.miktar}
                     onChange={(e) => setYeniHareket({ ...yeniHareket, miktar: parseFloat(e.target.value) || 0 })}
-                    placeholder="0"
                     min="0.01"
                     step="0.01"
                     required
@@ -563,21 +370,10 @@ const BimsStok = () => {
               </div>
               
               <div className="flex gap-2 pt-2">
-                <Button
-                  type="button"
-                  onClick={() => setShowHareketModal(null)}
-                  className="flex-1 h-12 bg-slate-700 hover:bg-slate-600 text-white"
-                >
+                <Button type="button" onClick={() => setShowHareketModal(null)} className="flex-1 h-12 bg-slate-700 hover:bg-slate-600 text-white">
                   İptal
                 </Button>
-                <Button
-                  type="submit"
-                  className={`flex-1 h-12 ${
-                    yeniHareket.hareket_tipi === 'giris'
-                      ? 'bg-green-500 hover:bg-green-600'
-                      : 'bg-red-500 hover:bg-red-600'
-                  } text-white`}
-                >
+                <Button type="submit" className={`flex-1 h-12 ${yeniHareket.hareket_tipi === 'giris' ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'} text-white`}>
                   {yeniHareket.hareket_tipi === 'giris' ? 'Giriş Yap' : 'Çıkış Yap'}
                 </Button>
               </div>
