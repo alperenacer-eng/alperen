@@ -114,17 +114,24 @@ const BimsResources = () => {
     e.preventDefault();
     if (!newProduct.name.trim()) return;
     try {
-      await axios.post(`${API_URL}/products`, newProduct, {
+      const productData = {
+        ...newProduct,
+        sevk_agirligi: parseFloat(newProduct.sevk_agirligi) || 0,
+        adet_basi_cimento: parseFloat(newProduct.adet_basi_cimento) || 0,
+        paket_adet_7_boy: parseInt(newProduct.paket_adet_7_boy) || 0,
+        paket_adet_5_boy: parseInt(newProduct.paket_adet_5_boy) || 0
+      };
+      await axios.post(`${API_URL}/products`, productData, {
         headers: { Authorization: `Bearer ${token}` }
       });
       toast.success('Ürün eklendi');
       setNewProduct({ 
         name: '', 
         unit: 'adet',
-        sevk_agirligi: 0,
-        adet_basi_cimento: 0,
-        paket_adet_7_boy: 0,
-        paket_adet_5_boy: 0
+        sevk_agirligi: '',
+        adet_basi_cimento: '',
+        paket_adet_7_boy: '',
+        paket_adet_5_boy: ''
       });
       fetchProducts();
     } catch (error) {
