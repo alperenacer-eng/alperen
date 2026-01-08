@@ -517,6 +517,7 @@ async def create_product(product: ProductCreate, current_user: dict = Depends(ge
         "harcanan_hisir": harcanan_hisir,
         "paket_adet_7_boy": product.paket_adet_7_boy,
         "paket_adet_5_boy": product.paket_adet_5_boy,
+        "uretim_palet_adetleri": product.uretim_palet_adetleri,
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     await db.products.insert_one(product_dict)
