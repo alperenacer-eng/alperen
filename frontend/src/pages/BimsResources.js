@@ -114,7 +114,34 @@ const BimsResources = () => {
 
   const handleAddProduct = async (e) => {
     e.preventDefault();
-    if (!newProduct.name.trim()) return;
+    if (!newProduct.name.trim()) {
+      toast.error('Ürün adı zorunludur');
+      return;
+    }
+    if (!newProduct.sevk_agirligi || parseFloat(newProduct.sevk_agirligi) <= 0) {
+      toast.error('Sevk ağırlığı zorunludur');
+      return;
+    }
+    if (!newProduct.adet_basi_cimento || parseFloat(newProduct.adet_basi_cimento) <= 0) {
+      toast.error('Adet başı çimento zorunludur');
+      return;
+    }
+    if (!newProduct.paket_adet_7_boy || parseInt(newProduct.paket_adet_7_boy) <= 0) {
+      toast.error('Paket adet (7 Boy) zorunludur');
+      return;
+    }
+    if (!newProduct.paket_adet_5_boy || parseInt(newProduct.paket_adet_5_boy) <= 0) {
+      toast.error('Paket adet (5 Boy) zorunludur');
+      return;
+    }
+    // İşletme palet adetleri kontrolü
+    for (const dept of departments) {
+      if (!newProduct.uretim_palet_adetleri[dept.id] || parseInt(newProduct.uretim_palet_adetleri[dept.id]) <= 0) {
+        toast.error(`${dept.name} için üretim palet adeti zorunludur`);
+        return;
+      }
+    }
+
     try {
       const productData = {
         ...newProduct,
@@ -122,12 +149,24 @@ const BimsResources = () => {
         adet_basi_cimento: parseFloat(newProduct.adet_basi_cimento) || 0,
         paket_adet_7_boy: parseInt(newProduct.paket_adet_7_boy) || 0,
         paket_adet_5_boy: parseInt(newProduct.paket_adet_5_boy) || 0,
-        uretim_palet_adetleri: newProduct.uretim_palet_adetleri
+        uretim_palet_adetleri: Object.fromEntries(
+          Object.entries(newProduct.uretim_palet_adetleri).map(([k, v]) => [k, parseInt(v) || 0])
+        )
       };
-      await axios.post(`${API_URL}/products`, productData, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      toast.success('Ürün eklendi');
+      
+      if (editingProduct) {
+        await axios.put(`${API_URL}/products/${editingProduct.id}`, productData, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        toast.success('Ürün güncellendi');
+        setEditingProduct(null);
+      } else {
+        await axios.post(`${API_URL}/products`, productData, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        toast.success('Ürün eklendi');
+      }
+      
       setNewProduct({ 
         name: '', 
         unit: 'adet',
@@ -139,8 +178,35 @@ const BimsResources = () => {
       });
       fetchProducts();
     } catch (error) {
-      toast.error('Ürün eklenemedi');
+      toast.error('İşlem başarısız');
     }
+  };
+
+  const handleEditProduct = (product) => {
+    setEditingProduct(product);
+    setNewProduct({
+      name: product.name || '',
+      unit: product.unit || 'adet',
+      sevk_agirligi: product.sevk_agirligi ? String(product.sevk_agirligi) : '',
+      adet_basi_cimento: product.adet_basi_cimento ? String(product.adet_basi_cimento) : '',
+      paket_adet_7_boy: product.paket_adet_7_boy ? String(product.paket_adet_7_boy) : '',
+      paket_adet_5_boy: product.paket_adet_5_boy ? String(product.paket_adet_5_boy) : '',
+      uretim_palet_adetleri: product.uretim_palet_adetleri || {}
+    });
+    setActiveTab('products');
+  };
+
+  const cancelEditProduct = () => {
+    setEditingProduct(null);
+    setNewProduct({ 
+      name: '', 
+      unit: 'adet',
+      sevk_agirligi: '',
+      adet_basi_cimento: '',
+      paket_adet_7_boy: '',
+      paket_adet_5_boy: '',
+      uretim_palet_adetleri: {}
+    });
   };
 
   const updatePaletAdet = (deptId, value) => {
