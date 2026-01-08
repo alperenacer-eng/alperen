@@ -542,6 +542,31 @@ async def get_products(current_user: dict = Depends(get_current_user)):
     products = await db.products.find({}, {"_id": 0}).sort("name", 1).to_list(1000)
     return [ProductResponse(**p) for p in products]
 
+@api_router.put("/products/{product_id}")
+async def update_product(product_id: str, product: ProductCreate, current_user: dict = Depends(get_current_user)):
+    existing = await db.products.find_one({"id": product_id}, {"_id": 0})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Product not found")
+    
+    harcanan_hisir = product.sevk_agirligi - product.adet_basi_cimento
+    update_data = {
+        "name": product.name,
+        "unit": product.unit,
+        "sevk_agirligi": product.sevk_agirligi,
+        "adet_basi_cimento": product.adet_basi_cimento,
+        "harcanan_hisir": harcanan_hisir,
+        "paket_adet_7_boy": product.paket_adet_7_boy,
+        "paket_adet_5_boy": product.paket_adet_5_boy,
+        "uretim_palet_adetleri": product.uretim_palet_adetleri,
+        "updated_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.products.update_one({"id": product_id}, {"$set": update_data})
+    # Stok adını da güncelle
+    await db.bims_stok_urunler.update_one({"id": product_id + "_stok"}, {"$set": {"urun_adi": product.name, "birim": product.unit}})
+    
+    updated = await db.products.find_one({"id": product_id}, {"_id": 0})
+    return ProductResponse(**updated)
+
 @api_router.delete("/products/{product_id}")
 async def delete_product(product_id: str, current_user: dict = Depends(get_current_user)):
     result = await db.products.delete_one({"id": product_id})
