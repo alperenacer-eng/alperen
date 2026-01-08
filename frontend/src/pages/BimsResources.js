@@ -32,7 +32,8 @@ const BimsResources = () => {
     sevk_agirligi: '',
     adet_basi_cimento: '',
     paket_adet_7_boy: '',
-    paket_adet_5_boy: ''
+    paket_adet_5_boy: '',
+    uretim_palet_adetleri: {}
   });
   const [deleteProductId, setDeleteProductId] = useState(null);
   
