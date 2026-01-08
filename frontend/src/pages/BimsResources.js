@@ -393,10 +393,12 @@ const BimsResources = () => {
         <TabsContent value="products">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div className="glass-effect rounded-xl p-6 border border-slate-800">
-              <h2 className="text-xl font-semibold text-white mb-6">Yeni Ürün Ekle</h2>
+              <h2 className="text-xl font-semibold text-white mb-6">
+                {editingProduct ? 'Ürün Düzenle' : 'Yeni Ürün Ekle'}
+              </h2>
               <form onSubmit={handleAddProduct} className="space-y-4">
                 <div className="space-y-2">
-                  <Label>Ürün Adı</Label>
+                  <Label>Ürün Adı *</Label>
                   <Input
                     value={newProduct.name}
                     onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })}
@@ -407,24 +409,26 @@ const BimsResources = () => {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label>Sevk Ağırlığı (kg)</Label>
+                    <Label>Sevk Ağırlığı (kg) *</Label>
                     <Input
                       type="number"
                       value={newProduct.sevk_agirligi}
                       onChange={(e) => setNewProduct({ ...newProduct, sevk_agirligi: e.target.value })}
                       placeholder="0"
                       step="0.01"
+                      required
                       className="h-12 bg-slate-950 border-slate-800 text-white"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>Adet Başı Çimento (kg)</Label>
+                    <Label>Adet Başı Çimento (kg) *</Label>
                     <Input
                       type="number"
                       value={newProduct.adet_basi_cimento}
                       onChange={(e) => setNewProduct({ ...newProduct, adet_basi_cimento: e.target.value })}
                       placeholder="0"
                       step="0.01"
+                      required
                       className="h-12 bg-slate-950 border-slate-800 text-white"
                     />
                   </div>
@@ -437,17 +441,18 @@ const BimsResources = () => {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label>Paket Adet (7 Boy)</Label>
+                    <Label>Paket Adet (7 Boy) *</Label>
                     <Input
                       type="number"
                       value={newProduct.paket_adet_7_boy}
                       onChange={(e) => setNewProduct({ ...newProduct, paket_adet_7_boy: e.target.value })}
                       placeholder="0"
+                      required
                       className="h-12 bg-slate-950 border-slate-800 text-white"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>Paket Adet (5 Boy)</Label>
+                    <Label>Paket Adet (5 Boy) *</Label>
                     <Input
                       type="number"
                       value={newProduct.paket_adet_5_boy}
