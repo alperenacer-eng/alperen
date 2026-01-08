@@ -75,6 +75,7 @@ class ProductCreate(BaseModel):
     adet_basi_cimento: float = 0  # kg
     paket_adet_7_boy: int = 0
     paket_adet_5_boy: int = 0
+    uretim_palet_adetleri: dict = {}  # {"isletme_id": palet_adeti}
 
 class ProductResponse(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -86,6 +87,7 @@ class ProductResponse(BaseModel):
     harcanan_hisir: Optional[float] = 0
     paket_adet_7_boy: Optional[int] = 0
     paket_adet_5_boy: Optional[int] = 0
+    uretim_palet_adetleri: Optional[dict] = {}
     created_at: str
 
 class DepartmentCreate(BaseModel):
