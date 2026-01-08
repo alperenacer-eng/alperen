@@ -390,6 +390,27 @@ const BimsResources = () => {
                     />
                   </div>
                 </div>
+                
+                {/* İşletmelere Göre Üretim Palet Adetleri */}
+                {departments.length > 0 && (
+                  <div className="space-y-2">
+                    <Label className="text-teal-400">İşletmelere Göre Üretim Palet Adeti</Label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {departments.map(dept => (
+                        <div key={dept.id} className="flex items-center gap-2">
+                          <span className="text-sm text-slate-400 w-24 truncate">{dept.name}:</span>
+                          <Input
+                            type="number"
+                            value={newProduct.uretim_palet_adetleri[dept.id] || ''}
+                            onChange={(e) => updatePaletAdet(dept.id, e.target.value)}
+                            placeholder="0"
+                            className="h-10 bg-slate-950 border-slate-800 text-white flex-1"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
                 <Button type="submit" className="w-full h-12 bg-blue-500 hover:bg-blue-600 text-white">
                   <Plus className="w-5 h-5 mr-2" />
                   Ekle
