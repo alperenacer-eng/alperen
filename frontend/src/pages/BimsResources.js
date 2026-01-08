@@ -466,7 +466,7 @@ const BimsResources = () => {
                 {/* İşletmelere Göre Üretim Palet Adetleri */}
                 {departments.length > 0 && (
                   <div className="space-y-2">
-                    <Label className="text-teal-400">İşletmelere Göre Üretim Palet Adeti</Label>
+                    <Label className="text-teal-400">İşletmelere Göre Üretim Palet Adeti *</Label>
                     <div className="grid grid-cols-2 gap-2">
                       {departments.map(dept => (
                         <div key={dept.id} className="flex items-center gap-2">
@@ -476,6 +476,7 @@ const BimsResources = () => {
                             value={newProduct.uretim_palet_adetleri[dept.id] || ''}
                             onChange={(e) => updatePaletAdet(dept.id, e.target.value)}
                             placeholder="0"
+                            required
                             className="h-10 bg-slate-950 border-slate-800 text-white flex-1"
                           />
                         </div>
@@ -483,10 +484,17 @@ const BimsResources = () => {
                     </div>
                   </div>
                 )}
-                <Button type="submit" className="w-full h-12 bg-blue-500 hover:bg-blue-600 text-white">
-                  <Plus className="w-5 h-5 mr-2" />
-                  Ekle
-                </Button>
+                <div className="flex gap-2">
+                  {editingProduct && (
+                    <Button type="button" onClick={cancelEditProduct} className="flex-1 h-12 bg-slate-700 hover:bg-slate-600 text-white">
+                      İptal
+                    </Button>
+                  )}
+                  <Button type="submit" className={`flex-1 h-12 ${editingProduct ? 'bg-green-500 hover:bg-green-600' : 'bg-blue-500 hover:bg-blue-600'} text-white`}>
+                    <Plus className="w-5 h-5 mr-2" />
+                    {editingProduct ? 'Güncelle' : 'Ekle'}
+                  </Button>
+                </div>
               </form>
             </div>
 
@@ -506,9 +514,14 @@ const BimsResources = () => {
                             <p className="text-slate-400">7 Boy: <span className="text-white">{product.paket_adet_7_boy || 0}</span> | 5 Boy: <span className="text-white">{product.paket_adet_5_boy || 0}</span></p>
                           </div>
                         </div>
-                        <Button variant="ghost" size="sm" onClick={() => setDeleteProductId(product.id)} className="text-red-400 hover:text-red-300 hover:bg-red-400/10">
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
+                        <div className="flex gap-1">
+                          <Button variant="ghost" size="sm" onClick={() => handleEditProduct(product)} className="text-blue-400 hover:text-blue-300 hover:bg-blue-400/10">
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                          <Button variant="ghost" size="sm" onClick={() => setDeleteProductId(product.id)} className="text-red-400 hover:text-red-300 hover:bg-red-400/10">
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   ))
