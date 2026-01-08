@@ -120,7 +120,8 @@ const BimsResources = () => {
         sevk_agirligi: parseFloat(newProduct.sevk_agirligi) || 0,
         adet_basi_cimento: parseFloat(newProduct.adet_basi_cimento) || 0,
         paket_adet_7_boy: parseInt(newProduct.paket_adet_7_boy) || 0,
-        paket_adet_5_boy: parseInt(newProduct.paket_adet_5_boy) || 0
+        paket_adet_5_boy: parseInt(newProduct.paket_adet_5_boy) || 0,
+        uretim_palet_adetleri: newProduct.uretim_palet_adetleri
       };
       await axios.post(`${API_URL}/products`, productData, {
         headers: { Authorization: `Bearer ${token}` }
@@ -132,12 +133,23 @@ const BimsResources = () => {
         sevk_agirligi: '',
         adet_basi_cimento: '',
         paket_adet_7_boy: '',
-        paket_adet_5_boy: ''
+        paket_adet_5_boy: '',
+        uretim_palet_adetleri: {}
       });
       fetchProducts();
     } catch (error) {
       toast.error('Ürün eklenemedi');
     }
+  };
+
+  const updatePaletAdet = (deptId, value) => {
+    setNewProduct(prev => ({
+      ...prev,
+      uretim_palet_adetleri: {
+        ...prev.uretim_palet_adetleri,
+        [deptId]: value
+      }
+    }));
   };
 
   const handleDeleteProduct = async () => {
