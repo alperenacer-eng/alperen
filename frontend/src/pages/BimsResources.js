@@ -26,7 +26,14 @@ const BimsResources = () => {
   
   // Products
   const [products, setProducts] = useState([]);
-  const [newProduct, setNewProduct] = useState({ name: '', unit: 'adet' });
+  const [newProduct, setNewProduct] = useState({ 
+    name: '', 
+    unit: 'adet',
+    sevk_agirligi: 0,
+    adet_basi_cimento: 0,
+    paket_adet_7_boy: 0,
+    paket_adet_5_boy: 0
+  });
   const [deleteProductId, setDeleteProductId] = useState(null);
   
   // Molds
