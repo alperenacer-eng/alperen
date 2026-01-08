@@ -91,6 +91,7 @@ function App() {
               <Route path="production-list" element={<ProductionList />} />
               <Route path="reports" element={<Reports />} />
               <Route path="bims-resources" element={<BimsResources />} />
+              <Route path="bims-stok" element={<BimsStok />} />
               <Route path="cimento" element={<CimentoDashboard />} />
               <Route path="cimento-entry" element={<CimentoEntry />} />
               <Route path="cimento-resources" element={<CimentoResources />} />
