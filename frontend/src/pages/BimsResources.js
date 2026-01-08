@@ -318,18 +318,57 @@ const BimsResources = () => {
                     className="h-12 bg-slate-950 border-slate-800 text-white"
                   />
                 </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Sevk Ağırlığı (kg)</Label>
+                    <Input
+                      type="number"
+                      value={newProduct.sevk_agirligi}
+                      onChange={(e) => setNewProduct({ ...newProduct, sevk_agirligi: parseFloat(e.target.value) || 0 })}
+                      placeholder="0"
+                      step="0.01"
+                      className="h-12 bg-slate-950 border-slate-800 text-white"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Adet Başı Çimento (kg)</Label>
+                    <Input
+                      type="number"
+                      value={newProduct.adet_basi_cimento}
+                      onChange={(e) => setNewProduct({ ...newProduct, adet_basi_cimento: parseFloat(e.target.value) || 0 })}
+                      placeholder="0"
+                      step="0.01"
+                      className="h-12 bg-slate-950 border-slate-800 text-white"
+                    />
+                  </div>
+                </div>
                 <div className="space-y-2">
-                  <Label>Varsayılan Birim</Label>
-                  <Select value={newProduct.unit} onValueChange={(value) => setNewProduct({ ...newProduct, unit: value })}>
-                    <SelectTrigger className="h-12 bg-slate-950 border-slate-800 text-white">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="bg-slate-900 border-slate-800 text-white">
-                      <SelectItem value="adet">Adet</SelectItem>
-                      <SelectItem value="m2">Metrekare (m²)</SelectItem>
-                      <SelectItem value="m3">Metreküp (m³)</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <Label>Harcanan Hışır (Otomatik)</Label>
+                  <div className="h-12 px-4 bg-slate-800 border border-slate-700 rounded-md flex items-center text-teal-400 font-semibold">
+                    {((newProduct.sevk_agirligi || 0) - (newProduct.adet_basi_cimento || 0)).toFixed(2)} kg
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Paket Adet (7 Boy)</Label>
+                    <Input
+                      type="number"
+                      value={newProduct.paket_adet_7_boy}
+                      onChange={(e) => setNewProduct({ ...newProduct, paket_adet_7_boy: parseInt(e.target.value) || 0 })}
+                      placeholder="0"
+                      className="h-12 bg-slate-950 border-slate-800 text-white"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Paket Adet (5 Boy)</Label>
+                    <Input
+                      type="number"
+                      value={newProduct.paket_adet_5_boy}
+                      onChange={(e) => setNewProduct({ ...newProduct, paket_adet_5_boy: parseInt(e.target.value) || 0 })}
+                      placeholder="0"
+                      className="h-12 bg-slate-950 border-slate-800 text-white"
+                    />
+                  </div>
                 </div>
                 <Button type="submit" className="w-full h-12 bg-blue-500 hover:bg-blue-600 text-white">
                   <Plus className="w-5 h-5 mr-2" />
@@ -340,17 +379,24 @@ const BimsResources = () => {
 
             <div className="glass-effect rounded-xl p-6 border border-slate-800">
               <h2 className="text-xl font-semibold text-white mb-6">Ürün Listesi ({products.length})</h2>
-              <div className="space-y-2 max-h-96 overflow-y-auto">
+              <div className="space-y-2 max-h-[500px] overflow-y-auto">
                 {products.length > 0 ? (
                   products.map((product) => (
-                    <div key={product.id} className="flex items-center justify-between p-4 bg-slate-800/30 rounded-lg border border-slate-800 hover:bg-slate-800/50 transition-colors">
-                      <div>
-                        <h3 className="font-semibold text-white">{product.name}</h3>
-                        <p className="text-sm text-slate-400">Birim: {product.unit}</p>
+                    <div key={product.id} className="p-4 bg-slate-800/30 rounded-lg border border-slate-800 hover:bg-slate-800/50 transition-colors">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <h3 className="font-semibold text-white">{product.name}</h3>
+                          <div className="grid grid-cols-2 gap-x-4 gap-y-1 mt-2 text-sm">
+                            <p className="text-slate-400">Sevk: <span className="text-white">{product.sevk_agirligi || 0} kg</span></p>
+                            <p className="text-slate-400">Çimento: <span className="text-white">{product.adet_basi_cimento || 0} kg</span></p>
+                            <p className="text-slate-400">Hışır: <span className="text-teal-400">{product.harcanan_hisir || 0} kg</span></p>
+                            <p className="text-slate-400">7 Boy: <span className="text-white">{product.paket_adet_7_boy || 0}</span> | 5 Boy: <span className="text-white">{product.paket_adet_5_boy || 0}</span></p>
+                          </div>
+                        </div>
+                        <Button variant="ghost" size="sm" onClick={() => setDeleteProductId(product.id)} className="text-red-400 hover:text-red-300 hover:bg-red-400/10">
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
                       </div>
-                      <Button variant="ghost" size="sm" onClick={() => setDeleteProductId(product.id)} className="text-red-400 hover:text-red-300 hover:bg-red-400/10">
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
                     </div>
                   ))
                 ) : (
