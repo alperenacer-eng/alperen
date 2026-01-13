@@ -20,8 +20,12 @@ import jwt
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
-# SQLite Database path
-DB_PATH = ROOT_DIR / "database.db"
+# Data klasörü - Docker volume için
+DATA_DIR = ROOT_DIR / "data"
+DATA_DIR.mkdir(exist_ok=True)
+
+# SQLite Database path - data klasöründe tutulacak (Docker volume)
+DB_PATH = DATA_DIR / "database.db"
 
 # Password hashing
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
