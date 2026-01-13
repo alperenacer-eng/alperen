@@ -1916,6 +1916,879 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# ============ Production Routes ============
+
+@api_router.post("/production", response_model=ProductionRecordResponse)
+async def create_production_record(record: ProductionRecordCreate, current_user: dict = Depends(get_current_user)):
+    db = await get_db()
+    record_id = generate_id()
+    created_at = datetime.now(timezone.utc).isoformat()
+    
+    await db.execute(
+        """INSERT INTO production_records (id, product_id, product_name, quantity, unit, department_id, department_name,
+           operator_id, operator_name, shift, notes, module, user_id, user_name, created_at, updated_at,
+           production_date, shift_type, shift_number, worked_hours, required_hours, product_type, mold_no,
+           strip_used, pallet_count, pallet_quantity, waste, pieces_per_pallet, mix_count, cement_in_mix,
+           machine_cement, product_to_field, product_length, breakdown_1, breakdown_2, breakdown_3)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        (record_id, record.product_id, record.product_name, record.quantity, record.unit, record.department_id,
+         record.department_name, record.operator_id, record.operator_name, record.shift, record.notes, record.module,
+         current_user["id"], current_user["name"], created_at, created_at, record.production_date, record.shift_type,
+         record.shift_number, record.worked_hours, record.required_hours, record.product_type, record.mold_no,
+         record.strip_used, record.pallet_count, record.pallet_quantity, record.waste, record.pieces_per_pallet,
+         record.mix_count, record.cement_in_mix, record.machine_cement, record.product_to_field, record.product_length,
+         record.breakdown_1, record.breakdown_2, record.breakdown_3)
+    )
+    await db.commit()
+    
+    async with db.execute("SELECT * FROM production_records WHERE id = ?", (record_id,)) as cursor:
+        row = await cursor.fetchone()
+    await db.close()
+    
+    return ProductionRecordResponse(**row_to_dict(row))
+
+@api_router.get("/production", response_model=List[ProductionRecordResponse])
+async def get_production_records(skip: int = 0, limit: int = 50, start_date: Optional[str] = None,
+                                  end_date: Optional[str] = None, module: Optional[str] = None,
+                                  current_user: dict = Depends(get_current_user)):
+    db = await get_db()
+    query = "SELECT * FROM production_records WHERE 1=1"
+    params = []
+    
+    if module:
+        query += " AND module = ?"
+        params.append(module)
+    if start_date:
+        query += " AND created_at >= ?"
+        params.append(start_date)
+    if end_date:
+        query += " AND created_at <= ?"
+        params.append(end_date)
+    
+    query += " ORDER BY created_at DESC LIMIT ? OFFSET ?"
+    params.extend([limit, skip])
+    
+    async with db.execute(query, params) as cursor:
+        rows = await cursor.fetchall()
+    await db.close()
+    
+    return [ProductionRecordResponse(**row_to_dict(row)) for row in rows]
+
+@api_router.get("/production/{record_id}", response_model=ProductionRecordResponse)
+async def get_production_record(record_id: str, current_user: dict = Depends(get_current_user)):
+    db = await get_db()
+    async with db.execute("SELECT * FROM production_records WHERE id = ?", (record_id,)) as cursor:
+        row = await cursor.fetchone()
+    await db.close()
+    
+    if not row:
+        raise HTTPException(status_code=404, detail="Record not found")
+    return ProductionRecordResponse(**row_to_dict(row))
+
+@api_router.put("/production/{record_id}", response_model=ProductionRecordResponse)
+async def update_production_record(record_id: str, update_data: ProductionRecordUpdate, current_user: dict = Depends(get_current_user)):
+    db = await get_db()
+    
+    async with db.execute("SELECT id FROM production_records WHERE id = ?", (record_id,)) as cursor:
+        existing = await cursor.fetchone()
+    if not existing:
+        await db.close()
+        raise HTTPException(status_code=404, detail="Record not found")
+    
+    updates = []
+    params = []
+    for field, value in update_data.model_dump().items():
+        if value is not None:
+            updates.append(f"{field} = ?")
+            params.append(value)
+    
+    if updates:
+        updates.append("updated_at = ?")
+        params.append(datetime.now(timezone.utc).isoformat())
+        params.append(record_id)
+        await db.execute(f"UPDATE production_records SET {', '.join(updates)} WHERE id = ?", params)
+        await db.commit()
+    
+    async with db.execute("SELECT * FROM production_records WHERE id = ?", (record_id,)) as cursor:
+        row = await cursor.fetchone()
+    await db.close()
+    
+    return ProductionRecordResponse(**row_to_dict(row))
+
+@api_router.delete("/production/{record_id}")
+async def delete_production_record(record_id: str, current_user: dict = Depends(get_current_user)):
+    db = await get_db()
+    cursor = await db.execute("DELETE FROM production_records WHERE id = ?", (record_id,))
+    await db.commit()
+    await db.close()
+    
+    if cursor.rowcount == 0:
+        raise HTTPException(status_code=404, detail="Record not found")
+    return {"message": "Record deleted successfully"}
+
+# Reports routes
+@api_router.get("/reports/stats", response_model=DashboardStats)
+async def get_dashboard_stats(module: Optional[str] = None, current_user: dict = Depends(get_current_user)):
+    now = datetime.now(timezone.utc)
+    today = now.strftime('%Y-%m-%d')
+    week_ago = (now - timedelta(days=7)).strftime('%Y-%m-%d')
+    month_ago = (now - timedelta(days=30)).strftime('%Y-%m-%d')
+    
+    db = await get_db()
+    
+    query = "SELECT * FROM production_records"
+    params = []
+    if module:
+        query += " WHERE module = ?"
+        params.append(module)
+    
+    async with db.execute(query, params) as cursor:
+        rows = await cursor.fetchall()
+    
+    all_records = rows_to_list(rows)
+    total_records = len(all_records)
+    
+    today_production = 0
+    week_production = 0
+    month_production = 0
+    
+    for r in all_records:
+        prod_date = r.get("production_date") or r["created_at"][:10]
+        qty = r.get("quantity", 0) or 0
+        
+        if prod_date == today:
+            today_production += qty
+        if prod_date >= week_ago:
+            week_production += qty
+        if prod_date >= month_ago:
+            month_production += qty
+    
+    recent_query = "SELECT * FROM production_records"
+    if module:
+        recent_query += " WHERE module = ?"
+    recent_query += " ORDER BY created_at DESC LIMIT 5"
+    
+    async with db.execute(recent_query, params if module else []) as cursor:
+        recent_rows = await cursor.fetchall()
+    await db.close()
+    
+    recent_records = [ProductionRecordResponse(**row_to_dict(r)) for r in recent_rows]
+    
+    return DashboardStats(
+        total_records=total_records,
+        today_production=today_production,
+        week_production=week_production,
+        month_production=month_production,
+        recent_records=recent_records
+    )
+
+@api_router.get("/reports/daily")
+async def get_daily_report(days: int = 7, module: Optional[str] = None, current_user: dict = Depends(get_current_user)):
+    now = datetime.now(timezone.utc)
+    start_date = (now - timedelta(days=days)).strftime('%Y-%m-%d')
+    
+    db = await get_db()
+    query = "SELECT * FROM production_records"
+    params = []
+    if module:
+        query += " WHERE module = ?"
+        params.append(module)
+    
+    async with db.execute(query, params) as cursor:
+        rows = await cursor.fetchall()
+    await db.close()
+    
+    records = rows_to_list(rows)
+    daily_data = {}
+    
+    for record in records:
+        date_key = record.get("production_date") or record["created_at"][:10]
+        if date_key >= start_date:
+            if date_key not in daily_data:
+                daily_data[date_key] = {"date": date_key, "quantity": 0, "records": 0, "net_pallets": 0}
+            daily_data[date_key]["quantity"] += record.get("quantity", 0) or 0
+            daily_data[date_key]["records"] += 1
+            pallet_count = record.get("pallet_count", 0) or 0
+            waste = record.get("waste", 0) or 0
+            daily_data[date_key]["net_pallets"] += (pallet_count - waste)
+    
+    return {"data": sorted(daily_data.values(), key=lambda x: x["date"])}
+
+# ============ Çimento Giriş API'leri ============
+
+class CimentoGirisCreate(BaseModel):
+    yukleme_tarihi: str = ""
+    bosaltim_tarihi: str = ""
+    irsaliye_no: str = ""
+    fatura_no: str = ""
+    vade_tarihi: str = ""
+    giris_miktari: float = 0
+    kantar_kg_miktari: float = 0
+    birim_fiyat: float = 0
+    giris_kdv_orani: float = 20
+    nakliye_birim_fiyat: float = 0
+    nakliye_kdv_orani: float = 20
+    nakliye_tevkifat_orani: float = 0
+    plaka: str = ""
+    nakliye_firmasi: str = ""
+    sofor: str = ""
+    sehir: str = ""
+    cimento_alinan_firma: str = ""
+    cimento_cinsi: str = ""
+
+class CimentoGirisUpdate(BaseModel):
+    yukleme_tarihi: Optional[str] = None
+    bosaltim_tarihi: Optional[str] = None
+    irsaliye_no: Optional[str] = None
+    fatura_no: Optional[str] = None
+    vade_tarihi: Optional[str] = None
+    giris_miktari: Optional[float] = None
+    kantar_kg_miktari: Optional[float] = None
+    birim_fiyat: Optional[float] = None
+    giris_kdv_orani: Optional[float] = None
+    nakliye_birim_fiyat: Optional[float] = None
+    nakliye_kdv_orani: Optional[float] = None
+    nakliye_tevkifat_orani: Optional[float] = None
+    plaka: Optional[str] = None
+    nakliye_firmasi: Optional[str] = None
+    sofor: Optional[str] = None
+    sehir: Optional[str] = None
+    cimento_alinan_firma: Optional[str] = None
+    cimento_cinsi: Optional[str] = None
+
+def calculate_cimento_fields(data: dict) -> dict:
+    giris_miktari = float(data.get('giris_miktari', 0) or 0)
+    kantar_kg_miktari = float(data.get('kantar_kg_miktari', 0) or 0)
+    data['aradaki_fark'] = giris_miktari - kantar_kg_miktari
+    
+    birim_fiyat = float(data.get('birim_fiyat', 0) or 0)
+    giris_kdv_orani = float(data.get('giris_kdv_orani', 0) or 0)
+    
+    data['giris_tutari'] = giris_miktari * birim_fiyat
+    data['giris_kdv_tutari'] = data['giris_tutari'] * (giris_kdv_orani / 100)
+    data['giris_kdv_dahil_toplam'] = data['giris_tutari'] + data['giris_kdv_tutari']
+    
+    nakliye_birim_fiyat = float(data.get('nakliye_birim_fiyat', 0) or 0)
+    nakliye_kdv_orani = float(data.get('nakliye_kdv_orani', 0) or 0)
+    nakliye_tevkifat_orani = float(data.get('nakliye_tevkifat_orani', 0) or 0)
+    
+    data['nakliye_matrahi'] = giris_miktari * nakliye_birim_fiyat
+    data['nakliye_kdv_tutari'] = data['nakliye_matrahi'] * (nakliye_kdv_orani / 100)
+    data['nakliye_t1'] = data['nakliye_matrahi'] + data['nakliye_kdv_tutari']
+    data['nakliye_t2'] = data['nakliye_kdv_tutari'] * (nakliye_tevkifat_orani / 100)
+    data['nakliye_genel_toplam'] = data['nakliye_t1'] - data['nakliye_t2']
+    
+    data['urun_nakliye_matrah'] = data['giris_tutari'] + data['nakliye_matrahi']
+    data['urun_nakliye_kdv_toplam'] = data['giris_kdv_tutari'] + data['nakliye_kdv_tutari']
+    data['urun_nakliye_tevkifat_toplam'] = data['nakliye_t2']
+    data['urun_nakliye_genel_toplam'] = data['giris_kdv_dahil_toplam'] + data['nakliye_genel_toplam']
+    
+    return data
+
+@api_router.post("/cimento-giris")
+async def create_cimento_giris(input: CimentoGirisCreate, current_user: dict = Depends(get_current_user)):
+    db = await get_db()
+    data = input.model_dump()
+    data = calculate_cimento_fields(data)
+    giris_id = generate_id()
+    created_at = datetime.now(timezone.utc).isoformat()
+    
+    await db.execute(
+        """INSERT INTO cimento_giris (id, yukleme_tarihi, bosaltim_tarihi, irsaliye_no, fatura_no, vade_tarihi,
+           giris_miktari, kantar_kg_miktari, birim_fiyat, giris_kdv_orani, nakliye_birim_fiyat, nakliye_kdv_orani,
+           nakliye_tevkifat_orani, plaka, nakliye_firmasi, sofor, sehir, cimento_alinan_firma, cimento_cinsi,
+           aradaki_fark, giris_tutari, giris_kdv_tutari, giris_kdv_dahil_toplam, nakliye_matrahi, nakliye_kdv_tutari,
+           nakliye_t1, nakliye_t2, nakliye_genel_toplam, urun_nakliye_matrah, urun_nakliye_kdv_toplam,
+           urun_nakliye_tevkifat_toplam, urun_nakliye_genel_toplam, created_at, updated_at, user_id, user_name)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        (giris_id, data['yukleme_tarihi'], data['bosaltim_tarihi'], data['irsaliye_no'], data['fatura_no'],
+         data['vade_tarihi'], data['giris_miktari'], data['kantar_kg_miktari'], data['birim_fiyat'],
+         data['giris_kdv_orani'], data['nakliye_birim_fiyat'], data['nakliye_kdv_orani'], data['nakliye_tevkifat_orani'],
+         data['plaka'], data['nakliye_firmasi'], data['sofor'], data['sehir'], data['cimento_alinan_firma'],
+         data['cimento_cinsi'], data['aradaki_fark'], data['giris_tutari'], data['giris_kdv_tutari'],
+         data['giris_kdv_dahil_toplam'], data['nakliye_matrahi'], data['nakliye_kdv_tutari'], data['nakliye_t1'],
+         data['nakliye_t2'], data['nakliye_genel_toplam'], data['urun_nakliye_matrah'], data['urun_nakliye_kdv_toplam'],
+         data['urun_nakliye_tevkifat_toplam'], data['urun_nakliye_genel_toplam'], created_at, created_at,
+         current_user['id'], current_user['name'])
+    )
+    await db.commit()
+    
+    async with db.execute("SELECT * FROM cimento_giris WHERE id = ?", (giris_id,)) as cursor:
+        row = await cursor.fetchone()
+    await db.close()
+    
+    return row_to_dict(row)
+
+@api_router.get("/cimento-giris")
+async def get_cimento_giris(current_user: dict = Depends(get_current_user)):
+    db = await get_db()
+    async with db.execute("SELECT * FROM cimento_giris ORDER BY created_at DESC") as cursor:
+        rows = await cursor.fetchall()
+    await db.close()
+    return rows_to_list(rows)
+
+@api_router.put("/cimento-giris/{id}")
+async def update_cimento_giris(id: str, input: CimentoGirisUpdate, current_user: dict = Depends(get_current_user)):
+    db = await get_db()
+    
+    async with db.execute("SELECT * FROM cimento_giris WHERE id = ?", (id,)) as cursor:
+        existing_row = await cursor.fetchone()
+    if not existing_row:
+        await db.close()
+        raise HTTPException(status_code=404, detail="Kayıt bulunamadı")
+    
+    existing = row_to_dict(existing_row)
+    for key, value in input.model_dump().items():
+        if value is not None:
+            existing[key] = value
+    
+    existing = calculate_cimento_fields(existing)
+    existing['updated_at'] = datetime.now(timezone.utc).isoformat()
+    
+    await db.execute(
+        """UPDATE cimento_giris SET yukleme_tarihi=?, bosaltim_tarihi=?, irsaliye_no=?, fatura_no=?, vade_tarihi=?,
+           giris_miktari=?, kantar_kg_miktari=?, birim_fiyat=?, giris_kdv_orani=?, nakliye_birim_fiyat=?,
+           nakliye_kdv_orani=?, nakliye_tevkifat_orani=?, plaka=?, nakliye_firmasi=?, sofor=?, sehir=?,
+           cimento_alinan_firma=?, cimento_cinsi=?, aradaki_fark=?, giris_tutari=?, giris_kdv_tutari=?,
+           giris_kdv_dahil_toplam=?, nakliye_matrahi=?, nakliye_kdv_tutari=?, nakliye_t1=?, nakliye_t2=?,
+           nakliye_genel_toplam=?, urun_nakliye_matrah=?, urun_nakliye_kdv_toplam=?, urun_nakliye_tevkifat_toplam=?,
+           urun_nakliye_genel_toplam=?, updated_at=? WHERE id=?""",
+        (existing['yukleme_tarihi'], existing['bosaltim_tarihi'], existing['irsaliye_no'], existing['fatura_no'],
+         existing['vade_tarihi'], existing['giris_miktari'], existing['kantar_kg_miktari'], existing['birim_fiyat'],
+         existing['giris_kdv_orani'], existing['nakliye_birim_fiyat'], existing['nakliye_kdv_orani'],
+         existing['nakliye_tevkifat_orani'], existing['plaka'], existing['nakliye_firmasi'], existing['sofor'],
+         existing['sehir'], existing['cimento_alinan_firma'], existing['cimento_cinsi'], existing['aradaki_fark'],
+         existing['giris_tutari'], existing['giris_kdv_tutari'], existing['giris_kdv_dahil_toplam'],
+         existing['nakliye_matrahi'], existing['nakliye_kdv_tutari'], existing['nakliye_t1'], existing['nakliye_t2'],
+         existing['nakliye_genel_toplam'], existing['urun_nakliye_matrah'], existing['urun_nakliye_kdv_toplam'],
+         existing['urun_nakliye_tevkifat_toplam'], existing['urun_nakliye_genel_toplam'], existing['updated_at'], id)
+    )
+    await db.commit()
+    await db.close()
+    
+    return existing
+
+@api_router.delete("/cimento-giris/{id}")
+async def delete_cimento_giris(id: str, current_user: dict = Depends(get_current_user)):
+    db = await get_db()
+    cursor = await db.execute("DELETE FROM cimento_giris WHERE id = ?", (id,))
+    await db.commit()
+    await db.close()
+    if cursor.rowcount == 0:
+        raise HTTPException(status_code=404, detail="Kayıt bulunamadı")
+    return {"message": "Kayıt silindi"}
+
+@api_router.get("/cimento-giris-ozet")
+async def get_cimento_giris_ozet(current_user: dict = Depends(get_current_user)):
+    db = await get_db()
+    async with db.execute("SELECT * FROM cimento_giris") as cursor:
+        rows = await cursor.fetchall()
+    await db.close()
+    
+    records = rows_to_list(rows)
+    return {
+        "kayit_sayisi": len(records),
+        "toplam_giris_miktari": sum(r.get('giris_miktari', 0) or 0 for r in records),
+        "toplam_kantar_kg": sum(r.get('kantar_kg_miktari', 0) or 0 for r in records),
+        "toplam_fark": sum(r.get('aradaki_fark', 0) or 0 for r in records),
+        "toplam_giris_tutari": sum(r.get('giris_tutari', 0) or 0 for r in records),
+        "toplam_giris_kdv": sum(r.get('giris_kdv_tutari', 0) or 0 for r in records),
+        "toplam_giris_kdv_dahil": sum(r.get('giris_kdv_dahil_toplam', 0) or 0 for r in records),
+        "toplam_nakliye_matrah": sum(r.get('nakliye_matrahi', 0) or 0 for r in records),
+        "toplam_nakliye_kdv": sum(r.get('nakliye_kdv_tutari', 0) or 0 for r in records),
+        "toplam_nakliye_genel": sum(r.get('nakliye_genel_toplam', 0) or 0 for r in records),
+        "toplam_urun_nakliye_matrah": sum(r.get('urun_nakliye_matrah', 0) or 0 for r in records),
+        "toplam_urun_nakliye_kdv": sum(r.get('urun_nakliye_kdv_toplam', 0) or 0 for r in records),
+        "toplam_urun_nakliye_tevkifat": sum(r.get('urun_nakliye_tevkifat_toplam', 0) or 0 for r in records),
+        "toplam_urun_nakliye_genel": sum(r.get('urun_nakliye_genel_toplam', 0) or 0 for r in records)
+    }
+
+# ============ PERSONEL MODÜLÜ API'LERİ ============
+
+class PersonelCreate(BaseModel):
+    ad_soyad: str
+    tc_kimlik: str = ""
+    telefon: str = ""
+    email: str = ""
+    adres: str = ""
+    dogum_tarihi: str = ""
+    ise_giris_tarihi: str = ""
+    departman: str = ""
+    pozisyon: str = ""
+    maas: float = 0
+    banka: str = ""
+    iban: str = ""
+    sgk_no: str = ""
+    ehliyet_sinifi: str = ""
+    kan_grubu: str = ""
+    acil_durum_kisi: str = ""
+    acil_durum_telefon: str = ""
+    notlar: str = ""
+    aktif: bool = True
+
+class PersonelUpdate(BaseModel):
+    ad_soyad: Optional[str] = None
+    tc_kimlik: Optional[str] = None
+    telefon: Optional[str] = None
+    email: Optional[str] = None
+    adres: Optional[str] = None
+    dogum_tarihi: Optional[str] = None
+    ise_giris_tarihi: Optional[str] = None
+    departman: Optional[str] = None
+    pozisyon: Optional[str] = None
+    maas: Optional[float] = None
+    banka: Optional[str] = None
+    iban: Optional[str] = None
+    sgk_no: Optional[str] = None
+    ehliyet_sinifi: Optional[str] = None
+    kan_grubu: Optional[str] = None
+    acil_durum_kisi: Optional[str] = None
+    acil_durum_telefon: Optional[str] = None
+    notlar: Optional[str] = None
+    aktif: Optional[bool] = None
+
+@api_router.post("/personeller")
+async def create_personel(input: PersonelCreate, current_user: dict = Depends(get_current_user)):
+    db = await get_db()
+    personel_id = generate_id()
+    created_at = datetime.now(timezone.utc).isoformat()
+    
+    await db.execute(
+        """INSERT INTO personeller (id, ad_soyad, tc_kimlik, telefon, email, adres, dogum_tarihi, ise_giris_tarihi,
+           departman, pozisyon, maas, banka, iban, sgk_no, ehliyet_sinifi, kan_grubu, acil_durum_kisi,
+           acil_durum_telefon, notlar, aktif, yillik_izin_hakki, kullanilan_izin, kalan_izin, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        (personel_id, input.ad_soyad, input.tc_kimlik, input.telefon, input.email, input.adres,
+         input.dogum_tarihi, input.ise_giris_tarihi, input.departman, input.pozisyon, input.maas,
+         input.banka, input.iban, input.sgk_no, input.ehliyet_sinifi, input.kan_grubu, input.acil_durum_kisi,
+         input.acil_durum_telefon, input.notlar, 1 if input.aktif else 0, 14, 0, 14, created_at)
+    )
+    await db.commit()
+    
+    async with db.execute("SELECT * FROM personeller WHERE id = ?", (personel_id,)) as cursor:
+        row = await cursor.fetchone()
+    await db.close()
+    
+    return row_to_dict(row)
+
+@api_router.get("/personeller")
+async def get_personeller(current_user: dict = Depends(get_current_user)):
+    db = await get_db()
+    async with db.execute("SELECT * FROM personeller ORDER BY ad_soyad") as cursor:
+        rows = await cursor.fetchall()
+    await db.close()
+    return rows_to_list(rows)
+
+@api_router.get("/personeller/{id}")
+async def get_personel(id: str, current_user: dict = Depends(get_current_user)):
+    db = await get_db()
+    async with db.execute("SELECT * FROM personeller WHERE id = ?", (id,)) as cursor:
+        row = await cursor.fetchone()
+    await db.close()
+    if not row:
+        raise HTTPException(status_code=404, detail="Personel bulunamadı")
+    return row_to_dict(row)
+
+@api_router.put("/personeller/{id}")
+async def update_personel(id: str, input: PersonelUpdate, current_user: dict = Depends(get_current_user)):
+    db = await get_db()
+    
+    async with db.execute("SELECT * FROM personeller WHERE id = ?", (id,)) as cursor:
+        existing = await cursor.fetchone()
+    if not existing:
+        await db.close()
+        raise HTTPException(status_code=404, detail="Personel bulunamadı")
+    
+    updates = []
+    params = []
+    for field, value in input.model_dump().items():
+        if value is not None:
+            if field == 'aktif':
+                updates.append(f"{field} = ?")
+                params.append(1 if value else 0)
+            else:
+                updates.append(f"{field} = ?")
+                params.append(value)
+    
+    if updates:
+        updates.append("updated_at = ?")
+        params.append(datetime.now(timezone.utc).isoformat())
+        params.append(id)
+        await db.execute(f"UPDATE personeller SET {', '.join(updates)} WHERE id = ?", params)
+        await db.commit()
+    
+    async with db.execute("SELECT * FROM personeller WHERE id = ?", (id,)) as cursor:
+        row = await cursor.fetchone()
+    await db.close()
+    return row_to_dict(row)
+
+@api_router.delete("/personeller/{id}")
+async def delete_personel(id: str, current_user: dict = Depends(get_current_user)):
+    db = await get_db()
+    cursor = await db.execute("DELETE FROM personeller WHERE id = ?", (id,))
+    await db.commit()
+    await db.close()
+    if cursor.rowcount == 0:
+        raise HTTPException(status_code=404, detail="Personel bulunamadı")
+    return {"message": "Personel silindi"}
+
+# Puantaj
+class PuantajCreate(BaseModel):
+    personel_id: str
+    personel_adi: str
+    tarih: str
+    giris_saati: str = ""
+    cikis_saati: str = ""
+    mesai_suresi: float = 0
+    fazla_mesai: float = 0
+    notlar: str = ""
+
+@api_router.post("/puantaj")
+async def create_puantaj(input: PuantajCreate, current_user: dict = Depends(get_current_user)):
+    db = await get_db()
+    puantaj_id = generate_id()
+    created_at = datetime.now(timezone.utc).isoformat()
+    
+    data = input.model_dump()
+    if data['giris_saati'] and data['cikis_saati']:
+        try:
+            giris = datetime.strptime(data['giris_saati'], "%H:%M")
+            cikis = datetime.strptime(data['cikis_saati'], "%H:%M")
+            fark = (cikis - giris).seconds / 3600
+            data['mesai_suresi'] = round(fark, 2)
+            data['fazla_mesai'] = max(0, round(fark - 8, 2))
+        except:
+            pass
+    
+    await db.execute(
+        """INSERT INTO puantaj (id, personel_id, personel_adi, tarih, giris_saati, cikis_saati,
+           mesai_suresi, fazla_mesai, notlar, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        (puantaj_id, data['personel_id'], data['personel_adi'], data['tarih'], data['giris_saati'],
+         data['cikis_saati'], data['mesai_suresi'], data['fazla_mesai'], data['notlar'], created_at)
+    )
+    await db.commit()
+    await db.close()
+    
+    data['id'] = puantaj_id
+    data['created_at'] = created_at
+    return data
+
+@api_router.get("/puantaj")
+async def get_puantaj(personel_id: Optional[str] = None, tarih_baslangic: Optional[str] = None,
+                      tarih_bitis: Optional[str] = None, current_user: dict = Depends(get_current_user)):
+    db = await get_db()
+    query = "SELECT * FROM puantaj WHERE 1=1"
+    params = []
+    
+    if personel_id:
+        query += " AND personel_id = ?"
+        params.append(personel_id)
+    if tarih_baslangic and tarih_bitis:
+        query += " AND tarih >= ? AND tarih <= ?"
+        params.extend([tarih_baslangic, tarih_bitis])
+    
+    query += " ORDER BY tarih DESC"
+    
+    async with db.execute(query, params) as cursor:
+        rows = await cursor.fetchall()
+    await db.close()
+    return rows_to_list(rows)
+
+@api_router.delete("/puantaj/{id}")
+async def delete_puantaj(id: str, current_user: dict = Depends(get_current_user)):
+    db = await get_db()
+    cursor = await db.execute("DELETE FROM puantaj WHERE id = ?", (id,))
+    await db.commit()
+    await db.close()
+    if cursor.rowcount == 0:
+        raise HTTPException(status_code=404, detail="Puantaj kaydı bulunamadı")
+    return {"message": "Puantaj kaydı silindi"}
+
+# İzin
+class IzinCreate(BaseModel):
+    personel_id: str
+    personel_adi: str
+    izin_turu: str
+    baslangic_tarihi: str
+    bitis_tarihi: str
+    gun_sayisi: int = 1
+    aciklama: str = ""
+    durum: str = "Beklemede"
+
+@api_router.post("/izinler")
+async def create_izin(input: IzinCreate, current_user: dict = Depends(get_current_user)):
+    db = await get_db()
+    izin_id = generate_id()
+    created_at = datetime.now(timezone.utc).isoformat()
+    
+    await db.execute(
+        """INSERT INTO izinler (id, personel_id, personel_adi, izin_turu, baslangic_tarihi, bitis_tarihi,
+           gun_sayisi, aciklama, durum, onayla_tarihi, onaylayan, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        (izin_id, input.personel_id, input.personel_adi, input.izin_turu, input.baslangic_tarihi,
+         input.bitis_tarihi, input.gun_sayisi, input.aciklama, input.durum, "", "", created_at)
+    )
+    await db.commit()
+    await db.close()
+    
+    return {
+        "id": izin_id, "personel_id": input.personel_id, "personel_adi": input.personel_adi,
+        "izin_turu": input.izin_turu, "baslangic_tarihi": input.baslangic_tarihi,
+        "bitis_tarihi": input.bitis_tarihi, "gun_sayisi": input.gun_sayisi, "aciklama": input.aciklama,
+        "durum": input.durum, "onayla_tarihi": "", "onaylayan": "", "created_at": created_at
+    }
+
+@api_router.get("/izinler")
+async def get_izinler(personel_id: Optional[str] = None, current_user: dict = Depends(get_current_user)):
+    db = await get_db()
+    if personel_id:
+        async with db.execute("SELECT * FROM izinler WHERE personel_id = ? ORDER BY created_at DESC", (personel_id,)) as cursor:
+            rows = await cursor.fetchall()
+    else:
+        async with db.execute("SELECT * FROM izinler ORDER BY created_at DESC") as cursor:
+            rows = await cursor.fetchall()
+    await db.close()
+    return rows_to_list(rows)
+
+@api_router.put("/izinler/{id}/onayla")
+async def onayla_izin(id: str, durum: str, current_user: dict = Depends(get_current_user)):
+    db = await get_db()
+    
+    async with db.execute("SELECT * FROM izinler WHERE id = ?", (id,)) as cursor:
+        row = await cursor.fetchone()
+    if not row:
+        await db.close()
+        raise HTTPException(status_code=404, detail="İzin kaydı bulunamadı")
+    
+    existing = row_to_dict(row)
+    onayla_tarihi = datetime.now(timezone.utc).isoformat()
+    
+    await db.execute(
+        "UPDATE izinler SET durum = ?, onayla_tarihi = ?, onaylayan = ? WHERE id = ?",
+        (durum, onayla_tarihi, current_user['name'], id)
+    )
+    
+    if durum == "Onaylandı" and existing['izin_turu'] == "Yıllık":
+        async with db.execute("SELECT * FROM personeller WHERE id = ?", (existing['personel_id'],)) as cursor:
+            personel_row = await cursor.fetchone()
+        if personel_row:
+            personel = row_to_dict(personel_row)
+            kullanilan = (personel.get('kullanilan_izin', 0) or 0) + existing['gun_sayisi']
+            kalan = (personel.get('yillik_izin_hakki', 14) or 14) - kullanilan
+            await db.execute(
+                "UPDATE personeller SET kullanilan_izin = ?, kalan_izin = ? WHERE id = ?",
+                (kullanilan, kalan, existing['personel_id'])
+            )
+    
+    await db.commit()
+    
+    async with db.execute("SELECT * FROM izinler WHERE id = ?", (id,)) as cursor:
+        updated = await cursor.fetchone()
+    await db.close()
+    
+    return row_to_dict(updated)
+
+@api_router.delete("/izinler/{id}")
+async def delete_izin(id: str, current_user: dict = Depends(get_current_user)):
+    db = await get_db()
+    cursor = await db.execute("DELETE FROM izinler WHERE id = ?", (id,))
+    await db.commit()
+    await db.close()
+    if cursor.rowcount == 0:
+        raise HTTPException(status_code=404, detail="İzin kaydı bulunamadı")
+    return {"message": "İzin kaydı silindi"}
+
+# Maaş Bordrosu
+class MaasBordrosuCreate(BaseModel):
+    personel_id: str
+    personel_adi: str
+    yil: int
+    ay: int
+    brut_maas: float = 0
+    sgk_isci: float = 0
+    sgk_isveren: float = 0
+    gelir_vergisi: float = 0
+    damga_vergisi: float = 0
+    net_maas: float = 0
+    fazla_mesai_ucreti: float = 0
+    ikramiye: float = 0
+    kesintiler: float = 0
+    toplam_odeme: float = 0
+    odeme_tarihi: str = ""
+    odendi: bool = False
+
+@api_router.post("/maas-bordrolari")
+async def create_maas_bordrosu(input: MaasBordrosuCreate, current_user: dict = Depends(get_current_user)):
+    db = await get_db()
+    bordro_id = generate_id()
+    created_at = datetime.now(timezone.utc).isoformat()
+    
+    brut = input.brut_maas
+    sgk_isci = round(brut * 0.14, 2)
+    sgk_isveren = round(brut * 0.205, 2)
+    gelir_vergisi = round((brut - sgk_isci) * 0.15, 2)
+    damga_vergisi = round(brut * 0.00759, 2)
+    net_maas = round(brut - sgk_isci - gelir_vergisi - damga_vergisi, 2)
+    toplam_odeme = round(net_maas + input.fazla_mesai_ucreti + input.ikramiye - input.kesintiler, 2)
+    
+    await db.execute(
+        """INSERT INTO maas_bordrolari (id, personel_id, personel_adi, yil, ay, brut_maas, sgk_isci,
+           sgk_isveren, gelir_vergisi, damga_vergisi, net_maas, fazla_mesai_ucreti, ikramiye,
+           kesintiler, toplam_odeme, odeme_tarihi, odendi, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        (bordro_id, input.personel_id, input.personel_adi, input.yil, input.ay, brut, sgk_isci,
+         sgk_isveren, gelir_vergisi, damga_vergisi, net_maas, input.fazla_mesai_ucreti, input.ikramiye,
+         input.kesintiler, toplam_odeme, input.odeme_tarihi, 1 if input.odendi else 0, created_at)
+    )
+    await db.commit()
+    
+    async with db.execute("SELECT * FROM maas_bordrolari WHERE id = ?", (bordro_id,)) as cursor:
+        row = await cursor.fetchone()
+    await db.close()
+    
+    return row_to_dict(row)
+
+@api_router.get("/maas-bordrolari")
+async def get_maas_bordrolari(personel_id: Optional[str] = None, yil: Optional[int] = None,
+                               ay: Optional[int] = None, current_user: dict = Depends(get_current_user)):
+    db = await get_db()
+    query = "SELECT * FROM maas_bordrolari WHERE 1=1"
+    params = []
+    
+    if personel_id:
+        query += " AND personel_id = ?"
+        params.append(personel_id)
+    if yil:
+        query += " AND yil = ?"
+        params.append(yil)
+    if ay:
+        query += " AND ay = ?"
+        params.append(ay)
+    
+    query += " ORDER BY yil DESC, ay DESC"
+    
+    async with db.execute(query, params) as cursor:
+        rows = await cursor.fetchall()
+    await db.close()
+    return rows_to_list(rows)
+
+@api_router.put("/maas-bordrolari/{id}/odendi")
+async def maas_odendi(id: str, current_user: dict = Depends(get_current_user)):
+    db = await get_db()
+    odeme_tarihi = datetime.now(timezone.utc).isoformat()
+    
+    await db.execute(
+        "UPDATE maas_bordrolari SET odendi = 1, odeme_tarihi = ? WHERE id = ?",
+        (odeme_tarihi, id)
+    )
+    await db.commit()
+    
+    async with db.execute("SELECT * FROM maas_bordrolari WHERE id = ?", (id,)) as cursor:
+        row = await cursor.fetchone()
+    await db.close()
+    
+    if not row:
+        raise HTTPException(status_code=404, detail="Bordro bulunamadı")
+    return row_to_dict(row)
+
+# Personel Özet
+@api_router.get("/personel-ozet")
+async def get_personel_ozet(current_user: dict = Depends(get_current_user)):
+    db = await get_db()
+    today = datetime.now().strftime("%Y-%m-%d")
+    
+    async with db.execute("SELECT * FROM personeller WHERE aktif = 1") as cursor:
+        personeller_rows = await cursor.fetchall()
+    
+    async with db.execute("SELECT * FROM puantaj WHERE tarih = ?", (today,)) as cursor:
+        puantaj_rows = await cursor.fetchall()
+    
+    async with db.execute("SELECT * FROM izinler WHERE durum = 'Beklemede'") as cursor:
+        izinler_rows = await cursor.fetchall()
+    
+    await db.close()
+    
+    personeller = rows_to_list(personeller_rows)
+    toplam_maas = sum(p.get('maas', 0) or 0 for p in personeller)
+    
+    return {
+        "toplam_personel": len(personeller),
+        "bugun_giris_yapan": len(rows_to_list(puantaj_rows)),
+        "bekleyen_izin_talepleri": len(rows_to_list(izinler_rows)),
+        "toplam_maas_gideri": toplam_maas
+    }
+
+# Personel Departmanlar
+class PersonelDepartmanCreate(BaseModel):
+    name: str
+    aciklama: str = ""
+
+@api_router.post("/personel-departmanlar")
+async def create_personel_departman(input: PersonelDepartmanCreate, current_user: dict = Depends(get_current_user)):
+    db = await get_db()
+    dept_id = generate_id()
+    created_at = datetime.now(timezone.utc).isoformat()
+    
+    await db.execute(
+        "INSERT INTO personel_departmanlar (id, name, aciklama, created_at) VALUES (?, ?, ?, ?)",
+        (dept_id, input.name, input.aciklama, created_at)
+    )
+    await db.commit()
+    await db.close()
+    
+    return {"id": dept_id, "name": input.name, "aciklama": input.aciklama, "created_at": created_at}
+
+@api_router.get("/personel-departmanlar")
+async def get_personel_departmanlar(current_user: dict = Depends(get_current_user)):
+    db = await get_db()
+    async with db.execute("SELECT * FROM personel_departmanlar ORDER BY name") as cursor:
+        rows = await cursor.fetchall()
+    await db.close()
+    return rows_to_list(rows)
+
+@api_router.delete("/personel-departmanlar/{id}")
+async def delete_personel_departman(id: str, current_user: dict = Depends(get_current_user)):
+    db = await get_db()
+    await db.execute("DELETE FROM personel_departmanlar WHERE id = ?", (id,))
+    await db.commit()
+    await db.close()
+    return {"message": "Departman silindi"}
+
+# Pozisyonlar
+class PozisyonCreate(BaseModel):
+    name: str
+    departman: str = ""
+
+@api_router.post("/pozisyonlar")
+async def create_pozisyon(input: PozisyonCreate, current_user: dict = Depends(get_current_user)):
+    db = await get_db()
+    poz_id = generate_id()
+    created_at = datetime.now(timezone.utc).isoformat()
+    
+    await db.execute(
+        "INSERT INTO pozisyonlar (id, name, departman, created_at) VALUES (?, ?, ?, ?)",
+        (poz_id, input.name, input.departman, created_at)
+    )
+    await db.commit()
+    await db.close()
+    
+    return {"id": poz_id, "name": input.name, "departman": input.departman, "created_at": created_at}
+
+@api_router.get("/pozisyonlar")
+async def get_pozisyonlar(current_user: dict = Depends(get_current_user)):
+    db = await get_db()
+    async with db.execute("SELECT * FROM pozisyonlar ORDER BY name") as cursor:
+        rows = await cursor.fetchall()
+    await db.close()
+    return rows_to_list(rows)
+
+@api_router.delete("/pozisyonlar/{id}")
+async def delete_pozisyon(id: str, current_user: dict = Depends(get_current_user)):
+    db = await get_db()
+    await db.execute("DELETE FROM pozisyonlar WHERE id = ?", (id,))
+    await db.commit()
+    await db.close()
+    return {"message": "Pozisyon silindi"}
+
 @app.on_event("startup")
 async def startup_event():
     await init_db()
