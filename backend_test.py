@@ -574,9 +574,9 @@ class SQLiteMigrationTester:
             return False
     
     def run_all_tests(self):
-        """Run all tests in sequence"""
+        """Run all critical endpoint tests for SQLite migration"""
         print("=" * 60)
-        print("TEKLIF (OFFER) MANAGEMENT API TEST SUITE")
+        print("SQLITE MIGRATION CRITICAL ENDPOINT TEST SUITE")
         print("=" * 60)
         print(f"Testing backend at: {BACKEND_URL}")
         print()
@@ -584,37 +584,27 @@ class SQLiteMigrationTester:
         # Authentication tests
         print("🔐 AUTHENTICATION TESTS")
         print("-" * 30)
-        if not self.test_auth_login_existing():
+        
+        # Try registration first, fallback to login if user exists
+        auth_success = self.test_auth_register()
+        if not auth_success:
+            auth_success = self.test_auth_login()
+        
+        if not auth_success:
             print("❌ Cannot proceed without authentication")
             return False
         
-        # Teklif Musteri tests
-        print("👥 TEKLIF MÜŞTERİ TESTS")
-        print("-" * 30)
-        self.test_create_teklif_musteri()
-        self.test_get_teklif_musteriler()
-        self.test_get_single_teklif_musteri()
-        self.test_update_teklif_musteri()
+        # Test JWT token validation
+        self.test_auth_me()
         
-        # Teklif tests
-        print("📋 TEKLIF TESTS")
+        # Critical endpoint tests
+        print("📊 CRITICAL ENDPOINT TESTS")
         print("-" * 30)
-        self.test_create_teklif()
+        self.test_get_products()
+        self.test_get_araclar()
+        self.test_get_personeller()
         self.test_get_teklifler()
-        self.test_get_single_teklif()
-        self.test_update_teklif()
-        self.test_update_teklif_durum()
-        
-        # Teklif Summary tests
-        print("📊 TEKLIF ÖZET TESTS")
-        print("-" * 30)
-        self.test_teklif_ozet()
-        
-        # Cleanup
-        print("🧹 CLEANUP")
-        print("-" * 30)
-        self.test_delete_teklif()
-        self.test_delete_teklif_musteri()
+        self.test_get_motorin_stok()
         
         # Summary
         print("=" * 60)
@@ -628,7 +618,7 @@ class SQLiteMigrationTester:
             for error in self.results['errors']:
                 print(f"   • {error}")
         
-        success_rate = (self.results['passed'] / (self.results['passed'] + self.results['failed'])) * 100
+        success_rate = (self.results['passed'] / (self.results['passed'] + self.results['failed'])) * 100 if (self.results['passed'] + self.results['failed']) > 0 else 0
         print(f"\n📊 Success Rate: {success_rate:.1f}%")
         
         return self.results['failed'] == 0
