@@ -46,6 +46,11 @@ async def get_db():
     db.row_factory = aiosqlite.Row
     return db
 
+# Health check endpoint - Docker için
+@api_router.get("/health")
+async def health_check():
+    return {"status": "healthy", "database": str(DB_PATH)}
+
 async def init_db():
     """Initialize SQLite database with all tables"""
     async with aiosqlite.connect(DB_PATH) as db:
