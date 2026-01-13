@@ -3904,6 +3904,9 @@ async def get_teklif_ozet(teklif_turu: str = None, current_user: dict = Depends(
         "son_teklifler": son_teklifler
     }
 
+# Include the API router after all routes are defined
+app.include_router(api_router)
+
 @app.on_event("startup")
 async def startup_event():
     await init_db()
