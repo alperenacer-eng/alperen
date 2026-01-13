@@ -625,7 +625,7 @@ class SQLiteMigrationTester:
 
 def main():
     """Main test runner"""
-    tester = TeklifAPITester()
+    tester = SQLiteMigrationTester()
     success = tester.run_all_tests()
     
     # Exit with appropriate code
