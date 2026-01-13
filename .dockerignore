@@ -1,0 +1,47 @@
+# Git
+.git
+.gitignore
+
+# Node modules
+frontend/node_modules
+
+# Python
+backend/__pycache__
+backend/*.pyc
+backend/venv
+backend/.venv
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Test
+tests/
+*.test.js
+*.spec.js
+
+# Build artifacts
+frontend/build
+
+# Temp
+tmp/
+temp/
+*.tmp
+
+# Documentation
+*.md
+!README.md
+docs/
+
+# Deploy scripts (sunucu kurulum için)
+deploy/

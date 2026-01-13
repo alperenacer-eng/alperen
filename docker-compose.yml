@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  # Backend - Python FastAPI
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: acerler-backend
+    restart: always
+    volumes:
+      # SQLite veritabanı - kalıcı veri
+      - ./data:/app/data
+      # Yüklenen dosyalar
+      - ./uploads:/app/uploads
+    environment:
+      - TZ=Europe/Istanbul
+    networks:
+      - acerler-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Frontend - React + Nginx
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: acerler-frontend
+    restart: always
+    ports:
+      # Dışarıya açılan port - değiştirilebilir
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - acerler-network
+
+networks:
+  acerler-network:
+    driver: bridge
+
+volumes:
+  data:
+  uploads:
