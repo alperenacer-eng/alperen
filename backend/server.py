@@ -1900,8 +1900,6 @@ async def get_file(filename: str):
     
     return FileResponse(file_path, media_type=media_type, filename=filename)
 
-app.include_router(api_router)
-
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
