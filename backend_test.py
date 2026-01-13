@@ -42,10 +42,43 @@ class SQLiteMigrationTester:
             self.results["errors"].append(f"{test_name}: {message}")
         print()
     
-    def test_auth_login_existing(self):
-        """Test user login with existing credentials"""
+    def test_auth_register(self):
+        """Test user registration with specified credentials"""
+        register_data = {
+            "name": "Test User",
+            "email": "test@test.com",
+            "password": "1234"
+        }
+        
+        try:
+            response = self.session.post(f"{BACKEND_URL}/auth/register", json=register_data)
+            
+            if response.status_code == 201:
+                data = response.json()
+                self.token = data.get("access_token")
+                self.user_data = data.get("user")
+                
+                # Set authorization header for future requests
+                self.session.headers.update({"Authorization": f"Bearer {self.token}"})
+                
+                self.log_result("Auth Register", True, f"Registration successful for: {self.user_data.get('name')}")
+                return True
+            elif response.status_code == 400 and "already registered" in response.text:
+                # User already exists, try to login instead
+                self.log_result("Auth Register", True, "User already exists, will use login")
+                return self.test_auth_login()
+            else:
+                self.log_result("Auth Register", False, "Registration failed", response)
+                return False
+                
+        except Exception as e:
+            self.log_result("Auth Register", False, f"Exception: {str(e)}")
+            return False
+
+    def test_auth_login(self):
+        """Test user login with specified credentials"""
         login_data = {
-            "email": "alperenacer@acerler.com",
+            "email": "test@test.com",
             "password": "1234"
         }
         
@@ -68,6 +101,123 @@ class SQLiteMigrationTester:
                 
         except Exception as e:
             self.log_result("Auth Login", False, f"Exception: {str(e)}")
+            return False
+
+    def test_auth_me(self):
+        """Test getting current user info with JWT token"""
+        try:
+            response = self.session.get(f"{BACKEND_URL}/auth/me")
+            
+            if response.status_code == 200:
+                data = response.json()
+                user_name = data.get("name")
+                user_email = data.get("email")
+                
+                self.log_result("Auth Me", True, f"User info retrieved: {user_name} ({user_email})")
+                return True
+            else:
+                self.log_result("Auth Me", False, "Failed to get user info", response)
+                return False
+                
+        except Exception as e:
+            self.log_result("Auth Me", False, f"Exception: {str(e)}")
+            return False
+
+    def test_get_products(self):
+        """Test getting products list"""
+        try:
+            response = self.session.get(f"{BACKEND_URL}/products")
+            
+            if response.status_code == 200:
+                data = response.json()
+                product_count = len(data)
+                
+                self.log_result("Get Products", True, f"Retrieved {product_count} products")
+                return True
+            else:
+                self.log_result("Get Products", False, "Failed to get products", response)
+                return False
+                
+        except Exception as e:
+            self.log_result("Get Products", False, f"Exception: {str(e)}")
+            return False
+
+    def test_get_araclar(self):
+        """Test getting vehicles list"""
+        try:
+            response = self.session.get(f"{BACKEND_URL}/araclar")
+            
+            if response.status_code == 200:
+                data = response.json()
+                arac_count = len(data)
+                
+                self.log_result("Get Araclar", True, f"Retrieved {arac_count} vehicles")
+                return True
+            else:
+                self.log_result("Get Araclar", False, "Failed to get vehicles", response)
+                return False
+                
+        except Exception as e:
+            self.log_result("Get Araclar", False, f"Exception: {str(e)}")
+            return False
+
+    def test_get_personeller(self):
+        """Test getting personnel list"""
+        try:
+            response = self.session.get(f"{BACKEND_URL}/personeller")
+            
+            if response.status_code == 200:
+                data = response.json()
+                personel_count = len(data)
+                
+                self.log_result("Get Personeller", True, f"Retrieved {personel_count} personnel")
+                return True
+            else:
+                self.log_result("Get Personeller", False, "Failed to get personnel", response)
+                return False
+                
+        except Exception as e:
+            self.log_result("Get Personeller", False, f"Exception: {str(e)}")
+            return False
+
+    def test_get_teklifler(self):
+        """Test getting quotes list"""
+        try:
+            response = self.session.get(f"{BACKEND_URL}/teklifler")
+            
+            if response.status_code == 200:
+                data = response.json()
+                teklif_count = len(data)
+                
+                self.log_result("Get Teklifler", True, f"Retrieved {teklif_count} quotes")
+                return True
+            else:
+                self.log_result("Get Teklifler", False, "Failed to get quotes", response)
+                return False
+                
+        except Exception as e:
+            self.log_result("Get Teklifler", False, f"Exception: {str(e)}")
+            return False
+
+    def test_get_motorin_stok(self):
+        """Test getting diesel stock status"""
+        try:
+            response = self.session.get(f"{BACKEND_URL}/motorin-stok")
+            
+            if response.status_code == 200:
+                data = response.json()
+                mevcut_stok = data.get("mevcut_stok", 0)
+                toplam_alim = data.get("toplam_alim", 0)
+                toplam_verme = data.get("toplam_verme", 0)
+                
+                self.log_result("Get Motorin Stok", True, f"Stock: {mevcut_stok}L, Total In: {toplam_alim}L, Total Out: {toplam_verme}L")
+                return True
+            else:
+                self.log_result("Get Motorin Stok", False, "Failed to get diesel stock", response)
+                return False
+                
+        except Exception as e:
+            self.log_result("Get Motorin Stok", False, f"Exception: {str(e)}")
             return False
     
     def test_create_teklif_musteri(self):
