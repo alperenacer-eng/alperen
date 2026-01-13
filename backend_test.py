@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Backend API Test Suite for Teklif (Offer) Management System
-Tests authentication and teklif module CRUD operations
+Backend API Test Suite for SQLite Migration Testing
+Tests critical endpoints after MongoDB to SQLite migration
 """
 
 import requests
@@ -13,7 +13,7 @@ from datetime import datetime
 # Backend URL from environment
 BACKEND_URL = "https://getir-clone-5.preview.emergentagent.com/api"
 
-class TeklifAPITester:
+class SQLiteMigrationTester:
     def __init__(self):
         self.session = requests.Session()
         self.token = None
