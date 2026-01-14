@@ -590,11 +590,11 @@ const CimentoEntry = () => {
                   <Input type="text" value={newRecord.fatura_no} onChange={(e) => setNewRecord({ ...newRecord, fatura_no: e.target.value })} className="bg-slate-800 border-slate-600 text-white" />
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-green-400">Giriş Miktarı (KG)</label>
+                  <label className="text-sm font-medium text-green-400">Giriş Miktarı (TON)</label>
                   <Input type="number" step="0.01" value={newRecord.giris_miktari || ''} onChange={(e) => setNewRecord({ ...newRecord, giris_miktari: e.target.value === '' ? 0 : parseFloat(e.target.value) })} className="bg-slate-800 border-slate-600 text-white" />
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-green-400">Kantar KG Miktarı</label>
+                  <label className="text-sm font-medium text-green-400">Kantar TON Miktarı</label>
                   <Input type="number" step="0.01" value={newRecord.kantar_kg_miktari || ''} onChange={(e) => setNewRecord({ ...newRecord, kantar_kg_miktari: e.target.value === '' ? 0 : parseFloat(e.target.value) })} className="bg-slate-800 border-slate-600 text-white" />
                 </div>
                 <div>
