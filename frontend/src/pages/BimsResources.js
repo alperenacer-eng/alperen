@@ -133,33 +133,6 @@ const BimsResources = () => {
       toast.error('Ürün adı zorunludur');
       return;
     }
-    if (!newProduct.sira_no || parseInt(newProduct.sira_no) <= 0) {
-      toast.error('Sıra numarası zorunludur');
-      return;
-    }
-    if (!newProduct.sevk_agirligi || parseFloat(newProduct.sevk_agirligi) <= 0) {
-      toast.error('Sevk ağırlığı zorunludur');
-      return;
-    }
-    if (!newProduct.adet_basi_cimento || parseFloat(newProduct.adet_basi_cimento) <= 0) {
-      toast.error('Adet başı çimento zorunludur');
-      return;
-    }
-    // İşletme bazlı kontroller
-    for (const dept of departments) {
-      if (!newProduct.uretim_palet_adetleri[dept.id] || parseInt(newProduct.uretim_palet_adetleri[dept.id]) <= 0) {
-        toast.error(`${dept.name} için üretim palet adeti zorunludur`);
-        return;
-      }
-      if (!newProduct.paket_adetleri_7_boy[dept.id] || parseInt(newProduct.paket_adetleri_7_boy[dept.id]) <= 0) {
-        toast.error(`${dept.name} için çıkan paket (7 Boy) zorunludur`);
-        return;
-      }
-      if (!newProduct.paket_adetleri_5_boy[dept.id] || parseInt(newProduct.paket_adetleri_5_boy[dept.id]) <= 0) {
-        toast.error(`${dept.name} için çıkan paket (5 Boy) zorunludur`);
-        return;
-      }
-    }
 
     try {
       const productData = {
