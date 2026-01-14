@@ -608,13 +608,18 @@ const BimsResources = () => {
                   products.map((product) => (
                     <div key={product.id} className="p-4 bg-slate-800/30 rounded-lg border border-slate-800 hover:bg-slate-800/50 transition-colors">
                       <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <h3 className="font-semibold text-white">{product.name}</h3>
-                          <div className="grid grid-cols-2 gap-x-4 gap-y-1 mt-2 text-sm">
-                            <p className="text-slate-400">Sevk: <span className="text-white">{product.sevk_agirligi || 0} kg</span></p>
-                            <p className="text-slate-400">Çimento: <span className="text-white">{product.adet_basi_cimento || 0} kg</span></p>
-                            <p className="text-slate-400">Hışır: <span className="text-teal-400">{product.harcanan_hisir || 0} kg</span></p>
-                            <p className="text-slate-400">7 Boy: <span className="text-white">{product.paket_adet_7_boy || 0}</span> | 5 Boy: <span className="text-white">{product.paket_adet_5_boy || 0}</span></p>
+                        <div className="flex items-start gap-3 flex-1">
+                          <div className="flex-shrink-0 w-10 h-10 bg-orange-500/20 rounded-lg flex items-center justify-center">
+                            <span className="text-orange-400 font-bold text-lg">{product.sira_no || '-'}</span>
+                          </div>
+                          <div className="flex-1">
+                            <h3 className="font-semibold text-white">{product.name}</h3>
+                            <div className="grid grid-cols-2 gap-x-4 gap-y-1 mt-2 text-sm">
+                              <p className="text-slate-400">Sevk: <span className="text-white">{product.sevk_agirligi || 0} kg</span></p>
+                              <p className="text-slate-400">Çimento: <span className="text-white">{product.adet_basi_cimento || 0} kg</span></p>
+                              <p className="text-slate-400">Hışır: <span className="text-teal-400">{product.harcanan_hisir || 0} kg</span></p>
+                              <p className="text-slate-400">7 Boy: <span className="text-white">{product.paket_adet_7_boy || 0}</span> | 5 Boy: <span className="text-white">{product.paket_adet_5_boy || 0}</span></p>
+                            </div>
                           </div>
                         </div>
                         <div className="flex gap-1">
