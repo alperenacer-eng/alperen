@@ -206,6 +206,7 @@ const BimsResources = () => {
     setNewProduct({
       name: product.name || '',
       unit: product.unit || 'adet',
+      sira_no: product.sira_no ? String(product.sira_no) : '',
       sevk_agirligi: product.sevk_agirligi ? String(product.sevk_agirligi) : '',
       adet_basi_cimento: product.adet_basi_cimento ? String(product.adet_basi_cimento) : '',
       paket_adet_7_boy: product.paket_adet_7_boy ? String(product.paket_adet_7_boy) : '',
@@ -220,6 +221,7 @@ const BimsResources = () => {
     setNewProduct({ 
       name: '', 
       unit: 'adet',
+      sira_no: '',
       sevk_agirligi: '',
       adet_basi_cimento: '',
       paket_adet_7_boy: '',
