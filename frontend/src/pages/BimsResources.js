@@ -219,9 +219,11 @@ const BimsResources = () => {
       sira_no: product.sira_no ? String(product.sira_no) : '',
       sevk_agirligi: product.sevk_agirligi ? String(product.sevk_agirligi) : '',
       adet_basi_cimento: product.adet_basi_cimento ? String(product.adet_basi_cimento) : '',
-      paket_adet_7_boy: product.paket_adet_7_boy ? String(product.paket_adet_7_boy) : '',
-      paket_adet_5_boy: product.paket_adet_5_boy ? String(product.paket_adet_5_boy) : '',
-      uretim_palet_adetleri: product.uretim_palet_adetleri || {}
+      paket_adet_7_boy: '',
+      paket_adet_5_boy: '',
+      uretim_palet_adetleri: product.uretim_palet_adetleri || {},
+      paket_adetleri_7_boy: product.paket_adetleri_7_boy || {},
+      paket_adetleri_5_boy: product.paket_adetleri_5_boy || {}
     });
     setActiveTab('products');
   };
@@ -236,7 +238,9 @@ const BimsResources = () => {
       adet_basi_cimento: '',
       paket_adet_7_boy: '',
       paket_adet_5_boy: '',
-      uretim_palet_adetleri: {}
+      uretim_palet_adetleri: {},
+      paket_adetleri_7_boy: {},
+      paket_adetleri_5_boy: {}
     });
   };
 
