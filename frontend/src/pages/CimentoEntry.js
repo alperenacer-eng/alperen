@@ -634,13 +634,13 @@ const CimentoEntry = () => {
           <Card className="glass-effect border-slate-800">
             <CardContent className="p-3">
               <p className="text-xs text-slate-400">Toplam Giriş</p>
-              <p className="text-lg font-bold text-green-500">{formatCurrency(ozet.toplam_giris_miktari)} KG</p>
+              <p className="text-lg font-bold text-green-500">{(ozet.toplam_giris_miktari / 1000).toFixed(2)} TON</p>
             </CardContent>
           </Card>
           <Card className="glass-effect border-slate-800">
             <CardContent className="p-3">
               <p className="text-xs text-slate-400">Toplam Fark</p>
-              <p className="text-lg font-bold text-yellow-500">{formatCurrency(ozet.toplam_fark)} KG</p>
+              <p className="text-lg font-bold text-yellow-500">{(ozet.toplam_fark / 1000).toFixed(2)} TON</p>
             </CardContent>
           </Card>
           <Card className="glass-effect border-slate-800">
