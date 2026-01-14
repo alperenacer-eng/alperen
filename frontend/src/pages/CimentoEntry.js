@@ -112,15 +112,16 @@ const CimentoEntry = () => {
   }, [token]);
 
   const fetchKaynaklar = useCallback(async () => {
+    const authHeaders = { Authorization: `Bearer ${token}` };
     try {
       const [plakaRes, nakliyeciRes, soforRes, sehirRes, cimentoRes, cinsRes, isletmeRes] = await Promise.all([
-        axios.get(`${API_URL}/plakalar`, { headers }),
-        axios.get(`${API_URL}/nakliyeci-firmalar`, { headers }),
-        axios.get(`${API_URL}/soforler`, { headers }),
-        axios.get(`${API_URL}/sehirler`, { headers }),
-        axios.get(`${API_URL}/cimento-firmalar`, { headers }),
-        axios.get(`${API_URL}/cimento-cinsleri`, { headers }),
-        axios.get(`${API_URL}/cimento-isletmeler`, { headers }),
+        axios.get(`${API_URL}/plakalar`, { headers: authHeaders }),
+        axios.get(`${API_URL}/nakliyeci-firmalar`, { headers: authHeaders }),
+        axios.get(`${API_URL}/soforler`, { headers: authHeaders }),
+        axios.get(`${API_URL}/sehirler`, { headers: authHeaders }),
+        axios.get(`${API_URL}/cimento-firmalar`, { headers: authHeaders }),
+        axios.get(`${API_URL}/cimento-cinsleri`, { headers: authHeaders }),
+        axios.get(`${API_URL}/cimento-isletmeler`, { headers: authHeaders }),
       ]);
       setPlakalar(plakaRes.data);
       setNakliyeciFirmalar(nakliyeciRes.data);
@@ -130,7 +131,7 @@ const CimentoEntry = () => {
       setCimentoCinsleri(cinsRes.data);
       setCimentoIsletmeler(isletmeRes.data);
     } catch (e) {
-      console.error(e);
+      console.error('Kaynaklar yüklenirken hata:', e);
     }
   }, [token]);
 
