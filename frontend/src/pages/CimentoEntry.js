@@ -95,20 +95,27 @@ const CimentoEntry = () => {
 
   const fetchRecords = useCallback(async () => {
     try {
-      const response = await axios.get(`${API_URL}/cimento-giris`, { headers });
+      setLoading(true);
+      const response = await axios.get(`${API_URL}/cimento-giris`, { 
+        headers: { Authorization: `Bearer ${token}` } 
+      });
       setRecords(response.data);
     } catch (e) {
-      console.error(e);
+      console.error('Kayıtlar yüklenirken hata:', e);
       toast.error("Kayıtlar yüklenirken hata oluştu");
+    } finally {
+      setLoading(false);
     }
   }, [token]);
 
   const fetchOzet = useCallback(async () => {
     try {
-      const response = await axios.get(`${API_URL}/cimento-giris-ozet`, { headers });
+      const response = await axios.get(`${API_URL}/cimento-giris-ozet`, { 
+        headers: { Authorization: `Bearer ${token}` } 
+      });
       setOzet(response.data);
     } catch (e) {
-      console.error(e);
+      console.error('Özet yüklenirken hata:', e);
     }
   }, [token]);
 
