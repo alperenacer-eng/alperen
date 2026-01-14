@@ -29,6 +29,7 @@ const BimsResources = () => {
   const [newProduct, setNewProduct] = useState({ 
     name: '', 
     unit: 'adet',
+    sira_no: '',
     sevk_agirligi: '',
     adet_basi_cimento: '',
     paket_adet_7_boy: '',
