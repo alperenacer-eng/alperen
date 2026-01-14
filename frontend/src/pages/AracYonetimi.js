@@ -45,6 +45,10 @@ const AracYonetimi = () => {
   const [modeller, setModeller] = useState([]);
   const [sirketler, setSirketler] = useState([]);
   
+  // Hızlı kaynak ekleme modalı
+  const [quickAddModal, setQuickAddModal] = useState({ open: false, type: '', title: '' });
+  const [quickAddValue, setQuickAddValue] = useState('');
+  
   // Form state
   const [formData, setFormData] = useState({
     plaka: '',
