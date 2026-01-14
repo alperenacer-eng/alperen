@@ -97,6 +97,8 @@ function App() {
               <Route path="cimento" element={<CimentoDashboard />} />
               <Route path="cimento-entry" element={<CimentoEntry />} />
               <Route path="cimento-resources" element={<CimentoResources />} />
+              <Route path="cimento-reports" element={<CimentoReports />} />
+              <Route path="cimento-list" element={<CimentoList />} />
               <Route path="personel" element={<PersonelDashboard />} />
               <Route path="personel-listesi" element={<PersonelListesi />} />
               <Route path="personel-ekle" element={<PersonelListesi />} />
