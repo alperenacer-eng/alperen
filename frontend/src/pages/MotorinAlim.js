@@ -260,33 +260,55 @@ const MotorinAlim = () => {
             {/* Tedarikçi */}
             <div>
               <Label className="text-slate-300">Tedarikçi *</Label>
-              <select
-                value={formData.tedarikci_id}
-                onChange={handleTedarikciChange}
-                className="w-full bg-slate-800 border border-slate-700 text-white rounded-md px-3 py-2 mt-1"
-                required
-              >
-                <option value="">Tedarikçi Seçin</option>
-                {tedarikciler.map(t => (
-                  <option key={t.id} value={t.id}>{t.name}</option>
-                ))}
-              </select>
+              <div className="flex gap-2 mt-1">
+                <select
+                  value={formData.tedarikci_id}
+                  onChange={handleTedarikciChange}
+                  className="flex-1 bg-slate-800 border border-slate-700 text-white rounded-md px-3 py-2"
+                  required
+                >
+                  <option value="">Tedarikçi Seçin</option>
+                  {tedarikciler.map(t => (
+                    <option key={t.id} value={t.id}>{t.name}</option>
+                  ))}
+                </select>
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="outline"
+                  className="border-green-500/50 text-green-400 hover:bg-green-500/20 h-10 w-10"
+                  onClick={() => openQuickAddModal('tedarikci', 'Tedarikçi')}
+                >
+                  <PlusCircle className="w-4 h-4" />
+                </Button>
+              </div>
             </div>
 
             {/* Akaryakıt Markası */}
             <div>
               <Label className="text-slate-300">Akaryakıt Markası *</Label>
-              <select
-                value={formData.akaryakit_markasi}
-                onChange={(e) => setFormData({ ...formData, akaryakit_markasi: e.target.value })}
-                className="w-full bg-slate-800 border border-slate-700 text-white rounded-md px-3 py-2 mt-1"
-                required
-              >
-                <option value="">Marka Seçin</option>
-                {markalar.map(m => (
-                  <option key={m.id} value={m.name}>{m.name}</option>
-                ))}
-              </select>
+              <div className="flex gap-2 mt-1">
+                <select
+                  value={formData.akaryakit_markasi}
+                  onChange={(e) => setFormData({ ...formData, akaryakit_markasi: e.target.value })}
+                  className="flex-1 bg-slate-800 border border-slate-700 text-white rounded-md px-3 py-2"
+                  required
+                >
+                  <option value="">Marka Seçin</option>
+                  {markalar.map(m => (
+                    <option key={m.id} value={m.name}>{m.name}</option>
+                  ))}
+                </select>
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="outline"
+                  className="border-green-500/50 text-green-400 hover:bg-green-500/20 h-10 w-10"
+                  onClick={() => openQuickAddModal('akaryakit_markasi', 'Akaryakıt Markası')}
+                >
+                  <PlusCircle className="w-4 h-4" />
+                </Button>
+              </div>
             </div>
 
             {/* Teslim Alan */}
