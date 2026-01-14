@@ -657,23 +657,34 @@ const AracYonetimi = () => {
               {/* Araç Cinsi */}
               <div className="space-y-2">
                 <Label htmlFor="arac_cinsi" className="text-slate-300">Araç Cinsi</Label>
-                <Select
-                  value={formData.arac_cinsi || undefined}
-                  onValueChange={(value) => setFormData({...formData, arac_cinsi: value})}
-                >
-                  <SelectTrigger className="bg-slate-800/50 border-slate-700">
-                    <SelectValue placeholder="Seçiniz" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-slate-800 border-slate-700">
-                    {aracCinsleri.length === 0 ? (
-                      <SelectItem value="_empty" disabled>Önce Kaynaklar'dan ekleyin</SelectItem>
-                    ) : (
-                      aracCinsleri.map(c => (
-                        <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>
-                      ))
-                    )}
-                  </SelectContent>
-                </Select>
+                <div className="flex gap-2">
+                  <Select
+                    value={formData.arac_cinsi || undefined}
+                    onValueChange={(value) => setFormData({...formData, arac_cinsi: value})}
+                  >
+                    <SelectTrigger className="bg-slate-800/50 border-slate-700 flex-1">
+                      <SelectValue placeholder="Seçiniz" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-slate-800 border-slate-700">
+                      {aracCinsleri.length === 0 ? (
+                        <SelectItem value="_empty" disabled>Henüz kayıt yok</SelectItem>
+                      ) : (
+                        aracCinsleri.map(c => (
+                          <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>
+                        ))
+                      )}
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="outline"
+                    className="border-green-500/50 text-green-400 hover:bg-green-500/20"
+                    onClick={() => openQuickAddModal('arac_cinsi', 'Araç Cinsi')}
+                  >
+                    <PlusCircle className="w-4 h-4" />
+                  </Button>
+                </div>
               </div>
 
               {/* Marka */}
