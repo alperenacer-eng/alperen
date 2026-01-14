@@ -1490,9 +1490,10 @@ async def update_product(product_id: str, product: ProductCreate, current_user: 
     
     await db.execute(
         """UPDATE products SET name=?, unit=?, sira_no=?, sevk_agirligi=?, adet_basi_cimento=?, harcanan_hisir=?,
-           paket_adet_7_boy=?, paket_adet_5_boy=?, uretim_palet_adetleri=?, updated_at=? WHERE id=?""",
+           paket_adet_7_boy=?, paket_adet_5_boy=?, uretim_palet_adetleri=?, paket_adetleri_7_boy=?, paket_adetleri_5_boy=?, updated_at=? WHERE id=?""",
         (product.name, product.unit, product.sira_no, product.sevk_agirligi, product.adet_basi_cimento, harcanan_hisir,
          product.paket_adet_7_boy, product.paket_adet_5_boy, json.dumps(product.uretim_palet_adetleri),
+         json.dumps(product.paket_adetleri_7_boy), json.dumps(product.paket_adetleri_5_boy),
          updated_at, product_id)
     )
     
@@ -1508,6 +1509,8 @@ async def update_product(product_id: str, product: ProductCreate, current_user: 
     
     p = row_to_dict(row)
     p['uretim_palet_adetleri'] = json.loads(p.get('uretim_palet_adetleri', '{}'))
+    p['paket_adetleri_7_boy'] = json.loads(p.get('paket_adetleri_7_boy', '{}'))
+    p['paket_adetleri_5_boy'] = json.loads(p.get('paket_adetleri_5_boy', '{}'))
     return ProductResponse(**p)
 
 @api_router.delete("/products/{product_id}")
