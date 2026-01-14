@@ -1047,6 +1047,19 @@ const CimentoResources = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <AlertDialog open={!!deleteIsletmeId} onOpenChange={() => setDeleteIsletmeId(null)}>
+        <AlertDialogContent className="bg-slate-900 border-slate-800 text-white">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Emin misiniz?</AlertDialogTitle>
+            <AlertDialogDescription className="text-slate-400">Bu işletmeyi silmek istediğinize emin misiniz? İlişkili tüm stok hareketleri de silinecektir.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700">İptal</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteIsletme} className="bg-red-500 hover:bg-red-600 text-white">Sil</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
