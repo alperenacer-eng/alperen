@@ -61,6 +61,7 @@ const emptyRecord = {
   sehir: "",
   cimento_alinan_firma: "",
   cimento_cinsi: "",
+  bosaltim_isletmesi: "",
 };
 
 const CimentoEntry = () => {
