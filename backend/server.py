@@ -80,6 +80,8 @@ async def init_db():
                 paket_adet_7_boy INTEGER DEFAULT 0,
                 paket_adet_5_boy INTEGER DEFAULT 0,
                 uretim_palet_adetleri TEXT DEFAULT '{}',
+                paket_adetleri_7_boy TEXT DEFAULT '{}',
+                paket_adetleri_5_boy TEXT DEFAULT '{}',
                 created_at TEXT NOT NULL,
                 updated_at TEXT
             )
