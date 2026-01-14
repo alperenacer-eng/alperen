@@ -113,13 +113,14 @@ const CimentoEntry = () => {
 
   const fetchKaynaklar = useCallback(async () => {
     try {
-      const [plakaRes, nakliyeciRes, soforRes, sehirRes, cimentoRes, cinsRes] = await Promise.all([
+      const [plakaRes, nakliyeciRes, soforRes, sehirRes, cimentoRes, cinsRes, isletmeRes] = await Promise.all([
         axios.get(`${API_URL}/plakalar`, { headers }),
         axios.get(`${API_URL}/nakliyeci-firmalar`, { headers }),
         axios.get(`${API_URL}/soforler`, { headers }),
         axios.get(`${API_URL}/sehirler`, { headers }),
         axios.get(`${API_URL}/cimento-firmalar`, { headers }),
         axios.get(`${API_URL}/cimento-cinsleri`, { headers }),
+        axios.get(`${API_URL}/cimento-isletmeler`, { headers }),
       ]);
       setPlakalar(plakaRes.data);
       setNakliyeciFirmalar(nakliyeciRes.data);
@@ -127,6 +128,7 @@ const CimentoEntry = () => {
       setSehirler(sehirRes.data);
       setCimentoFirmalar(cimentoRes.data);
       setCimentoCinsleri(cinsRes.data);
+      setCimentoIsletmeler(isletmeRes.data);
     } catch (e) {
       console.error(e);
     }
