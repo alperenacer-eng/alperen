@@ -783,6 +783,10 @@ async def init_db():
                 await db.execute(f"ALTER TABLE molds ADD COLUMN kalip_no_{i} TEXT DEFAULT ''")
             except:
                 pass
+            try:
+                await db.execute(f"ALTER TABLE molds ADD COLUMN duvar_kalinlik_{i} TEXT DEFAULT ''")
+            except:
+                pass
         
         await db.commit()
 
