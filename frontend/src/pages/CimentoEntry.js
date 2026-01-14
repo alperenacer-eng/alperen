@@ -30,7 +30,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
-import { Plus, Trash2, Edit, Save, X, FileSpreadsheet, ArrowLeft } from 'lucide-react';
+import { Plus, Trash2, Edit, Save, X, FileSpreadsheet, ArrowLeft, PlusCircle } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL + '/api';
 
