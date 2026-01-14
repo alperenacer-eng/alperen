@@ -2519,6 +2519,7 @@ class CimentoGirisCreate(BaseModel):
     sehir: str = ""
     cimento_alinan_firma: str = ""
     cimento_cinsi: str = ""
+    bosaltim_isletmesi: str = ""
 
 class CimentoGirisUpdate(BaseModel):
     yukleme_tarihi: Optional[str] = None
@@ -2539,6 +2540,7 @@ class CimentoGirisUpdate(BaseModel):
     sehir: Optional[str] = None
     cimento_alinan_firma: Optional[str] = None
     cimento_cinsi: Optional[str] = None
+    bosaltim_isletmesi: Optional[str] = None
 
 def calculate_cimento_fields(data: dict) -> dict:
     giris_miktari = float(data.get('giris_miktari', 0) or 0)
