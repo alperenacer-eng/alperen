@@ -1737,11 +1737,17 @@ async def create_mold(mold: MoldCreate, current_user: dict = Depends(get_current
     await db.execute("""
         INSERT INTO molds (id, mold_no, description, product_id, product_name, 
                           kalip_no_1, kalip_no_2, kalip_no_3, kalip_no_4, kalip_no_5,
-                          kalip_no_6, kalip_no_7, kalip_no_8, kalip_no_9, kalip_no_10, created_at) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                          kalip_no_6, kalip_no_7, kalip_no_8, kalip_no_9, kalip_no_10,
+                          duvar_kalinlik_1, duvar_kalinlik_2, duvar_kalinlik_3, duvar_kalinlik_4, duvar_kalinlik_5,
+                          duvar_kalinlik_6, duvar_kalinlik_7, duvar_kalinlik_8, duvar_kalinlik_9, duvar_kalinlik_10,
+                          created_at) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
         (mold_id, mold.mold_no, mold.description, mold.product_id, mold.product_name,
          mold.kalip_no_1, mold.kalip_no_2, mold.kalip_no_3, mold.kalip_no_4, mold.kalip_no_5,
-         mold.kalip_no_6, mold.kalip_no_7, mold.kalip_no_8, mold.kalip_no_9, mold.kalip_no_10, created_at))
+         mold.kalip_no_6, mold.kalip_no_7, mold.kalip_no_8, mold.kalip_no_9, mold.kalip_no_10,
+         mold.duvar_kalinlik_1, mold.duvar_kalinlik_2, mold.duvar_kalinlik_3, mold.duvar_kalinlik_4, mold.duvar_kalinlik_5,
+         mold.duvar_kalinlik_6, mold.duvar_kalinlik_7, mold.duvar_kalinlik_8, mold.duvar_kalinlik_9, mold.duvar_kalinlik_10,
+         created_at))
     await db.commit()
     await db.close()
     
@@ -1751,7 +1757,12 @@ async def create_mold(mold: MoldCreate, current_user: dict = Depends(get_current
         kalip_no_1=mold.kalip_no_1, kalip_no_2=mold.kalip_no_2, kalip_no_3=mold.kalip_no_3,
         kalip_no_4=mold.kalip_no_4, kalip_no_5=mold.kalip_no_5, kalip_no_6=mold.kalip_no_6,
         kalip_no_7=mold.kalip_no_7, kalip_no_8=mold.kalip_no_8, kalip_no_9=mold.kalip_no_9,
-        kalip_no_10=mold.kalip_no_10, created_at=created_at
+        kalip_no_10=mold.kalip_no_10,
+        duvar_kalinlik_1=mold.duvar_kalinlik_1, duvar_kalinlik_2=mold.duvar_kalinlik_2, duvar_kalinlik_3=mold.duvar_kalinlik_3,
+        duvar_kalinlik_4=mold.duvar_kalinlik_4, duvar_kalinlik_5=mold.duvar_kalinlik_5, duvar_kalinlik_6=mold.duvar_kalinlik_6,
+        duvar_kalinlik_7=mold.duvar_kalinlik_7, duvar_kalinlik_8=mold.duvar_kalinlik_8, duvar_kalinlik_9=mold.duvar_kalinlik_9,
+        duvar_kalinlik_10=mold.duvar_kalinlik_10,
+        created_at=created_at
     )
 
 @api_router.get("/molds", response_model=List[MoldResponse])
@@ -1769,11 +1780,16 @@ async def update_mold(mold_id: str, mold: MoldCreate, current_user: dict = Depen
     await db.execute("""
         UPDATE molds SET mold_no=?, description=?, product_id=?, product_name=?,
                         kalip_no_1=?, kalip_no_2=?, kalip_no_3=?, kalip_no_4=?, kalip_no_5=?,
-                        kalip_no_6=?, kalip_no_7=?, kalip_no_8=?, kalip_no_9=?, kalip_no_10=?
+                        kalip_no_6=?, kalip_no_7=?, kalip_no_8=?, kalip_no_9=?, kalip_no_10=?,
+                        duvar_kalinlik_1=?, duvar_kalinlik_2=?, duvar_kalinlik_3=?, duvar_kalinlik_4=?, duvar_kalinlik_5=?,
+                        duvar_kalinlik_6=?, duvar_kalinlik_7=?, duvar_kalinlik_8=?, duvar_kalinlik_9=?, duvar_kalinlik_10=?
         WHERE id=?""",
         (mold.mold_no, mold.description, mold.product_id, mold.product_name,
          mold.kalip_no_1, mold.kalip_no_2, mold.kalip_no_3, mold.kalip_no_4, mold.kalip_no_5,
-         mold.kalip_no_6, mold.kalip_no_7, mold.kalip_no_8, mold.kalip_no_9, mold.kalip_no_10, mold_id))
+         mold.kalip_no_6, mold.kalip_no_7, mold.kalip_no_8, mold.kalip_no_9, mold.kalip_no_10,
+         mold.duvar_kalinlik_1, mold.duvar_kalinlik_2, mold.duvar_kalinlik_3, mold.duvar_kalinlik_4, mold.duvar_kalinlik_5,
+         mold.duvar_kalinlik_6, mold.duvar_kalinlik_7, mold.duvar_kalinlik_8, mold.duvar_kalinlik_9, mold.duvar_kalinlik_10,
+         mold_id))
     await db.commit()
     
     async with db.execute("SELECT * FROM molds WHERE id=?", (mold_id,)) as cursor:
