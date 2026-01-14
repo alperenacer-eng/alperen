@@ -511,14 +511,13 @@ const BimsResources = () => {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>Adet Başı Çimento (kg) *</Label>
+                    <Label>Adet Başı Çimento (kg)</Label>
                     <Input
                       type="number"
                       value={newProduct.adet_basi_cimento}
                       onChange={(e) => setNewProduct({ ...newProduct, adet_basi_cimento: e.target.value })}
                       placeholder="0"
                       step="0.01"
-                      required
                       className="h-12 bg-slate-950 border-slate-800 text-white"
                     />
                   </div>
@@ -533,7 +532,7 @@ const BimsResources = () => {
                 {/* İşletmelere Göre Palet ve Paket Adetleri */}
                 {departments.length > 0 && (
                   <div className="space-y-4 p-4 bg-slate-900/50 rounded-lg border border-slate-700">
-                    <Label className="text-teal-400 text-lg font-semibold">İşletmelere Göre Adetler *</Label>
+                    <Label className="text-teal-400 text-lg font-semibold">İşletmelere Göre Adetler</Label>
                     
                     {departments.map(dept => (
                       <div key={dept.id} className="p-3 bg-slate-800/50 rounded-lg border border-slate-700">
@@ -549,7 +548,6 @@ const BimsResources = () => {
                                 uretim_palet_adetleri: {...newProduct.uretim_palet_adetleri, [dept.id]: e.target.value}
                               })}
                               placeholder="0"
-                              required
                               className="h-10 bg-slate-950 border-slate-700 text-white text-center"
                             />
                           </div>
@@ -563,7 +561,6 @@ const BimsResources = () => {
                                 paket_adetleri_7_boy: {...newProduct.paket_adetleri_7_boy, [dept.id]: e.target.value}
                               })}
                               placeholder="0"
-                              required
                               className="h-10 bg-slate-950 border-slate-700 text-white text-center"
                             />
                           </div>
@@ -577,7 +574,6 @@ const BimsResources = () => {
                                 paket_adetleri_5_boy: {...newProduct.paket_adetleri_5_boy, [dept.id]: e.target.value}
                               })}
                               placeholder="0"
-                              required
                               className="h-10 bg-slate-950 border-slate-700 text-white text-center"
                             />
                           </div>
