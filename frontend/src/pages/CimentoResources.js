@@ -49,6 +49,19 @@ const CimentoResources = () => {
   const [newCimentoCinsi, setNewCimentoCinsi] = useState({ name: '', description: '' });
   const [deleteCimentoCinsiId, setDeleteCimentoCinsiId] = useState(null);
 
+  // İşletmeler
+  const [isletmeler, setIsletmeler] = useState([]);
+  const [newIsletme, setNewIsletme] = useState({ 
+    name: '', 
+    adres: '', 
+    yetkili_kisi: '', 
+    telefon: '', 
+    acilis_stok_kg: 0, 
+    acilis_tarihi: '', 
+    notlar: '' 
+  });
+  const [deleteIsletmeId, setDeleteIsletmeId] = useState(null);
+
   useEffect(() => {
     fetchAll();
   }, []);
@@ -60,6 +73,7 @@ const CimentoResources = () => {
     fetchSoforler();
     fetchSehirler();
     fetchCimentoCinsleri();
+    fetchIsletmeler();
   };
 
   // Çimento Firmaları
