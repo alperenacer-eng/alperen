@@ -155,6 +155,40 @@ async def init_db():
             )
         ''')
         
+        # Cimento İşletmeler table - Açılış stok takibi
+        await db.execute('''
+            CREATE TABLE IF NOT EXISTS cimento_isletmeler (
+                id TEXT PRIMARY KEY,
+                name TEXT NOT NULL,
+                adres TEXT DEFAULT '',
+                yetkili_kisi TEXT DEFAULT '',
+                telefon TEXT DEFAULT '',
+                acilis_stok_kg REAL DEFAULT 0,
+                acilis_tarihi TEXT DEFAULT '',
+                mevcut_stok_kg REAL DEFAULT 0,
+                notlar TEXT DEFAULT '',
+                aktif INTEGER DEFAULT 1,
+                created_at TEXT NOT NULL,
+                updated_at TEXT
+            )
+        ''')
+        
+        # Cimento Stok Hareketler - İşletme bazlı stok takibi
+        await db.execute('''
+            CREATE TABLE IF NOT EXISTS cimento_stok_hareketler (
+                id TEXT PRIMARY KEY,
+                isletme_id TEXT NOT NULL,
+                isletme_adi TEXT DEFAULT '',
+                hareket_tipi TEXT NOT NULL,
+                miktar_kg REAL NOT NULL,
+                tarih TEXT NOT NULL,
+                aciklama TEXT DEFAULT '',
+                referans_id TEXT DEFAULT '',
+                referans_tip TEXT DEFAULT '',
+                created_at TEXT NOT NULL
+            )
+        ''')
+        
         # Nakliyeci Firmalar table
         await db.execute('''
             CREATE TABLE IF NOT EXISTS nakliyeci_firmalar (
