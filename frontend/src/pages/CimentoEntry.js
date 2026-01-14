@@ -708,11 +708,11 @@ const CimentoEntry = () => {
                     {records.map((record, index) => (
                       <TableRow
                         key={record.id}
-                        className={`border-slate-800 ${
-                          index % 2 === 0 ? "bg-slate-900/30" : "bg-slate-900/50"
-                        } hover:bg-slate-800/50 transition-colors`}
+                        className={`border-slate-700 ${
+                          index % 2 === 0 ? "bg-slate-800/40" : "bg-slate-800/70"
+                        } hover:bg-slate-700/50 transition-colors`}
                       >
-                        <TableCell className="sticky left-0 bg-inherit z-10">
+                        <TableCell className="sticky left-0 bg-slate-900 z-10 border-r border-slate-700">
                           <div className="flex gap-1">
                             {editingId === record.id ? (
                               <>
@@ -728,7 +728,7 @@ const CimentoEntry = () => {
                                 <Button size="icon" variant="ghost" className="h-7 w-7 text-blue-500 hover:text-blue-400 hover:bg-blue-900/30" onClick={() => startEdit(record)}>
                                   <Edit className="w-4 h-4" />
                                 </Button>
-                                <Button size="icon" variant="ghost" className="h-7 w-7 text-red-500 hover:text-red-400 hover:bg-red-900/30" onClick={() => handleDeleteRecord(record.id)}>
+                                <Button size="icon" variant="ghost" className="h-7 w-7 text-red-500 hover:text-red-400 hover:bg-red-900/30" onClick={() => setDeleteConfirm({ open: true, id: record.id })}>
                                   <Trash2 className="w-4 h-4" />
                                 </Button>
                               </>
@@ -738,8 +738,8 @@ const CimentoEntry = () => {
                         {columnHeaders.map((col) => (
                           <TableCell
                             key={col.key}
-                            className={`text-xs px-2 py-1 whitespace-nowrap text-slate-300 ${
-                              col.type === "select" ? "bg-orange-900/10" : col.editable ? "" : "bg-slate-900/20"
+                            className={`text-xs px-3 py-2 whitespace-nowrap border-r border-slate-700/50 ${
+                              col.type === "select" ? "bg-slate-800/30" : ""
                             }`}
                           >
                             {renderCell(record, col)}
