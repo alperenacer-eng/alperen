@@ -584,31 +584,31 @@ const CimentoEntry = () => {
                 </div>
                 <div>
                   <label className="text-sm font-medium text-green-400">Giriş Miktarı (KG)</label>
-                  <Input type="number" step="0.01" value={newRecord.giris_miktari} onChange={(e) => setNewRecord({ ...newRecord, giris_miktari: parseFloat(e.target.value) || 0 })} className="bg-slate-800 border-slate-600 text-white" />
+                  <Input type="number" step="0.01" value={newRecord.giris_miktari || ''} onChange={(e) => setNewRecord({ ...newRecord, giris_miktari: e.target.value === '' ? 0 : parseFloat(e.target.value) })} className="bg-slate-800 border-slate-600 text-white" />
                 </div>
                 <div>
                   <label className="text-sm font-medium text-green-400">Kantar KG Miktarı</label>
-                  <Input type="number" step="0.01" value={newRecord.kantar_kg_miktari} onChange={(e) => setNewRecord({ ...newRecord, kantar_kg_miktari: parseFloat(e.target.value) || 0 })} className="bg-slate-800 border-slate-600 text-white" />
+                  <Input type="number" step="0.01" value={newRecord.kantar_kg_miktari || ''} onChange={(e) => setNewRecord({ ...newRecord, kantar_kg_miktari: e.target.value === '' ? 0 : parseFloat(e.target.value) })} className="bg-slate-800 border-slate-600 text-white" />
                 </div>
                 <div>
                   <label className="text-sm font-medium text-green-400">Birim Fiyat (₺)</label>
-                  <Input type="number" step="0.01" value={newRecord.birim_fiyat} onChange={(e) => setNewRecord({ ...newRecord, birim_fiyat: parseFloat(e.target.value) || 0 })} className="bg-slate-800 border-slate-600 text-white" />
+                  <Input type="number" step="0.01" value={newRecord.birim_fiyat || ''} onChange={(e) => setNewRecord({ ...newRecord, birim_fiyat: e.target.value === '' ? 0 : parseFloat(e.target.value) })} className="bg-slate-800 border-slate-600 text-white" />
                 </div>
                 <div>
                   <label className="text-sm font-medium text-blue-400">Giriş KDV Oranı (%)</label>
-                  <Input type="number" step="1" value={newRecord.giris_kdv_orani} onChange={(e) => setNewRecord({ ...newRecord, giris_kdv_orani: parseFloat(e.target.value) || 0 })} className="bg-slate-800 border-slate-600 text-white" />
+                  <Input type="number" step="1" value={newRecord.giris_kdv_orani || ''} onChange={(e) => setNewRecord({ ...newRecord, giris_kdv_orani: e.target.value === '' ? 0 : parseFloat(e.target.value) })} className="bg-slate-800 border-slate-600 text-white" />
                 </div>
                 <div>
                   <label className="text-sm font-medium text-green-400">Nakliye Birim Fiyat (₺)</label>
-                  <Input type="number" step="0.01" value={newRecord.nakliye_birim_fiyat} onChange={(e) => setNewRecord({ ...newRecord, nakliye_birim_fiyat: parseFloat(e.target.value) || 0 })} className="bg-slate-800 border-slate-600 text-white" />
+                  <Input type="number" step="0.01" value={newRecord.nakliye_birim_fiyat || ''} onChange={(e) => setNewRecord({ ...newRecord, nakliye_birim_fiyat: e.target.value === '' ? 0 : parseFloat(e.target.value) })} className="bg-slate-800 border-slate-600 text-white" />
                 </div>
                 <div>
                   <label className="text-sm font-medium text-blue-400">Nakliye KDV Oranı (%)</label>
-                  <Input type="number" step="1" value={newRecord.nakliye_kdv_orani} onChange={(e) => setNewRecord({ ...newRecord, nakliye_kdv_orani: parseFloat(e.target.value) || 0 })} className="bg-slate-800 border-slate-600 text-white" />
+                  <Input type="number" step="1" value={newRecord.nakliye_kdv_orani || ''} onChange={(e) => setNewRecord({ ...newRecord, nakliye_kdv_orani: e.target.value === '' ? 0 : parseFloat(e.target.value) })} className="bg-slate-800 border-slate-600 text-white" />
                 </div>
                 <div>
                   <label className="text-sm font-medium text-blue-400">Nakliye Tevkifat Oranı (%)</label>
-                  <Input type="number" step="1" value={newRecord.nakliye_tevkifat_orani} onChange={(e) => setNewRecord({ ...newRecord, nakliye_tevkifat_orani: parseFloat(e.target.value) || 0 })} className="bg-slate-800 border-slate-600 text-white" />
+                  <Input type="number" step="1" value={newRecord.nakliye_tevkifat_orani || ''} onChange={(e) => setNewRecord({ ...newRecord, nakliye_tevkifat_orani: e.target.value === '' ? 0 : parseFloat(e.target.value) })} className="bg-slate-800 border-slate-600 text-white" />
                 </div>
               </div>
               <div className="flex justify-end gap-2">
