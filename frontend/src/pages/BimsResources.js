@@ -655,29 +655,36 @@ const BimsResources = () => {
                   />
                 </div>
 
-                {/* 10 Adet Kalıp Numarası ve Duvar Kalınlıkları */}
+                {/* 10 Adet Kalıp Numarası, Duvar Kalınlıkları ve Makina Cinsi */}
                 <div className="space-y-2">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-3 gap-2">
                     <Label className="text-teal-400">Kalıp Numaraları</Label>
                     <Label className="text-orange-400">Duvar Kalınlıkları</Label>
+                    <Label className="text-blue-400">Makina Cinsi</Label>
                   </div>
                   <div className="space-y-2">
                     {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(num => (
-                      <div key={num} className="grid grid-cols-2 gap-2">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm text-slate-500 w-6">{num}.</span>
+                      <div key={num} className="grid grid-cols-3 gap-2">
+                        <div className="flex items-center gap-1">
+                          <span className="text-xs text-slate-500 w-5">{num}.</span>
                           <Input
                             value={newMold[`kalip_no_${num}`] || ''}
                             onChange={(e) => setNewMold({ ...newMold, [`kalip_no_${num}`]: e.target.value })}
                             placeholder={`Kalıp ${num}`}
-                            className="h-9 bg-slate-950 border-slate-800 text-white flex-1"
+                            className="h-8 text-sm bg-slate-950 border-slate-800 text-white flex-1"
                           />
                         </div>
                         <Input
                           value={newMold[`duvar_kalinlik_${num}`] || ''}
                           onChange={(e) => setNewMold({ ...newMold, [`duvar_kalinlik_${num}`]: e.target.value })}
                           placeholder={`Kalınlık ${num}`}
-                          className="h-9 bg-slate-950 border-slate-800 text-white"
+                          className="h-8 text-sm bg-slate-950 border-slate-800 text-white"
+                        />
+                        <Input
+                          value={newMold[`makina_cinsi_${num}`] || ''}
+                          onChange={(e) => setNewMold({ ...newMold, [`makina_cinsi_${num}`]: e.target.value })}
+                          placeholder={`Makina ${num}`}
+                          className="h-8 text-sm bg-slate-950 border-slate-800 text-white"
                         />
                       </div>
                     ))}
