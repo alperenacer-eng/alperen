@@ -1897,6 +1897,175 @@ async def delete_cimento_cinsi(cins_id: str, current_user: dict = Depends(get_cu
         raise HTTPException(status_code=404, detail="Çimento cinsi not found")
     return {"message": "Çimento cinsi deleted"}
 
+# ============ ÇİMENTO İŞLETMELER API'LERİ ============
+
+class CimentoIsletmeCreate(BaseModel):
+    name: str
+    adres: str = ""
+    yetkili_kisi: str = ""
+    telefon: str = ""
+    acilis_stok_kg: float = 0
+    acilis_tarihi: str = ""
+    notlar: str = ""
+    aktif: bool = True
+
+class CimentoIsletmeUpdate(BaseModel):
+    name: Optional[str] = None
+    adres: Optional[str] = None
+    yetkili_kisi: Optional[str] = None
+    telefon: Optional[str] = None
+    acilis_stok_kg: Optional[float] = None
+    acilis_tarihi: Optional[str] = None
+    notlar: Optional[str] = None
+    aktif: Optional[bool] = None
+
+@api_router.post("/cimento-isletmeler")
+async def create_cimento_isletme(input: CimentoIsletmeCreate, current_user: dict = Depends(get_current_user)):
+    db = await get_db()
+    isletme_id = generate_id()
+    created_at = datetime.now(timezone.utc).isoformat()
+    mevcut_stok = input.acilis_stok_kg
+    
+    await db.execute(
+        """INSERT INTO cimento_isletmeler (id, name, adres, yetkili_kisi, telefon, acilis_stok_kg, 
+           acilis_tarihi, mevcut_stok_kg, notlar, aktif, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        (isletme_id, input.name, input.adres, input.yetkili_kisi, input.telefon, 
+         input.acilis_stok_kg, input.acilis_tarihi, mevcut_stok, input.notlar, 
+         1 if input.aktif else 0, created_at)
+    )
+    
+    # Açılış fişi hareketi oluştur
+    if input.acilis_stok_kg > 0:
+        hareket_id = generate_id() + "h"
+        hareket_tarih = input.acilis_tarihi or datetime.now().strftime('%Y-%m-%d')
+        await db.execute(
+            """INSERT INTO cimento_stok_hareketler (id, isletme_id, isletme_adi, hareket_tipi, 
+               miktar_kg, tarih, aciklama, referans_id, referans_tip, created_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (hareket_id, isletme_id, input.name, 'acilis', input.acilis_stok_kg, 
+             hareket_tarih, 'Açılış fişi', '', 'acilis', created_at)
+        )
+    
+    await db.commit()
+    
+    async with db.execute("SELECT * FROM cimento_isletmeler WHERE id = ?", (isletme_id,)) as cursor:
+        row = await cursor.fetchone()
+    await db.close()
+    
+    return row_to_dict(row)
+
+@api_router.get("/cimento-isletmeler")
+async def get_cimento_isletmeler(current_user: dict = Depends(get_current_user)):
+    db = await get_db()
+    async with db.execute("SELECT * FROM cimento_isletmeler ORDER BY name") as cursor:
+        rows = await cursor.fetchall()
+    await db.close()
+    return rows_to_list(rows)
+
+@api_router.get("/cimento-isletmeler/{id}")
+async def get_cimento_isletme(id: str, current_user: dict = Depends(get_current_user)):
+    db = await get_db()
+    async with db.execute("SELECT * FROM cimento_isletmeler WHERE id = ?", (id,)) as cursor:
+        row = await cursor.fetchone()
+    await db.close()
+    if not row:
+        raise HTTPException(status_code=404, detail="İşletme bulunamadı")
+    return row_to_dict(row)
+
+@api_router.put("/cimento-isletmeler/{id}")
+async def update_cimento_isletme(id: str, input: CimentoIsletmeUpdate, current_user: dict = Depends(get_current_user)):
+    db = await get_db()
+    
+    async with db.execute("SELECT * FROM cimento_isletmeler WHERE id = ?", (id,)) as cursor:
+        existing_row = await cursor.fetchone()
+    if not existing_row:
+        await db.close()
+        raise HTTPException(status_code=404, detail="İşletme bulunamadı")
+    
+    existing = row_to_dict(existing_row)
+    old_acilis_stok = existing.get('acilis_stok_kg', 0) or 0
+    
+    updates = []
+    params = []
+    new_acilis_stok = None
+    
+    for field, value in input.model_dump().items():
+        if value is not None:
+            if field == 'aktif':
+                updates.append(f"{field} = ?")
+                params.append(1 if value else 0)
+            elif field == 'acilis_stok_kg':
+                new_acilis_stok = value
+                updates.append(f"{field} = ?")
+                params.append(value)
+                # Mevcut stoku da güncelle (fark kadar)
+                stok_fark = value - old_acilis_stok
+                new_mevcut = (existing.get('mevcut_stok_kg', 0) or 0) + stok_fark
+                updates.append("mevcut_stok_kg = ?")
+                params.append(new_mevcut)
+            else:
+                updates.append(f"{field} = ?")
+                params.append(value)
+    
+    if updates:
+        updates.append("updated_at = ?")
+        params.append(datetime.now(timezone.utc).isoformat())
+        params.append(id)
+        await db.execute(f"UPDATE cimento_isletmeler SET {', '.join(updates)} WHERE id = ?", params)
+        await db.commit()
+    
+    async with db.execute("SELECT * FROM cimento_isletmeler WHERE id = ?", (id,)) as cursor:
+        row = await cursor.fetchone()
+    await db.close()
+    return row_to_dict(row)
+
+@api_router.delete("/cimento-isletmeler/{id}")
+async def delete_cimento_isletme(id: str, current_user: dict = Depends(get_current_user)):
+    db = await get_db()
+    # İlişkili stok hareketlerini de sil
+    await db.execute("DELETE FROM cimento_stok_hareketler WHERE isletme_id = ?", (id,))
+    cursor = await db.execute("DELETE FROM cimento_isletmeler WHERE id = ?", (id,))
+    await db.commit()
+    await db.close()
+    if cursor.rowcount == 0:
+        raise HTTPException(status_code=404, detail="İşletme bulunamadı")
+    return {"message": "İşletme silindi"}
+
+# Çimento Stok Hareketleri
+@api_router.get("/cimento-stok-hareketler")
+async def get_cimento_stok_hareketler(isletme_id: str = None, current_user: dict = Depends(get_current_user)):
+    db = await get_db()
+    if isletme_id:
+        async with db.execute(
+            "SELECT * FROM cimento_stok_hareketler WHERE isletme_id = ? ORDER BY created_at DESC", 
+            (isletme_id,)
+        ) as cursor:
+            rows = await cursor.fetchall()
+    else:
+        async with db.execute("SELECT * FROM cimento_stok_hareketler ORDER BY created_at DESC") as cursor:
+            rows = await cursor.fetchall()
+    await db.close()
+    return rows_to_list(rows)
+
+# İşletme bazlı stok özeti
+@api_router.get("/cimento-isletme-stok-ozet")
+async def get_cimento_isletme_stok_ozet(current_user: dict = Depends(get_current_user)):
+    db = await get_db()
+    async with db.execute("SELECT * FROM cimento_isletmeler WHERE aktif = 1") as cursor:
+        rows = await cursor.fetchall()
+    await db.close()
+    
+    isletmeler = rows_to_list(rows)
+    toplam_stok = sum(i.get('mevcut_stok_kg', 0) or 0 for i in isletmeler)
+    
+    return {
+        "toplam_isletme": len(isletmeler),
+        "toplam_stok_kg": toplam_stok,
+        "toplam_stok_ton": round(toplam_stok / 1000, 2),
+        "isletmeler": isletmeler
+    }
+
 # Uploads klasörü
 UPLOAD_DIR = ROOT_DIR / "uploads"
 UPLOAD_DIR.mkdir(exist_ok=True)
