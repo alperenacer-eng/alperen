@@ -245,6 +245,124 @@ const BimsResources = () => {
     }
   };
 
+  // Excel'e Aktar
+  const exportToExcel = () => {
+    if (products.length === 0) {
+      toast.error('Dışarı aktarılacak ürün yok');
+      return;
+    }
+
+    const exportData = products.map((product, index) => {
+      const row = {
+        'Sıra No': product.sira_no || index + 1,
+        'Ürün Adı': product.name,
+        'Birim': product.unit || 'adet',
+        'Sevk Ağırlığı (kg)': product.sevk_agirligi || 0,
+        'Adet Başı Çimento (kg)': product.adet_basi_cimento || 0,
+        'Harcanan Hışır (kg)': product.harcanan_hisir || 0,
+      };
+
+      // İşletme bazlı değerleri ekle
+      departments.forEach(dept => {
+        row[`${dept.name} - Üretim Palet`] = product.uretim_palet_adetleri?.[dept.id] || 0;
+        row[`${dept.name} - 7 Boy Paket`] = product.paket_adetleri_7_boy?.[dept.id] || 0;
+        row[`${dept.name} - 5 Boy Paket`] = product.paket_adetleri_5_boy?.[dept.id] || 0;
+      });
+
+      return row;
+    });
+
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Ürünler');
+    
+    // Sütun genişliklerini ayarla
+    const colWidths = Object.keys(exportData[0] || {}).map(key => ({ wch: Math.max(key.length, 15) }));
+    ws['!cols'] = colWidths;
+
+    const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+    const data = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    saveAs(data, `Bims_Urunler_${new Date().toLocaleDateString('tr-TR').replace(/\./g, '_')}.xlsx`);
+    toast.success('Excel dosyası indirildi');
+  };
+
+  // PDF'e Aktar
+  const exportToPDF = () => {
+    if (products.length === 0) {
+      toast.error('Dışarı aktarılacak ürün yok');
+      return;
+    }
+
+    const doc = new jsPDF('l', 'mm', 'a4'); // Landscape A4
+    
+    // Başlık
+    doc.setFontSize(18);
+    doc.text('Bims Ürün Listesi', 14, 20);
+    doc.setFontSize(10);
+    doc.text(`Tarih: ${new Date().toLocaleDateString('tr-TR')}`, 14, 28);
+
+    // Tablo başlıkları
+    const headers = [
+      'Sıra',
+      'Ürün Adı',
+      'Sevk (kg)',
+      'Çimento (kg)',
+      'Hışır (kg)'
+    ];
+
+    // İşletme başlıkları ekle
+    departments.forEach(dept => {
+      headers.push(`${dept.name}\nPalet`);
+      headers.push(`${dept.name}\n7 Boy`);
+      headers.push(`${dept.name}\n5 Boy`);
+    });
+
+    // Tablo verileri
+    const tableData = products.map((product, index) => {
+      const row = [
+        product.sira_no || index + 1,
+        product.name,
+        product.sevk_agirligi || 0,
+        product.adet_basi_cimento || 0,
+        product.harcanan_hisir || 0
+      ];
+
+      departments.forEach(dept => {
+        row.push(product.uretim_palet_adetleri?.[dept.id] || 0);
+        row.push(product.paket_adetleri_7_boy?.[dept.id] || 0);
+        row.push(product.paket_adetleri_5_boy?.[dept.id] || 0);
+      });
+
+      return row;
+    });
+
+    // Tabloyu oluştur
+    doc.autoTable({
+      head: [headers],
+      body: tableData,
+      startY: 35,
+      styles: {
+        fontSize: 8,
+        cellPadding: 2,
+      },
+      headStyles: {
+        fillColor: [249, 115, 22], // Orange
+        textColor: 255,
+        fontStyle: 'bold',
+      },
+      alternateRowStyles: {
+        fillColor: [245, 245, 245],
+      },
+      columnStyles: {
+        0: { halign: 'center', cellWidth: 12 },
+        1: { cellWidth: 35 },
+      },
+    });
+
+    doc.save(`Bims_Urunler_${new Date().toLocaleDateString('tr-TR').replace(/\./g, '_')}.pdf`);
+    toast.success('PDF dosyası indirildi');
+  };
+
   // Molds
   const fetchMolds = async () => {
     try {
