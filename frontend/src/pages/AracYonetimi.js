@@ -72,14 +72,15 @@ const AracYonetimi = () => {
   const [uploadingSigorta, setUploadingSigorta] = useState(false);
 
   const token = localStorage.getItem('token');
-  const headers = {
+  
+  const getHeaders = useCallback(() => ({
     'Content-Type': 'application/json',
     'Authorization': `Bearer ${token}`
-  };
+  }), [token]);
 
   const fetchAraclar = useCallback(async () => {
     try {
-      const response = await fetch(`${BACKEND_URL}/api/araclar`, { headers });
+      const response = await fetch(`${BACKEND_URL}/api/araclar`, { headers: getHeaders() });
       if (response.ok) {
         const data = await response.json();
         setAraclar(data);
@@ -90,7 +91,7 @@ const AracYonetimi = () => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [getHeaders]);
 
   const fetchOzet = useCallback(async () => {
     try {
