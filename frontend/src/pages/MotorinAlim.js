@@ -634,6 +634,52 @@ const MotorinAlim = () => {
           </Button>
         </div>
       </form>
+
+      {/* Hızlı Kaynak Ekleme Modal */}
+      <Dialog open={quickAddModal.open} onOpenChange={(open) => setQuickAddModal(prev => ({ ...prev, open }))}>
+        <DialogContent className="bg-slate-900 border-slate-800 max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-white">
+              Yeni {quickAddModal.title} Ekle
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label className="text-slate-300">{quickAddModal.title} Adı</Label>
+              <Input
+                value={quickAddValue}
+                onChange={(e) => setQuickAddValue(e.target.value)}
+                placeholder={`${quickAddModal.title} adını girin`}
+                className="bg-slate-800/50 border-slate-700"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleQuickAdd();
+                  }
+                }}
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={() => setQuickAddModal({ open: false, type: '', title: '' })}
+            >
+              İptal
+            </Button>
+            <Button 
+              type="button" 
+              className="bg-green-500 hover:bg-green-600"
+              onClick={handleQuickAdd}
+            >
+              Ekle
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
