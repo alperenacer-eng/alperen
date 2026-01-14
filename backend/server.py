@@ -803,6 +803,12 @@ async def init_db():
             except:
                 pass
         
+        # Migration: Add bosaltim_isletmesi to cimento_giris
+        try:
+            await db.execute("ALTER TABLE cimento_giris ADD COLUMN bosaltim_isletmesi TEXT DEFAULT ''")
+        except:
+            pass
+        
         await db.commit()
 
 def row_to_dict(row):
