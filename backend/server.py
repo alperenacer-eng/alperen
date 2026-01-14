@@ -121,6 +121,16 @@ async def init_db():
                 kalip_no_8 TEXT DEFAULT '',
                 kalip_no_9 TEXT DEFAULT '',
                 kalip_no_10 TEXT DEFAULT '',
+                duvar_kalinlik_1 TEXT DEFAULT '',
+                duvar_kalinlik_2 TEXT DEFAULT '',
+                duvar_kalinlik_3 TEXT DEFAULT '',
+                duvar_kalinlik_4 TEXT DEFAULT '',
+                duvar_kalinlik_5 TEXT DEFAULT '',
+                duvar_kalinlik_6 TEXT DEFAULT '',
+                duvar_kalinlik_7 TEXT DEFAULT '',
+                duvar_kalinlik_8 TEXT DEFAULT '',
+                duvar_kalinlik_9 TEXT DEFAULT '',
+                duvar_kalinlik_10 TEXT DEFAULT '',
                 created_at TEXT NOT NULL
             )
         ''')
