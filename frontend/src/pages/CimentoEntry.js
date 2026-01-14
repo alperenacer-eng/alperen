@@ -355,10 +355,10 @@ const CimentoEntry = () => {
             value={editData[column.key] || ""}
             onValueChange={(val) => setEditData({ ...editData, [column.key]: val })}
           >
-            <SelectTrigger className="w-28 h-8 text-xs bg-slate-900 border-slate-700">
+            <SelectTrigger className="w-28 h-8 text-xs bg-slate-800 border-slate-600 text-white">
               <SelectValue placeholder="Seçin" />
             </SelectTrigger>
-            <SelectContent className="bg-slate-900 border-slate-700">
+            <SelectContent className="bg-slate-800 border-slate-600">
               {(column.source || []).map((item) => (
                 <SelectItem key={item.id} value={item[column.sourceKey]}>
                   {item[column.sourceKey]}
@@ -374,7 +374,7 @@ const CimentoEntry = () => {
             type="date"
             value={editData[column.key] || ""}
             onChange={(e) => setEditData({ ...editData, [column.key]: e.target.value })}
-            className="w-32 h-8 text-xs bg-slate-900 border-slate-700"
+            className="w-32 h-8 text-xs bg-slate-800 border-slate-600 text-white"
           />
         );
       }
@@ -385,7 +385,7 @@ const CimentoEntry = () => {
             step="0.01"
             value={editData[column.key] || 0}
             onChange={(e) => setEditData({ ...editData, [column.key]: parseFloat(e.target.value) || 0 })}
-            className="w-24 h-8 text-xs bg-slate-900 border-slate-700"
+            className="w-24 h-8 text-xs bg-slate-800 border-slate-600 text-white"
           />
         );
       }
@@ -394,18 +394,25 @@ const CimentoEntry = () => {
           type="text"
           value={editData[column.key] || ""}
           onChange={(e) => setEditData({ ...editData, [column.key]: e.target.value })}
-          className="w-28 h-8 text-xs bg-slate-900 border-slate-700"
+          className="w-28 h-8 text-xs bg-slate-800 border-slate-600 text-white"
         />
       );
     }
 
+    // Select alanları için özel renklendirme
+    if (column.type === "select") {
+      return <span className="text-yellow-300 font-medium">{value || "-"}</span>;
+    }
     if (column.type === "currency" || column.type === "calculated") {
-      return <span className="font-mono text-right block">{formatCurrency(value)}</span>;
+      return <span className="font-mono text-right block text-green-400">{formatCurrency(value)}</span>;
     }
     if (column.type === "number") {
-      return <span className="font-mono text-right block">{value}</span>;
+      return <span className="font-mono text-right block text-blue-300">{value}</span>;
     }
-    return value || "-";
+    if (column.type === "date") {
+      return <span className="text-cyan-300">{value || "-"}</span>;
+    }
+    return <span className="text-white">{value || "-"}</span>;
   };
 
   return (
