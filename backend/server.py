@@ -1774,30 +1774,29 @@ async def create_mold(mold: MoldCreate, current_user: dict = Depends(get_current
                           kalip_no_6, kalip_no_7, kalip_no_8, kalip_no_9, kalip_no_10,
                           duvar_kalinlik_1, duvar_kalinlik_2, duvar_kalinlik_3, duvar_kalinlik_4, duvar_kalinlik_5,
                           duvar_kalinlik_6, duvar_kalinlik_7, duvar_kalinlik_8, duvar_kalinlik_9, duvar_kalinlik_10,
+                          makina_cinsi_1, makina_cinsi_2, makina_cinsi_3, makina_cinsi_4, makina_cinsi_5,
+                          makina_cinsi_6, makina_cinsi_7, makina_cinsi_8, makina_cinsi_9, makina_cinsi_10,
                           created_at) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
         (mold_id, mold.mold_no, mold.description, mold.product_id, mold.product_name,
          mold.kalip_no_1, mold.kalip_no_2, mold.kalip_no_3, mold.kalip_no_4, mold.kalip_no_5,
          mold.kalip_no_6, mold.kalip_no_7, mold.kalip_no_8, mold.kalip_no_9, mold.kalip_no_10,
          mold.duvar_kalinlik_1, mold.duvar_kalinlik_2, mold.duvar_kalinlik_3, mold.duvar_kalinlik_4, mold.duvar_kalinlik_5,
          mold.duvar_kalinlik_6, mold.duvar_kalinlik_7, mold.duvar_kalinlik_8, mold.duvar_kalinlik_9, mold.duvar_kalinlik_10,
+         mold.makina_cinsi_1, mold.makina_cinsi_2, mold.makina_cinsi_3, mold.makina_cinsi_4, mold.makina_cinsi_5,
+         mold.makina_cinsi_6, mold.makina_cinsi_7, mold.makina_cinsi_8, mold.makina_cinsi_9, mold.makina_cinsi_10,
          created_at))
     await db.commit()
     await db.close()
     
-    return MoldResponse(
-        id=mold_id, mold_no=mold.mold_no, description=mold.description,
-        product_id=mold.product_id, product_name=mold.product_name,
-        kalip_no_1=mold.kalip_no_1, kalip_no_2=mold.kalip_no_2, kalip_no_3=mold.kalip_no_3,
-        kalip_no_4=mold.kalip_no_4, kalip_no_5=mold.kalip_no_5, kalip_no_6=mold.kalip_no_6,
-        kalip_no_7=mold.kalip_no_7, kalip_no_8=mold.kalip_no_8, kalip_no_9=mold.kalip_no_9,
-        kalip_no_10=mold.kalip_no_10,
-        duvar_kalinlik_1=mold.duvar_kalinlik_1, duvar_kalinlik_2=mold.duvar_kalinlik_2, duvar_kalinlik_3=mold.duvar_kalinlik_3,
-        duvar_kalinlik_4=mold.duvar_kalinlik_4, duvar_kalinlik_5=mold.duvar_kalinlik_5, duvar_kalinlik_6=mold.duvar_kalinlik_6,
-        duvar_kalinlik_7=mold.duvar_kalinlik_7, duvar_kalinlik_8=mold.duvar_kalinlik_8, duvar_kalinlik_9=mold.duvar_kalinlik_9,
-        duvar_kalinlik_10=mold.duvar_kalinlik_10,
-        created_at=created_at
-    )
+    return MoldResponse(**{
+        'id': mold_id, 'mold_no': mold.mold_no, 'description': mold.description,
+        'product_id': mold.product_id, 'product_name': mold.product_name,
+        **{f'kalip_no_{i}': getattr(mold, f'kalip_no_{i}') for i in range(1, 11)},
+        **{f'duvar_kalinlik_{i}': getattr(mold, f'duvar_kalinlik_{i}') for i in range(1, 11)},
+        **{f'makina_cinsi_{i}': getattr(mold, f'makina_cinsi_{i}') for i in range(1, 11)},
+        'created_at': created_at
+    })
 
 @api_router.get("/molds", response_model=List[MoldResponse])
 async def get_molds(current_user: dict = Depends(get_current_user)):
@@ -1816,13 +1815,17 @@ async def update_mold(mold_id: str, mold: MoldCreate, current_user: dict = Depen
                         kalip_no_1=?, kalip_no_2=?, kalip_no_3=?, kalip_no_4=?, kalip_no_5=?,
                         kalip_no_6=?, kalip_no_7=?, kalip_no_8=?, kalip_no_9=?, kalip_no_10=?,
                         duvar_kalinlik_1=?, duvar_kalinlik_2=?, duvar_kalinlik_3=?, duvar_kalinlik_4=?, duvar_kalinlik_5=?,
-                        duvar_kalinlik_6=?, duvar_kalinlik_7=?, duvar_kalinlik_8=?, duvar_kalinlik_9=?, duvar_kalinlik_10=?
+                        duvar_kalinlik_6=?, duvar_kalinlik_7=?, duvar_kalinlik_8=?, duvar_kalinlik_9=?, duvar_kalinlik_10=?,
+                        makina_cinsi_1=?, makina_cinsi_2=?, makina_cinsi_3=?, makina_cinsi_4=?, makina_cinsi_5=?,
+                        makina_cinsi_6=?, makina_cinsi_7=?, makina_cinsi_8=?, makina_cinsi_9=?, makina_cinsi_10=?
         WHERE id=?""",
         (mold.mold_no, mold.description, mold.product_id, mold.product_name,
          mold.kalip_no_1, mold.kalip_no_2, mold.kalip_no_3, mold.kalip_no_4, mold.kalip_no_5,
          mold.kalip_no_6, mold.kalip_no_7, mold.kalip_no_8, mold.kalip_no_9, mold.kalip_no_10,
          mold.duvar_kalinlik_1, mold.duvar_kalinlik_2, mold.duvar_kalinlik_3, mold.duvar_kalinlik_4, mold.duvar_kalinlik_5,
          mold.duvar_kalinlik_6, mold.duvar_kalinlik_7, mold.duvar_kalinlik_8, mold.duvar_kalinlik_9, mold.duvar_kalinlik_10,
+         mold.makina_cinsi_1, mold.makina_cinsi_2, mold.makina_cinsi_3, mold.makina_cinsi_4, mold.makina_cinsi_5,
+         mold.makina_cinsi_6, mold.makina_cinsi_7, mold.makina_cinsi_8, mold.makina_cinsi_9, mold.makina_cinsi_10,
          mold_id))
     await db.commit()
     
