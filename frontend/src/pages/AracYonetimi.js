@@ -141,7 +141,7 @@ const AracYonetimi = () => {
     try {
       const response = await fetch(`${BACKEND_URL}${endpoints[quickAddModal.type]}`, {
         method: 'POST',
-        headers,
+        headers: getHeaders(),
         body: JSON.stringify({ name: quickAddValue.trim() })
       });
 
