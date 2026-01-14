@@ -473,7 +473,7 @@ const CimentoEntry = () => {
       return <span className="font-mono text-right block text-blue-300">{value}</span>;
     }
     if (column.type === "date") {
-      return <span className="text-cyan-300">{value || "-"}</span>;
+      return <span className="text-cyan-300">{formatDate(value)}</span>;
     }
     return <span className="text-white">{value || "-"}</span>;
   };
