@@ -492,6 +492,9 @@ const CimentoEntry = () => {
             <p className="text-slate-400">Excel benzeri tablo ile veri girişi yapın</p>
           </div>
           <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+            <Button onClick={exportToExcel} className="bg-green-600 hover:bg-green-700">
+              <Download className="w-4 h-4 mr-2" /> Excel'e Aktar
+            </Button>
             <DialogTrigger asChild>
               <Button className="bg-orange-500 hover:bg-orange-600">
                 <Plus className="w-4 h-4 mr-2" /> Yeni Kayıt Ekle
