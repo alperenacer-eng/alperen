@@ -233,6 +233,10 @@ const CimentoEntry = () => {
       toast.error("Lütfen çimento cinsi seçin");
       return;
     }
+    if (!newRecord.bosaltim_isletmesi) {
+      toast.error("Lütfen boşaltım işletmesi seçin");
+      return;
+    }
 
     try {
       await axios.post(`${API_URL}/cimento-giris`, newRecord, { headers });
