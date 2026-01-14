@@ -122,6 +122,56 @@ const AracYonetimi = () => {
     }
   }, []);
 
+  // Hızlı kaynak ekleme fonksiyonu
+  const handleQuickAdd = async () => {
+    if (!quickAddValue.trim()) {
+      toast.error('Lütfen bir değer girin');
+      return;
+    }
+
+    const endpoints = {
+      'arac_cinsi': '/api/arac-cinsleri',
+      'marka': '/api/markalar',
+      'model': '/api/modeller',
+      'sirket': '/api/sirketler'
+    };
+
+    try {
+      const response = await fetch(`${BACKEND_URL}${endpoints[quickAddModal.type]}`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ name: quickAddValue.trim() })
+      });
+
+      if (response.ok) {
+        toast.success(`${quickAddModal.title} eklendi`);
+        setQuickAddModal({ open: false, type: '', title: '' });
+        setQuickAddValue('');
+        fetchKaynaklar();
+        
+        // Eklenen değeri form'a otomatik seç
+        const fieldMap = {
+          'arac_cinsi': 'arac_cinsi',
+          'marka': 'marka',
+          'model': 'model',
+          'sirket': 'kayitli_sirket'
+        };
+        setFormData(prev => ({ ...prev, [fieldMap[quickAddModal.type]]: quickAddValue.trim() }));
+      } else {
+        const error = await response.json();
+        toast.error(error.detail || 'Ekleme başarısız');
+      }
+    } catch (error) {
+      console.error('Kaynak ekleme hatası:', error);
+      toast.error('Bir hata oluştu');
+    }
+  };
+
+  const openQuickAddModal = (type, title) => {
+    setQuickAddModal({ open: true, type, title });
+    setQuickAddValue('');
+  };
+
   useEffect(() => {
     if (!user) {
       navigate('/login');
