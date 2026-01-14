@@ -645,18 +645,29 @@ const BimsResources = () => {
                   />
                 </div>
 
-                {/* 10 Adet Kalıp Numarası */}
+                {/* 10 Adet Kalıp Numarası ve Duvar Kalınlıkları */}
                 <div className="space-y-2">
-                  <Label className="text-teal-400">Kalıp Numaraları (10 adet)</Label>
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-2 gap-4">
+                    <Label className="text-teal-400">Kalıp Numaraları</Label>
+                    <Label className="text-orange-400">Duvar Kalınlıkları</Label>
+                  </div>
+                  <div className="space-y-2">
                     {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(num => (
-                      <div key={num} className="flex items-center gap-2">
-                        <span className="text-sm text-slate-500 w-8">{num}.</span>
+                      <div key={num} className="grid grid-cols-2 gap-2">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-slate-500 w-6">{num}.</span>
+                          <Input
+                            value={newMold[`kalip_no_${num}`] || ''}
+                            onChange={(e) => setNewMold({ ...newMold, [`kalip_no_${num}`]: e.target.value })}
+                            placeholder={`Kalıp ${num}`}
+                            className="h-9 bg-slate-950 border-slate-800 text-white flex-1"
+                          />
+                        </div>
                         <Input
-                          value={newMold[`kalip_no_${num}`] || ''}
-                          onChange={(e) => setNewMold({ ...newMold, [`kalip_no_${num}`]: e.target.value })}
-                          placeholder={`Kalıp ${num}`}
-                          className="h-10 bg-slate-950 border-slate-800 text-white flex-1"
+                          value={newMold[`duvar_kalinlik_${num}`] || ''}
+                          onChange={(e) => setNewMold({ ...newMold, [`duvar_kalinlik_${num}`]: e.target.value })}
+                          placeholder={`Kalınlık ${num}`}
+                          className="h-9 bg-slate-950 border-slate-800 text-white"
                         />
                       </div>
                     ))}
