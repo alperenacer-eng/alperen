@@ -345,6 +345,7 @@ async def init_db():
                 sehir TEXT DEFAULT '',
                 cimento_alinan_firma TEXT DEFAULT '',
                 cimento_cinsi TEXT DEFAULT '',
+                bosaltim_isletmesi TEXT DEFAULT '',
                 aradaki_fark REAL DEFAULT 0,
                 giris_tutari REAL DEFAULT 0,
                 giris_kdv_tutari REAL DEFAULT 0,
