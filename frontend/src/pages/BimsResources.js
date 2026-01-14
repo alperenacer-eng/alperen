@@ -716,19 +716,40 @@ const BimsResources = () => {
                               </span>
                             )}
                           </div>
-                          {/* Kalıp Numaraları */}
-                          <div className="flex flex-wrap gap-1">
-                            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(num => {
-                              const kalipNo = mold[`kalip_no_${num}`];
-                              if (kalipNo) {
-                                return (
-                                  <span key={num} className="px-2 py-0.5 bg-slate-700 text-slate-300 rounded text-xs">
-                                    {kalipNo}
-                                  </span>
-                                );
-                              }
-                              return null;
-                            })}
+                          {/* Kalıp Numaraları ve Duvar Kalınlıkları */}
+                          <div className="grid grid-cols-2 gap-2 text-xs mb-2">
+                            <div>
+                              <span className="text-teal-400 font-medium">Kalıp No:</span>
+                              <div className="flex flex-wrap gap-1 mt-1">
+                                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(num => {
+                                  const kalipNo = mold[`kalip_no_${num}`];
+                                  if (kalipNo) {
+                                    return (
+                                      <span key={num} className="px-2 py-0.5 bg-teal-500/20 text-teal-300 rounded">
+                                        {kalipNo}
+                                      </span>
+                                    );
+                                  }
+                                  return null;
+                                })}
+                              </div>
+                            </div>
+                            <div>
+                              <span className="text-orange-400 font-medium">Duvar Kalınlık:</span>
+                              <div className="flex flex-wrap gap-1 mt-1">
+                                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(num => {
+                                  const kalinlik = mold[`duvar_kalinlik_${num}`];
+                                  if (kalinlik) {
+                                    return (
+                                      <span key={num} className="px-2 py-0.5 bg-orange-500/20 text-orange-300 rounded">
+                                        {kalinlik}
+                                      </span>
+                                    );
+                                  }
+                                  return null;
+                                })}
+                              </div>
+                            </div>
                           </div>
                           {mold.description && (
                             <p className="text-sm text-slate-400 mt-2">{mold.description}</p>
