@@ -279,20 +279,11 @@ const BimsResources = () => {
         toast.success('Kalıp eklendi');
       }
       setNewMold({ 
-        mold_no: '', 
-        description: '', 
-        product_id: '',
-        product_name: '',
-        kalip_no_1: '',
-        kalip_no_2: '',
-        kalip_no_3: '',
-        kalip_no_4: '',
-        kalip_no_5: '',
-        kalip_no_6: '',
-        kalip_no_7: '',
-        kalip_no_8: '',
-        kalip_no_9: '',
-        kalip_no_10: ''
+        mold_no: '', description: '', product_id: '', product_name: '',
+        kalip_no_1: '', kalip_no_2: '', kalip_no_3: '', kalip_no_4: '', kalip_no_5: '',
+        kalip_no_6: '', kalip_no_7: '', kalip_no_8: '', kalip_no_9: '', kalip_no_10: '',
+        duvar_kalinlik_1: '', duvar_kalinlik_2: '', duvar_kalinlik_3: '', duvar_kalinlik_4: '', duvar_kalinlik_5: '',
+        duvar_kalinlik_6: '', duvar_kalinlik_7: '', duvar_kalinlik_8: '', duvar_kalinlik_9: '', duvar_kalinlik_10: ''
       });
       fetchMolds();
     } catch (error) {
@@ -307,16 +298,14 @@ const BimsResources = () => {
       description: mold.description || '',
       product_id: mold.product_id || '',
       product_name: mold.product_name || '',
-      kalip_no_1: mold.kalip_no_1 || '',
-      kalip_no_2: mold.kalip_no_2 || '',
-      kalip_no_3: mold.kalip_no_3 || '',
-      kalip_no_4: mold.kalip_no_4 || '',
-      kalip_no_5: mold.kalip_no_5 || '',
-      kalip_no_6: mold.kalip_no_6 || '',
-      kalip_no_7: mold.kalip_no_7 || '',
-      kalip_no_8: mold.kalip_no_8 || '',
-      kalip_no_9: mold.kalip_no_9 || '',
-      kalip_no_10: mold.kalip_no_10 || ''
+      kalip_no_1: mold.kalip_no_1 || '', kalip_no_2: mold.kalip_no_2 || '', kalip_no_3: mold.kalip_no_3 || '',
+      kalip_no_4: mold.kalip_no_4 || '', kalip_no_5: mold.kalip_no_5 || '', kalip_no_6: mold.kalip_no_6 || '',
+      kalip_no_7: mold.kalip_no_7 || '', kalip_no_8: mold.kalip_no_8 || '', kalip_no_9: mold.kalip_no_9 || '',
+      kalip_no_10: mold.kalip_no_10 || '',
+      duvar_kalinlik_1: mold.duvar_kalinlik_1 || '', duvar_kalinlik_2: mold.duvar_kalinlik_2 || '', duvar_kalinlik_3: mold.duvar_kalinlik_3 || '',
+      duvar_kalinlik_4: mold.duvar_kalinlik_4 || '', duvar_kalinlik_5: mold.duvar_kalinlik_5 || '', duvar_kalinlik_6: mold.duvar_kalinlik_6 || '',
+      duvar_kalinlik_7: mold.duvar_kalinlik_7 || '', duvar_kalinlik_8: mold.duvar_kalinlik_8 || '', duvar_kalinlik_9: mold.duvar_kalinlik_9 || '',
+      duvar_kalinlik_10: mold.duvar_kalinlik_10 || ''
     });
     setActiveTab('molds');
   };
@@ -324,20 +313,11 @@ const BimsResources = () => {
   const cancelEditMold = () => {
     setEditingMold(null);
     setNewMold({ 
-      mold_no: '', 
-      description: '', 
-      product_id: '',
-      product_name: '',
-      kalip_no_1: '',
-      kalip_no_2: '',
-      kalip_no_3: '',
-      kalip_no_4: '',
-      kalip_no_5: '',
-      kalip_no_6: '',
-      kalip_no_7: '',
-      kalip_no_8: '',
-      kalip_no_9: '',
-      kalip_no_10: ''
+      mold_no: '', description: '', product_id: '', product_name: '',
+      kalip_no_1: '', kalip_no_2: '', kalip_no_3: '', kalip_no_4: '', kalip_no_5: '',
+      kalip_no_6: '', kalip_no_7: '', kalip_no_8: '', kalip_no_9: '', kalip_no_10: '',
+      duvar_kalinlik_1: '', duvar_kalinlik_2: '', duvar_kalinlik_3: '', duvar_kalinlik_4: '', duvar_kalinlik_5: '',
+      duvar_kalinlik_6: '', duvar_kalinlik_7: '', duvar_kalinlik_8: '', duvar_kalinlik_9: '', duvar_kalinlik_10: ''
     });
   };
 
