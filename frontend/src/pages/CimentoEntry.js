@@ -724,6 +724,52 @@ const CimentoEntry = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* Hızlı Kaynak Ekleme Modal */}
+      <Dialog open={quickAddModal.open} onOpenChange={(open) => setQuickAddModal(prev => ({ ...prev, open }))}>
+        <DialogContent className="bg-slate-900 border-slate-800 max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-white">
+              Yeni {quickAddModal.title} Ekle
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-slate-300">{quickAddModal.title} {quickAddModal.type === 'plaka' ? '' : 'Adı'}</label>
+              <Input
+                value={quickAddValue}
+                onChange={(e) => setQuickAddValue(quickAddModal.type === 'plaka' ? e.target.value.toUpperCase() : e.target.value)}
+                placeholder={`${quickAddModal.title} ${quickAddModal.type === 'plaka' ? '(örn: 34 ABC 123)' : 'adını girin'}`}
+                className="bg-slate-800/50 border-slate-700"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleQuickAdd();
+                  }
+                }}
+              />
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-2 mt-4">
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={() => setQuickAddModal({ open: false, type: '', title: '' })}
+            >
+              İptal
+            </Button>
+            <Button 
+              type="button" 
+              className="bg-green-500 hover:bg-green-600"
+              onClick={handleQuickAdd}
+            >
+              Ekle
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
