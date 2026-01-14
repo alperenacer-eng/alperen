@@ -17,7 +17,7 @@ const API_URL = process.env.REACT_APP_BACKEND_URL + '/api';
 const CimentoResources = () => {
   const { token } = useAuth();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState('cimento-firmalar');
+  const [activeTab, setActiveTab] = useState('isletmeler');
   
   // Çimento Firmaları
   const [cimentoFirmalar, setCimentoFirmalar] = useState([]);
