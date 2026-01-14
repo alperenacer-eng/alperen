@@ -767,34 +767,6 @@ const BimsResources = () => {
             </div>
           </div>
         </TabsContent>
-                </Button>
-              </form>
-            </div>
-
-            <div className="glass-effect rounded-xl p-6 border border-slate-800">
-              <h2 className="text-xl font-semibold text-white mb-6">Kalıp Listesi ({molds.length})</h2>
-              <div className="space-y-2 max-h-96 overflow-y-auto">
-                {molds.length > 0 ? (
-                  molds.map((mold) => (
-                    <div key={mold.id} className="flex items-center justify-between p-4 bg-slate-800/30 rounded-lg border border-slate-800 hover:bg-slate-800/50 transition-colors">
-                      <div>
-                        <h3 className="font-semibold text-white">{mold.mold_no}</h3>
-                        {mold.description && (
-                          <p className="text-sm text-slate-400">{mold.description}</p>
-                        )}
-                      </div>
-                      <Button variant="ghost" size="sm" onClick={() => setDeleteMoldId(mold.id)} className="text-red-400 hover:text-red-300 hover:bg-red-400/10">
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  ))
-                ) : (
-                  <div className="text-center py-8 text-slate-500">Henüz kalıp eklenmedi</div>
-                )}
-              </div>
-            </div>
-          </div>
-        </TabsContent>
 
         {/* Operators Tab */}
         <TabsContent value="operators">
