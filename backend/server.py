@@ -1430,11 +1430,12 @@ async def create_product(product: ProductCreate, current_user: dict = Depends(ge
     
     await db.execute(
         """INSERT INTO products (id, name, unit, sira_no, sevk_agirligi, adet_basi_cimento, harcanan_hisir, 
-           paket_adet_7_boy, paket_adet_5_boy, uretim_palet_adetleri, created_at) 
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+           paket_adet_7_boy, paket_adet_5_boy, uretim_palet_adetleri, paket_adetleri_7_boy, paket_adetleri_5_boy, created_at) 
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
         (product_id, product.name, product.unit, product.sira_no, product.sevk_agirligi, product.adet_basi_cimento,
          harcanan_hisir, product.paket_adet_7_boy, product.paket_adet_5_boy, 
-         json.dumps(product.uretim_palet_adetleri), created_at)
+         json.dumps(product.uretim_palet_adetleri), json.dumps(product.paket_adetleri_7_boy),
+         json.dumps(product.paket_adetleri_5_boy), created_at)
     )
     
     # Otomatik olarak stoka da ekle
@@ -1452,7 +1453,10 @@ async def create_product(product: ProductCreate, current_user: dict = Depends(ge
         id=product_id, name=product.name, unit=product.unit, sira_no=product.sira_no, sevk_agirligi=product.sevk_agirligi,
         adet_basi_cimento=product.adet_basi_cimento, harcanan_hisir=harcanan_hisir,
         paket_adet_7_boy=product.paket_adet_7_boy, paket_adet_5_boy=product.paket_adet_5_boy,
-        uretim_palet_adetleri=product.uretim_palet_adetleri, created_at=created_at
+        uretim_palet_adetleri=product.uretim_palet_adetleri, 
+        paket_adetleri_7_boy=product.paket_adetleri_7_boy,
+        paket_adetleri_5_boy=product.paket_adetleri_5_boy,
+        created_at=created_at
     )
 
 @api_router.get("/products", response_model=List[ProductResponse])
@@ -1466,6 +1470,8 @@ async def get_products(current_user: dict = Depends(get_current_user)):
     for row in rows:
         p = row_to_dict(row)
         p['uretim_palet_adetleri'] = json.loads(p.get('uretim_palet_adetleri', '{}'))
+        p['paket_adetleri_7_boy'] = json.loads(p.get('paket_adetleri_7_boy', '{}'))
+        p['paket_adetleri_5_boy'] = json.loads(p.get('paket_adetleri_5_boy', '{}'))
         result.append(ProductResponse(**p))
     return result
 
