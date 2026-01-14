@@ -884,6 +884,16 @@ class MoldCreate(BaseModel):
     kalip_no_8: Optional[str] = ''
     kalip_no_9: Optional[str] = ''
     kalip_no_10: Optional[str] = ''
+    duvar_kalinlik_1: Optional[str] = ''
+    duvar_kalinlik_2: Optional[str] = ''
+    duvar_kalinlik_3: Optional[str] = ''
+    duvar_kalinlik_4: Optional[str] = ''
+    duvar_kalinlik_5: Optional[str] = ''
+    duvar_kalinlik_6: Optional[str] = ''
+    duvar_kalinlik_7: Optional[str] = ''
+    duvar_kalinlik_8: Optional[str] = ''
+    duvar_kalinlik_9: Optional[str] = ''
+    duvar_kalinlik_10: Optional[str] = ''
 
 class MoldResponse(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -902,6 +912,16 @@ class MoldResponse(BaseModel):
     kalip_no_8: Optional[str] = ''
     kalip_no_9: Optional[str] = ''
     kalip_no_10: Optional[str] = ''
+    duvar_kalinlik_1: Optional[str] = ''
+    duvar_kalinlik_2: Optional[str] = ''
+    duvar_kalinlik_3: Optional[str] = ''
+    duvar_kalinlik_4: Optional[str] = ''
+    duvar_kalinlik_5: Optional[str] = ''
+    duvar_kalinlik_6: Optional[str] = ''
+    duvar_kalinlik_7: Optional[str] = ''
+    duvar_kalinlik_8: Optional[str] = ''
+    duvar_kalinlik_9: Optional[str] = ''
+    duvar_kalinlik_10: Optional[str] = ''
     created_at: str
 
 # BIMS Stok Modeli
