@@ -1423,10 +1423,10 @@ async def create_product(product: ProductCreate, current_user: dict = Depends(ge
     created_at = datetime.now(timezone.utc).isoformat()
     
     await db.execute(
-        """INSERT INTO products (id, name, unit, sevk_agirligi, adet_basi_cimento, harcanan_hisir, 
+        """INSERT INTO products (id, name, unit, sira_no, sevk_agirligi, adet_basi_cimento, harcanan_hisir, 
            paket_adet_7_boy, paket_adet_5_boy, uretim_palet_adetleri, created_at) 
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-        (product_id, product.name, product.unit, product.sevk_agirligi, product.adet_basi_cimento,
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        (product_id, product.name, product.unit, product.sira_no, product.sevk_agirligi, product.adet_basi_cimento,
          harcanan_hisir, product.paket_adet_7_boy, product.paket_adet_5_boy, 
          json.dumps(product.uretim_palet_adetleri), created_at)
     )
@@ -1443,7 +1443,7 @@ async def create_product(product: ProductCreate, current_user: dict = Depends(ge
     await db.close()
     
     return ProductResponse(
-        id=product_id, name=product.name, unit=product.unit, sevk_agirligi=product.sevk_agirligi,
+        id=product_id, name=product.name, unit=product.unit, sira_no=product.sira_no, sevk_agirligi=product.sevk_agirligi,
         adet_basi_cimento=product.adet_basi_cimento, harcanan_hisir=harcanan_hisir,
         paket_adet_7_boy=product.paket_adet_7_boy, paket_adet_5_boy=product.paket_adet_5_boy,
         uretim_palet_adetleri=product.uretim_palet_adetleri, created_at=created_at
@@ -1452,7 +1452,7 @@ async def create_product(product: ProductCreate, current_user: dict = Depends(ge
 @api_router.get("/products", response_model=List[ProductResponse])
 async def get_products(current_user: dict = Depends(get_current_user)):
     db = await get_db()
-    async with db.execute("SELECT * FROM products ORDER BY name") as cursor:
+    async with db.execute("SELECT * FROM products ORDER BY sira_no ASC, name ASC") as cursor:
         rows = await cursor.fetchall()
     await db.close()
     
