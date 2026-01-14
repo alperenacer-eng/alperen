@@ -556,51 +556,64 @@ const BimsResources = () => {
                     {((parseFloat(newProduct.sevk_agirligi) || 0) - (parseFloat(newProduct.adet_basi_cimento) || 0)).toFixed(2)} kg
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Paket Adet (7 Boy) *</Label>
-                    <Input
-                      type="number"
-                      value={newProduct.paket_adet_7_boy}
-                      onChange={(e) => setNewProduct({ ...newProduct, paket_adet_7_boy: e.target.value })}
-                      placeholder="0"
-                      required
-                      className="h-12 bg-slate-950 border-slate-800 text-white"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Paket Adet (5 Boy) *</Label>
-                    <Input
-                      type="number"
-                      value={newProduct.paket_adet_5_boy}
-                      onChange={(e) => setNewProduct({ ...newProduct, paket_adet_5_boy: e.target.value })}
-                      placeholder="0"
-                      className="h-12 bg-slate-950 border-slate-800 text-white"
-                    />
-                  </div>
-                </div>
                 
-                {/* İşletmelere Göre Üretim Palet Adetleri */}
+                {/* İşletmelere Göre Palet ve Paket Adetleri */}
                 {departments.length > 0 && (
-                  <div className="space-y-2">
-                    <Label className="text-teal-400">İşletmelere Göre Üretim Palet Adeti *</Label>
-                    <div className="grid grid-cols-2 gap-2">
-                      {departments.map(dept => (
-                        <div key={dept.id} className="flex items-center gap-2">
-                          <span className="text-sm text-slate-400 w-24 truncate">{dept.name}:</span>
-                          <Input
-                            type="number"
-                            value={newProduct.uretim_palet_adetleri[dept.id] || ''}
-                            onChange={(e) => updatePaletAdet(dept.id, e.target.value)}
-                            placeholder="0"
-                            required
-                            className="h-10 bg-slate-950 border-slate-800 text-white flex-1"
-                          />
+                  <div className="space-y-4 p-4 bg-slate-900/50 rounded-lg border border-slate-700">
+                    <Label className="text-teal-400 text-lg font-semibold">İşletmelere Göre Adetler *</Label>
+                    
+                    {departments.map(dept => (
+                      <div key={dept.id} className="p-3 bg-slate-800/50 rounded-lg border border-slate-700">
+                        <h4 className="text-orange-400 font-semibold mb-3">{dept.name}</h4>
+                        <div className="grid grid-cols-3 gap-3">
+                          <div className="space-y-1">
+                            <Label className="text-xs text-slate-400">Üretim Palet</Label>
+                            <Input
+                              type="number"
+                              value={newProduct.uretim_palet_adetleri[dept.id] || ''}
+                              onChange={(e) => setNewProduct({
+                                ...newProduct,
+                                uretim_palet_adetleri: {...newProduct.uretim_palet_adetleri, [dept.id]: e.target.value}
+                              })}
+                              placeholder="0"
+                              required
+                              className="h-10 bg-slate-950 border-slate-700 text-white text-center"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-xs text-slate-400">Çıkan Paket (7 Boy)</Label>
+                            <Input
+                              type="number"
+                              value={newProduct.paket_adetleri_7_boy[dept.id] || ''}
+                              onChange={(e) => setNewProduct({
+                                ...newProduct,
+                                paket_adetleri_7_boy: {...newProduct.paket_adetleri_7_boy, [dept.id]: e.target.value}
+                              })}
+                              placeholder="0"
+                              required
+                              className="h-10 bg-slate-950 border-slate-700 text-white text-center"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-xs text-slate-400">Çıkan Paket (5 Boy)</Label>
+                            <Input
+                              type="number"
+                              value={newProduct.paket_adetleri_5_boy[dept.id] || ''}
+                              onChange={(e) => setNewProduct({
+                                ...newProduct,
+                                paket_adetleri_5_boy: {...newProduct.paket_adetleri_5_boy, [dept.id]: e.target.value}
+                              })}
+                              placeholder="0"
+                              required
+                              className="h-10 bg-slate-950 border-slate-700 text-white text-center"
+                            />
+                          </div>
                         </div>
-                      ))}
-                    </div>
+                      </div>
+                    ))}
                   </div>
                 )}
+
                 <div className="flex gap-2">
                   {editingProduct && (
                     <Button type="button" onClick={cancelEditProduct} className="flex-1 h-12 bg-slate-700 hover:bg-slate-600 text-white">
