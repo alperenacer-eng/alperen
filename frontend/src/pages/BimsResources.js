@@ -486,15 +486,29 @@ const BimsResources = () => {
                 {editingProduct ? 'Ürün Düzenle' : 'Yeni Ürün Ekle'}
               </h2>
               <form onSubmit={handleAddProduct} className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Ürün Adı *</Label>
-                  <Input
-                    value={newProduct.name}
-                    onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })}
-                    placeholder="Örn: Bims Blok 20x20x40"
-                    required
-                    className="h-12 bg-slate-950 border-slate-800 text-white"
-                  />
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="col-span-2 space-y-2">
+                    <Label>Ürün Adı *</Label>
+                    <Input
+                      value={newProduct.name}
+                      onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })}
+                      placeholder="Örn: Bims Blok 20x20x40"
+                      required
+                      className="h-12 bg-slate-950 border-slate-800 text-white"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Sıra No *</Label>
+                    <Input
+                      type="number"
+                      value={newProduct.sira_no}
+                      onChange={(e) => setNewProduct({ ...newProduct, sira_no: e.target.value })}
+                      placeholder="1"
+                      min="1"
+                      required
+                      className="h-12 bg-slate-950 border-slate-800 text-white text-center font-bold text-orange-400"
+                    />
+                  </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
