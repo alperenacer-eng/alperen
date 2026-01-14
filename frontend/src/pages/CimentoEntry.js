@@ -531,15 +531,15 @@ const CimentoEntry = () => {
                   </div>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-red-400">Çimento Cinsi *</label>
+                  <label className="text-sm font-medium text-yellow-400">Çimento Cinsi *</label>
                   <div className="flex gap-2">
                     <Select value={newRecord.cimento_cinsi} onValueChange={(val) => setNewRecord({ ...newRecord, cimento_cinsi: val })}>
-                      <SelectTrigger className="bg-slate-950 border-slate-700 flex-1">
+                      <SelectTrigger className="bg-slate-800 border-slate-600 flex-1 text-yellow-300">
                         <SelectValue placeholder="Cins seçin" />
                       </SelectTrigger>
-                      <SelectContent className="bg-slate-900 border-slate-700">
+                      <SelectContent className="bg-slate-800 border-slate-600">
                         {cimentoCinsleri.map((item) => (
-                          <SelectItem key={item.id} value={item.name}>{item.name}</SelectItem>
+                          <SelectItem key={item.id} value={item.name} className="text-white">{item.name}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -549,54 +549,54 @@ const CimentoEntry = () => {
                   </div>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-blue-400">Boşaltım İşletmesi *</label>
+                  <label className="text-sm font-medium text-cyan-400">Boşaltım İşletmesi *</label>
                   <Select value={newRecord.bosaltim_isletmesi} onValueChange={(val) => setNewRecord({ ...newRecord, bosaltim_isletmesi: val })}>
-                    <SelectTrigger className="bg-slate-950 border-slate-700">
+                    <SelectTrigger className="bg-slate-800 border-slate-600 text-cyan-300">
                       <SelectValue placeholder="İşletme seçin" />
                     </SelectTrigger>
-                    <SelectContent className="bg-slate-900 border-slate-700">
+                    <SelectContent className="bg-slate-800 border-slate-600">
                       {cimentoIsletmeler.map((item) => (
-                        <SelectItem key={item.id} value={item.name}>{item.name}</SelectItem>
+                        <SelectItem key={item.id} value={item.name} className="text-white">{item.name}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="border-t border-slate-700 col-span-3 pt-2 mt-2"></div>
                 <div>
-                  <label className="text-sm font-medium">Yükleme Tarihi</label>
-                  <Input type="date" value={newRecord.yukleme_tarihi} onChange={(e) => setNewRecord({ ...newRecord, yukleme_tarihi: e.target.value })} className="bg-slate-950 border-slate-700" />
+                  <label className="text-sm font-medium text-slate-300">Yükleme Tarihi</label>
+                  <Input type="date" value={newRecord.yukleme_tarihi} onChange={(e) => setNewRecord({ ...newRecord, yukleme_tarihi: e.target.value })} className="bg-slate-800 border-slate-600 text-white" />
                 </div>
                 <div>
-                  <label className="text-sm font-medium">Boşaltım Tarihi</label>
-                  <Input type="date" value={newRecord.bosaltim_tarihi} onChange={(e) => setNewRecord({ ...newRecord, bosaltim_tarihi: e.target.value })} className="bg-slate-950 border-slate-700" />
+                  <label className="text-sm font-medium text-slate-300">Boşaltım Tarihi</label>
+                  <Input type="date" value={newRecord.bosaltim_tarihi} onChange={(e) => setNewRecord({ ...newRecord, bosaltim_tarihi: e.target.value })} className="bg-slate-800 border-slate-600 text-white" />
                 </div>
                 <div>
-                  <label className="text-sm font-medium">Vade Tarihi</label>
-                  <Input type="date" value={newRecord.vade_tarihi} onChange={(e) => setNewRecord({ ...newRecord, vade_tarihi: e.target.value })} className="bg-slate-950 border-slate-700" />
+                  <label className="text-sm font-medium text-slate-300">Vade Tarihi</label>
+                  <Input type="date" value={newRecord.vade_tarihi} onChange={(e) => setNewRecord({ ...newRecord, vade_tarihi: e.target.value })} className="bg-slate-800 border-slate-600 text-white" />
                 </div>
                 <div>
-                  <label className="text-sm font-medium">İrsaliye No</label>
-                  <Input type="text" value={newRecord.irsaliye_no} onChange={(e) => setNewRecord({ ...newRecord, irsaliye_no: e.target.value })} className="bg-slate-950 border-slate-700" />
+                  <label className="text-sm font-medium text-slate-300">İrsaliye No</label>
+                  <Input type="text" value={newRecord.irsaliye_no} onChange={(e) => setNewRecord({ ...newRecord, irsaliye_no: e.target.value })} className="bg-slate-800 border-slate-600 text-white" />
                 </div>
                 <div>
-                  <label className="text-sm font-medium">Fatura No</label>
-                  <Input type="text" value={newRecord.fatura_no} onChange={(e) => setNewRecord({ ...newRecord, fatura_no: e.target.value })} className="bg-slate-950 border-slate-700" />
+                  <label className="text-sm font-medium text-slate-300">Fatura No</label>
+                  <Input type="text" value={newRecord.fatura_no} onChange={(e) => setNewRecord({ ...newRecord, fatura_no: e.target.value })} className="bg-slate-800 border-slate-600 text-white" />
                 </div>
                 <div>
-                  <label className="text-sm font-medium">Giriş Miktarı (KG)</label>
-                  <Input type="number" step="0.01" value={newRecord.giris_miktari} onChange={(e) => setNewRecord({ ...newRecord, giris_miktari: parseFloat(e.target.value) || 0 })} className="bg-slate-950 border-slate-700" />
+                  <label className="text-sm font-medium text-green-400">Giriş Miktarı (KG)</label>
+                  <Input type="number" step="0.01" value={newRecord.giris_miktari} onChange={(e) => setNewRecord({ ...newRecord, giris_miktari: parseFloat(e.target.value) || 0 })} className="bg-slate-800 border-slate-600 text-white" />
                 </div>
                 <div>
-                  <label className="text-sm font-medium">Kantar KG Miktarı</label>
-                  <Input type="number" step="0.01" value={newRecord.kantar_kg_miktari} onChange={(e) => setNewRecord({ ...newRecord, kantar_kg_miktari: parseFloat(e.target.value) || 0 })} className="bg-slate-950 border-slate-700" />
+                  <label className="text-sm font-medium text-green-400">Kantar KG Miktarı</label>
+                  <Input type="number" step="0.01" value={newRecord.kantar_kg_miktari} onChange={(e) => setNewRecord({ ...newRecord, kantar_kg_miktari: parseFloat(e.target.value) || 0 })} className="bg-slate-800 border-slate-600 text-white" />
                 </div>
                 <div>
-                  <label className="text-sm font-medium">Birim Fiyat (₺)</label>
-                  <Input type="number" step="0.01" value={newRecord.birim_fiyat} onChange={(e) => setNewRecord({ ...newRecord, birim_fiyat: parseFloat(e.target.value) || 0 })} className="bg-slate-950 border-slate-700" />
+                  <label className="text-sm font-medium text-green-400">Birim Fiyat (₺)</label>
+                  <Input type="number" step="0.01" value={newRecord.birim_fiyat} onChange={(e) => setNewRecord({ ...newRecord, birim_fiyat: parseFloat(e.target.value) || 0 })} className="bg-slate-800 border-slate-600 text-white" />
                 </div>
                 <div>
-                  <label className="text-sm font-medium">Giriş KDV Oranı (%)</label>
-                  <Input type="number" step="1" value={newRecord.giris_kdv_orani} onChange={(e) => setNewRecord({ ...newRecord, giris_kdv_orani: parseFloat(e.target.value) || 0 })} className="bg-slate-950 border-slate-700" />
+                  <label className="text-sm font-medium text-blue-400">Giriş KDV Oranı (%)</label>
+                  <Input type="number" step="1" value={newRecord.giris_kdv_orani} onChange={(e) => setNewRecord({ ...newRecord, giris_kdv_orani: parseFloat(e.target.value) || 0 })} className="bg-slate-800 border-slate-600 text-white" />
                 </div>
                 <div>
                   <label className="text-sm font-medium">Nakliye Birim Fiyat (₺)</label>
