@@ -76,6 +76,7 @@ const CimentoEntry = () => {
   const [editData, setEditData] = useState({});
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [newRecord, setNewRecord] = useState(emptyRecord);
+  const [deleteConfirm, setDeleteConfirm] = useState({ open: false, id: null });
   
   // Kaynaklar
   const [plakalar, setPlakalar] = useState([]);
