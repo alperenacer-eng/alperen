@@ -327,17 +327,28 @@ const MotorinAlim = () => {
             {/* Boşaltım Yapılan Tesis */}
             <div>
               <Label className="text-slate-300">Boşaltım Yapılan Tesis *</Label>
-              <select
-                value={formData.bosaltim_tesisi}
-                onChange={handleTesisChange}
-                className="w-full bg-slate-800 border border-slate-700 text-white rounded-md px-3 py-2 mt-1"
-                required
-              >
-                <option value="">Tesis Seçin</option>
-                {tesisler.map(t => (
-                  <option key={t.id} value={t.name}>{t.name}</option>
-                ))}
-              </select>
+              <div className="flex gap-2 mt-1">
+                <select
+                  value={formData.bosaltim_tesisi}
+                  onChange={handleTesisChange}
+                  className="flex-1 bg-slate-800 border border-slate-700 text-white rounded-md px-3 py-2"
+                  required
+                >
+                  <option value="">Tesis Seçin</option>
+                  {tesisler.map(t => (
+                    <option key={t.id} value={t.name}>{t.name}</option>
+                  ))}
+                </select>
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="outline"
+                  className="border-green-500/50 text-green-400 hover:bg-green-500/20 h-10 w-10"
+                  onClick={() => openQuickAddModal('bosaltim_tesisi', 'Boşaltım Tesisi')}
+                >
+                  <PlusCircle className="w-4 h-4" />
+                </Button>
+              </div>
             </div>
           </div>
         </div>
