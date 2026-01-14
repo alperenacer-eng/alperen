@@ -633,31 +633,140 @@ const BimsResources = () => {
         <TabsContent value="molds">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div className="glass-effect rounded-xl p-6 border border-slate-800">
-              <h2 className="text-xl font-semibold text-white mb-6">Yeni Kalıp Ekle</h2>
+              <h2 className="text-xl font-semibold text-white mb-6">
+                {editingMold ? 'Kalıp Düzenle' : 'Yeni Kalıp Ekle'}
+              </h2>
               <form onSubmit={handleAddMold} className="space-y-4">
+                {/* Ürün Seçimi */}
                 <div className="space-y-2">
-                  <Label>Kalıp No</Label>
+                  <Label className="text-purple-400">Ürün Seçimi *</Label>
+                  <Select 
+                    value={newMold.product_id} 
+                    onValueChange={handleProductSelectForMold}
+                  >
+                    <SelectTrigger className="h-12 bg-slate-950 border-slate-800 text-white">
+                      <SelectValue placeholder="Ürün seçin" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-slate-900 border-slate-700">
+                      {products.length === 0 ? (
+                        <SelectItem value="_empty" disabled>Önce ürün ekleyin</SelectItem>
+                      ) : (
+                        products.map(product => (
+                          <SelectItem key={product.id} value={product.id}>{product.name}</SelectItem>
+                        ))
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Kalıp Adı */}
+                <div className="space-y-2">
+                  <Label>Kalıp Adı *</Label>
                   <Input
                     value={newMold.mold_no}
                     onChange={(e) => setNewMold({ ...newMold, mold_no: e.target.value })}
-                    placeholder="Örn: K-001, K-002"
+                    placeholder="Örn: Kalıp Set A"
                     required
                     className="h-12 bg-slate-950 border-slate-800 text-white"
                   />
                 </div>
+
+                {/* 10 Adet Kalıp Numarası */}
+                <div className="space-y-2">
+                  <Label className="text-teal-400">Kalıp Numaraları (10 adet)</Label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(num => (
+                      <div key={num} className="flex items-center gap-2">
+                        <span className="text-sm text-slate-500 w-8">{num}.</span>
+                        <Input
+                          value={newMold[`kalip_no_${num}`] || ''}
+                          onChange={(e) => setNewMold({ ...newMold, [`kalip_no_${num}`]: e.target.value })}
+                          placeholder={`Kalıp ${num}`}
+                          className="h-10 bg-slate-950 border-slate-800 text-white flex-1"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Açıklama */}
                 <div className="space-y-2">
                   <Label>Açıklama (Opsiyonel)</Label>
                   <Textarea
                     value={newMold.description}
                     onChange={(e) => setNewMold({ ...newMold, description: e.target.value })}
                     placeholder="Kalıp hakkında ek bilgi..."
-                    rows={3}
+                    rows={2}
                     className="bg-slate-950 border-slate-800 text-white resize-none"
                   />
                 </div>
-                <Button type="submit" className="w-full h-12 bg-purple-500 hover:bg-purple-600 text-white">
-                  <Plus className="w-5 h-5 mr-2" />
-                  Ekle
+
+                <div className="flex gap-2">
+                  {editingMold && (
+                    <Button type="button" onClick={cancelEditMold} className="flex-1 h-12 bg-slate-700 hover:bg-slate-600 text-white">
+                      İptal
+                    </Button>
+                  )}
+                  <Button type="submit" className={`flex-1 h-12 ${editingMold ? 'bg-green-500 hover:bg-green-600' : 'bg-purple-500 hover:bg-purple-600'} text-white`}>
+                    <Plus className="w-5 h-5 mr-2" />
+                    {editingMold ? 'Güncelle' : 'Ekle'}
+                  </Button>
+                </div>
+              </form>
+            </div>
+
+            <div className="glass-effect rounded-xl p-6 border border-slate-800">
+              <h2 className="text-xl font-semibold text-white mb-6">Kalıp Listesi ({molds.length})</h2>
+              <div className="space-y-3 max-h-[600px] overflow-y-auto">
+                {molds.length > 0 ? (
+                  molds.map((mold) => (
+                    <div key={mold.id} className="p-4 bg-slate-800/30 rounded-lg border border-slate-800 hover:bg-slate-800/50 transition-colors">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            <h3 className="font-semibold text-white">{mold.mold_no}</h3>
+                            {mold.product_name && (
+                              <span className="px-2 py-0.5 bg-purple-500/20 text-purple-400 rounded text-xs">
+                                {mold.product_name}
+                              </span>
+                            )}
+                          </div>
+                          {/* Kalıp Numaraları */}
+                          <div className="flex flex-wrap gap-1">
+                            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(num => {
+                              const kalipNo = mold[`kalip_no_${num}`];
+                              if (kalipNo) {
+                                return (
+                                  <span key={num} className="px-2 py-0.5 bg-slate-700 text-slate-300 rounded text-xs">
+                                    {kalipNo}
+                                  </span>
+                                );
+                              }
+                              return null;
+                            })}
+                          </div>
+                          {mold.description && (
+                            <p className="text-sm text-slate-400 mt-2">{mold.description}</p>
+                          )}
+                        </div>
+                        <div className="flex gap-1">
+                          <Button variant="ghost" size="sm" onClick={() => handleEditMold(mold)} className="text-blue-400 hover:text-blue-300 hover:bg-blue-400/10">
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                          <Button variant="ghost" size="sm" onClick={() => setDeleteMoldId(mold.id)} className="text-red-400 hover:text-red-300 hover:bg-red-400/10">
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-8 text-slate-500">Henüz kalıp eklenmedi</div>
+                )}
+              </div>
+            </div>
+          </div>
+        </TabsContent>
                 </Button>
               </form>
             </div>
