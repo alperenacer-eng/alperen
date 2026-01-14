@@ -599,21 +599,21 @@ const CimentoEntry = () => {
                   <Input type="number" step="1" value={newRecord.giris_kdv_orani} onChange={(e) => setNewRecord({ ...newRecord, giris_kdv_orani: parseFloat(e.target.value) || 0 })} className="bg-slate-800 border-slate-600 text-white" />
                 </div>
                 <div>
-                  <label className="text-sm font-medium">Nakliye Birim Fiyat (₺)</label>
-                  <Input type="number" step="0.01" value={newRecord.nakliye_birim_fiyat} onChange={(e) => setNewRecord({ ...newRecord, nakliye_birim_fiyat: parseFloat(e.target.value) || 0 })} className="bg-slate-950 border-slate-700" />
+                  <label className="text-sm font-medium text-green-400">Nakliye Birim Fiyat (₺)</label>
+                  <Input type="number" step="0.01" value={newRecord.nakliye_birim_fiyat} onChange={(e) => setNewRecord({ ...newRecord, nakliye_birim_fiyat: parseFloat(e.target.value) || 0 })} className="bg-slate-800 border-slate-600 text-white" />
                 </div>
                 <div>
-                  <label className="text-sm font-medium">Nakliye KDV Oranı (%)</label>
-                  <Input type="number" step="1" value={newRecord.nakliye_kdv_orani} onChange={(e) => setNewRecord({ ...newRecord, nakliye_kdv_orani: parseFloat(e.target.value) || 0 })} className="bg-slate-950 border-slate-700" />
+                  <label className="text-sm font-medium text-blue-400">Nakliye KDV Oranı (%)</label>
+                  <Input type="number" step="1" value={newRecord.nakliye_kdv_orani} onChange={(e) => setNewRecord({ ...newRecord, nakliye_kdv_orani: parseFloat(e.target.value) || 0 })} className="bg-slate-800 border-slate-600 text-white" />
                 </div>
                 <div>
-                  <label className="text-sm font-medium">Nakliye Tevkifat Oranı (%)</label>
-                  <Input type="number" step="1" value={newRecord.nakliye_tevkifat_orani} onChange={(e) => setNewRecord({ ...newRecord, nakliye_tevkifat_orani: parseFloat(e.target.value) || 0 })} className="bg-slate-950 border-slate-700" />
+                  <label className="text-sm font-medium text-blue-400">Nakliye Tevkifat Oranı (%)</label>
+                  <Input type="number" step="1" value={newRecord.nakliye_tevkifat_orani} onChange={(e) => setNewRecord({ ...newRecord, nakliye_tevkifat_orani: parseFloat(e.target.value) || 0 })} className="bg-slate-800 border-slate-600 text-white" />
                 </div>
               </div>
               <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={() => setIsAddDialogOpen(false)} className="border-slate-700">İptal</Button>
-                <Button onClick={handleAddRecord} className="bg-orange-500 hover:bg-orange-600">
+                <Button variant="outline" onClick={() => setIsAddDialogOpen(false)} className="border-slate-600">İptal</Button>
+                <Button onClick={handleAddRecord} className="bg-green-500 hover:bg-green-600">
                   <Save className="w-4 h-4 mr-2" /> Kaydet
                 </Button>
               </div>
