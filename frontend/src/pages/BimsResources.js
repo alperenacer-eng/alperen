@@ -131,6 +131,10 @@ const BimsResources = () => {
       toast.error('Ürün adı zorunludur');
       return;
     }
+    if (!newProduct.sira_no || parseInt(newProduct.sira_no) <= 0) {
+      toast.error('Sıra numarası zorunludur');
+      return;
+    }
     if (!newProduct.sevk_agirligi || parseFloat(newProduct.sevk_agirligi) <= 0) {
       toast.error('Sevk ağırlığı zorunludur');
       return;
@@ -158,6 +162,7 @@ const BimsResources = () => {
     try {
       const productData = {
         ...newProduct,
+        sira_no: parseInt(newProduct.sira_no) || 0,
         sevk_agirligi: parseFloat(newProduct.sevk_agirligi) || 0,
         adet_basi_cimento: parseFloat(newProduct.adet_basi_cimento) || 0,
         paket_adet_7_boy: parseInt(newProduct.paket_adet_7_boy) || 0,
@@ -183,6 +188,7 @@ const BimsResources = () => {
       setNewProduct({ 
         name: '', 
         unit: 'adet',
+        sira_no: '',
         sevk_agirligi: '',
         adet_basi_cimento: '',
         paket_adet_7_boy: '',
