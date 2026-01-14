@@ -441,15 +441,15 @@ const CimentoEntry = () => {
               <div className="grid grid-cols-3 gap-4 py-4">
                 {/* Kaynak alanları */}
                 <div>
-                  <label className="text-sm font-medium text-red-400">Plaka *</label>
+                  <label className="text-sm font-medium text-yellow-400">Plaka *</label>
                   <div className="flex gap-2">
                     <Select value={newRecord.plaka} onValueChange={(val) => setNewRecord({ ...newRecord, plaka: val })}>
-                      <SelectTrigger className="bg-slate-950 border-slate-700 flex-1">
+                      <SelectTrigger className="bg-slate-800 border-slate-600 flex-1 text-yellow-300">
                         <SelectValue placeholder="Plaka seçin" />
                       </SelectTrigger>
-                      <SelectContent className="bg-slate-900 border-slate-700">
+                      <SelectContent className="bg-slate-800 border-slate-600">
                         {plakalar.map((item) => (
-                          <SelectItem key={item.id} value={item.plaka}>{item.plaka}</SelectItem>
+                          <SelectItem key={item.id} value={item.plaka} className="text-white">{item.plaka}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -459,15 +459,15 @@ const CimentoEntry = () => {
                   </div>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-red-400">Nakliye Firması *</label>
+                  <label className="text-sm font-medium text-yellow-400">Nakliye Firması *</label>
                   <div className="flex gap-2">
                     <Select value={newRecord.nakliye_firmasi} onValueChange={(val) => setNewRecord({ ...newRecord, nakliye_firmasi: val })}>
-                      <SelectTrigger className="bg-slate-950 border-slate-700 flex-1">
+                      <SelectTrigger className="bg-slate-800 border-slate-600 flex-1 text-yellow-300">
                         <SelectValue placeholder="Firma seçin" />
                       </SelectTrigger>
-                      <SelectContent className="bg-slate-900 border-slate-700">
+                      <SelectContent className="bg-slate-800 border-slate-600">
                         {nakliyeciFirmalar.map((item) => (
-                          <SelectItem key={item.id} value={item.name}>{item.name}</SelectItem>
+                          <SelectItem key={item.id} value={item.name} className="text-white">{item.name}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -477,15 +477,15 @@ const CimentoEntry = () => {
                   </div>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-red-400">Şoför *</label>
+                  <label className="text-sm font-medium text-yellow-400">Şoför *</label>
                   <div className="flex gap-2">
                     <Select value={newRecord.sofor} onValueChange={(val) => setNewRecord({ ...newRecord, sofor: val })}>
-                      <SelectTrigger className="bg-slate-950 border-slate-700 flex-1">
+                      <SelectTrigger className="bg-slate-800 border-slate-600 flex-1 text-yellow-300">
                         <SelectValue placeholder="Şoför seçin" />
                       </SelectTrigger>
-                      <SelectContent className="bg-slate-900 border-slate-700">
+                      <SelectContent className="bg-slate-800 border-slate-600">
                         {soforler.map((item) => (
-                          <SelectItem key={item.id} value={item.name}>{item.name}</SelectItem>
+                          <SelectItem key={item.id} value={item.name} className="text-white">{item.name}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -495,15 +495,15 @@ const CimentoEntry = () => {
                   </div>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-red-400">Şehir *</label>
+                  <label className="text-sm font-medium text-yellow-400">Şehir *</label>
                   <div className="flex gap-2">
                     <Select value={newRecord.sehir} onValueChange={(val) => setNewRecord({ ...newRecord, sehir: val })}>
-                      <SelectTrigger className="bg-slate-950 border-slate-700 flex-1">
+                      <SelectTrigger className="bg-slate-800 border-slate-600 flex-1 text-yellow-300">
                         <SelectValue placeholder="Şehir seçin" />
                       </SelectTrigger>
-                      <SelectContent className="bg-slate-900 border-slate-700">
+                      <SelectContent className="bg-slate-800 border-slate-600">
                         {sehirler.map((item) => (
-                          <SelectItem key={item.id} value={item.name}>{item.name}</SelectItem>
+                          <SelectItem key={item.id} value={item.name} className="text-white">{item.name}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -513,15 +513,15 @@ const CimentoEntry = () => {
                   </div>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-red-400">Çimento Alınan Firma *</label>
+                  <label className="text-sm font-medium text-yellow-400">Çimento Alınan Firma *</label>
                   <div className="flex gap-2">
                     <Select value={newRecord.cimento_alinan_firma} onValueChange={(val) => setNewRecord({ ...newRecord, cimento_alinan_firma: val })}>
-                      <SelectTrigger className="bg-slate-950 border-slate-700 flex-1">
+                      <SelectTrigger className="bg-slate-800 border-slate-600 flex-1 text-yellow-300">
                         <SelectValue placeholder="Firma seçin" />
                       </SelectTrigger>
-                      <SelectContent className="bg-slate-900 border-slate-700">
+                      <SelectContent className="bg-slate-800 border-slate-600">
                         {cimentoFirmalar.map((item) => (
-                          <SelectItem key={item.id} value={item.name}>{item.name}</SelectItem>
+                          <SelectItem key={item.id} value={item.name} className="text-white">{item.name}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
