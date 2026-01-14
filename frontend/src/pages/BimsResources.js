@@ -718,7 +718,17 @@ const BimsResources = () => {
             </div>
 
             <div className="glass-effect rounded-xl p-6 border border-slate-800">
-              <h2 className="text-xl font-semibold text-white mb-6">Ürün Listesi ({products.length})</h2>
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-semibold text-white">Ürün Listesi ({products.length})</h2>
+                <div className="flex gap-2">
+                  <Button onClick={exportToExcel} size="sm" className="bg-green-600 hover:bg-green-700 text-white">
+                    <FileSpreadsheet className="w-4 h-4 mr-1" /> Excel
+                  </Button>
+                  <Button onClick={exportToPDF} size="sm" className="bg-red-600 hover:bg-red-700 text-white">
+                    <FileText className="w-4 h-4 mr-1" /> PDF
+                  </Button>
+                </div>
+              </div>
               <div className="space-y-2 max-h-[500px] overflow-y-auto">
                 {products.length > 0 ? (
                   products.map((product) => (
