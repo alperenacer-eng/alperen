@@ -855,6 +855,7 @@ class Token(BaseModel):
 class ProductCreate(BaseModel):
     name: str
     unit: str = "adet"
+    sira_no: int = 0
     sevk_agirligi: float = 0
     adet_basi_cimento: float = 0
     paket_adet_7_boy: int = 0
@@ -866,6 +867,7 @@ class ProductResponse(BaseModel):
     id: str
     name: str
     unit: str
+    sira_no: Optional[int] = 0
     sevk_agirligi: Optional[float] = 0
     adet_basi_cimento: Optional[float] = 0
     harcanan_hisir: Optional[float] = 0
