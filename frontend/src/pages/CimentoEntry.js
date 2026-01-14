@@ -286,6 +286,7 @@ const CimentoEntry = () => {
       sehir: record.sehir,
       cimento_alinan_firma: record.cimento_alinan_firma,
       cimento_cinsi: record.cimento_cinsi || "",
+      bosaltim_isletmesi: record.bosaltim_isletmesi || "",
     });
   };
 
@@ -315,6 +316,7 @@ const CimentoEntry = () => {
     { key: "sehir", label: "Şehir", type: "select", source: sehirler, sourceKey: "name", editable: true },
     { key: "cimento_alinan_firma", label: "Çimento Firma", type: "select", source: cimentoFirmalar, sourceKey: "name", editable: true },
     { key: "cimento_cinsi", label: "Çimento Cinsi", type: "select", source: cimentoCinsleri, sourceKey: "name", editable: true },
+    { key: "bosaltim_isletmesi", label: "Boşaltım İşletmesi", type: "select", source: cimentoIsletmeler, sourceKey: "name", editable: true },
     { key: "yukleme_tarihi", label: "Yükleme Tarihi", type: "date", editable: true },
     { key: "bosaltim_tarihi", label: "Boşaltım Tarihi", type: "date", editable: true },
     { key: "irsaliye_no", label: "İrsaliye No", type: "text", editable: true },
