@@ -45,16 +45,10 @@ const BimsResources = () => {
     description: '', 
     product_id: '',
     product_name: '',
-    kalip_no_1: '',
-    kalip_no_2: '',
-    kalip_no_3: '',
-    kalip_no_4: '',
-    kalip_no_5: '',
-    kalip_no_6: '',
-    kalip_no_7: '',
-    kalip_no_8: '',
-    kalip_no_9: '',
-    kalip_no_10: ''
+    kalip_no_1: '', kalip_no_2: '', kalip_no_3: '', kalip_no_4: '', kalip_no_5: '',
+    kalip_no_6: '', kalip_no_7: '', kalip_no_8: '', kalip_no_9: '', kalip_no_10: '',
+    duvar_kalinlik_1: '', duvar_kalinlik_2: '', duvar_kalinlik_3: '', duvar_kalinlik_4: '', duvar_kalinlik_5: '',
+    duvar_kalinlik_6: '', duvar_kalinlik_7: '', duvar_kalinlik_8: '', duvar_kalinlik_9: '', duvar_kalinlik_10: ''
   });
   const [deleteMoldId, setDeleteMoldId] = useState(null);
   const [editingMold, setEditingMold] = useState(null);
