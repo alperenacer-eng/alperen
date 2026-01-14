@@ -847,12 +847,36 @@ class OperatorResponse(BaseModel):
 class MoldCreate(BaseModel):
     mold_no: str
     description: Optional[str] = None
+    product_id: Optional[str] = ''
+    product_name: Optional[str] = ''
+    kalip_no_1: Optional[str] = ''
+    kalip_no_2: Optional[str] = ''
+    kalip_no_3: Optional[str] = ''
+    kalip_no_4: Optional[str] = ''
+    kalip_no_5: Optional[str] = ''
+    kalip_no_6: Optional[str] = ''
+    kalip_no_7: Optional[str] = ''
+    kalip_no_8: Optional[str] = ''
+    kalip_no_9: Optional[str] = ''
+    kalip_no_10: Optional[str] = ''
 
 class MoldResponse(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: str
     mold_no: str
     description: Optional[str]
+    product_id: Optional[str] = ''
+    product_name: Optional[str] = ''
+    kalip_no_1: Optional[str] = ''
+    kalip_no_2: Optional[str] = ''
+    kalip_no_3: Optional[str] = ''
+    kalip_no_4: Optional[str] = ''
+    kalip_no_5: Optional[str] = ''
+    kalip_no_6: Optional[str] = ''
+    kalip_no_7: Optional[str] = ''
+    kalip_no_8: Optional[str] = ''
+    kalip_no_9: Optional[str] = ''
+    kalip_no_10: Optional[str] = ''
     created_at: str
 
 # BIMS Stok Modeli
