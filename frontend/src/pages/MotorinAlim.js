@@ -6,7 +6,8 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ArrowLeft, Save, Fuel, Truck, User, Scale } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { ArrowLeft, Save, Fuel, Truck, User, Scale, PlusCircle } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL + '/api';
 
@@ -17,6 +18,10 @@ const MotorinAlim = () => {
   const [tesisler, setTesisler] = useState([]);
   const [markalar, setMarkalar] = useState([]);
   const [loading, setLoading] = useState(false);
+  
+  // Hızlı kaynak ekleme modalı
+  const [quickAddModal, setQuickAddModal] = useState({ open: false, type: '', title: '' });
+  const [quickAddValue, setQuickAddValue] = useState('');
   
   const [formData, setFormData] = useState({
     tarih: new Date().toISOString().split('T')[0],
