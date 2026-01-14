@@ -908,6 +908,16 @@ class MoldCreate(BaseModel):
     duvar_kalinlik_8: Optional[str] = ''
     duvar_kalinlik_9: Optional[str] = ''
     duvar_kalinlik_10: Optional[str] = ''
+    makina_cinsi_1: Optional[str] = ''
+    makina_cinsi_2: Optional[str] = ''
+    makina_cinsi_3: Optional[str] = ''
+    makina_cinsi_4: Optional[str] = ''
+    makina_cinsi_5: Optional[str] = ''
+    makina_cinsi_6: Optional[str] = ''
+    makina_cinsi_7: Optional[str] = ''
+    makina_cinsi_8: Optional[str] = ''
+    makina_cinsi_9: Optional[str] = ''
+    makina_cinsi_10: Optional[str] = ''
 
 class MoldResponse(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -936,6 +946,16 @@ class MoldResponse(BaseModel):
     duvar_kalinlik_8: Optional[str] = ''
     duvar_kalinlik_9: Optional[str] = ''
     duvar_kalinlik_10: Optional[str] = ''
+    makina_cinsi_1: Optional[str] = ''
+    makina_cinsi_2: Optional[str] = ''
+    makina_cinsi_3: Optional[str] = ''
+    makina_cinsi_4: Optional[str] = ''
+    makina_cinsi_5: Optional[str] = ''
+    makina_cinsi_6: Optional[str] = ''
+    makina_cinsi_7: Optional[str] = ''
+    makina_cinsi_8: Optional[str] = ''
+    makina_cinsi_9: Optional[str] = ''
+    makina_cinsi_10: Optional[str] = ''
     created_at: str
 
 # BIMS Stok Modeli
