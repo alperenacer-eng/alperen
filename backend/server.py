@@ -2246,6 +2246,158 @@ async def get_cimento_isletme_stok_ozet(current_user: dict = Depends(get_current
         "isletmeler": isletmeler
     }
 
+# ============ Çimento Stok Raporu API'si ============
+@api_router.get("/cimento-stok-raporu")
+async def get_cimento_stok_raporu(
+    baslangic_tarihi: str = None,
+    bitis_tarihi: str = None,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    İşletme bazlı çimento stok raporu:
+    - Açılış Stoku (cimento_isletmeler.acilis_stok_kg)
+    - Gelen Tonaj (cimento_giris tablosundan bosaltim_isletmesi bazında)
+    - Harcanan Tonaj (production_records.machine_cement department_name bazında)
+    - Mevcut Stok = Açılış + Gelen - Harcanan
+    """
+    db = await get_db()
+    
+    # 1. Tüm işletmeleri al
+    async with db.execute("SELECT * FROM cimento_isletmeler WHERE aktif = 1 ORDER BY name") as cursor:
+        isletme_rows = await cursor.fetchall()
+    isletmeler = rows_to_list(isletme_rows)
+    
+    # 2. Çimento giriş kayıtlarını al (tarih filtreli)
+    giris_query = "SELECT bosaltim_isletmesi, SUM(giris_miktari) as toplam_giris FROM cimento_giris WHERE 1=1"
+    params = []
+    if baslangic_tarihi:
+        giris_query += " AND bosaltim_tarihi >= ?"
+        params.append(baslangic_tarihi)
+    if bitis_tarihi:
+        giris_query += " AND bosaltim_tarihi <= ?"
+        params.append(bitis_tarihi)
+    giris_query += " GROUP BY bosaltim_isletmesi"
+    
+    async with db.execute(giris_query, params) as cursor:
+        giris_rows = await cursor.fetchall()
+    giris_data = {row[0]: row[1] or 0 for row in giris_rows}
+    
+    # 3. Üretim kayıtlarından harcanan çimentoyu al (machine_cement, department_name bazında)
+    harcanan_query = """
+        SELECT department_name, SUM(COALESCE(machine_cement, 0)) as toplam_harcanan 
+        FROM production_records WHERE 1=1
+    """
+    params2 = []
+    if baslangic_tarihi:
+        harcanan_query += " AND (production_date >= ? OR created_at >= ?)"
+        params2.extend([baslangic_tarihi, baslangic_tarihi])
+    if bitis_tarihi:
+        harcanan_query += " AND (production_date <= ? OR created_at <= ?)"
+        params2.extend([bitis_tarihi, bitis_tarihi])
+    harcanan_query += " GROUP BY department_name"
+    
+    async with db.execute(harcanan_query, params2) as cursor:
+        harcanan_rows = await cursor.fetchall()
+    harcanan_data = {row[0]: row[1] or 0 for row in harcanan_rows}
+    
+    # 4. Günlük giriş detayları (tarih bazlı)
+    gunluk_giris_query = """
+        SELECT bosaltim_tarihi, bosaltim_isletmesi, SUM(giris_miktari) as toplam
+        FROM cimento_giris WHERE 1=1
+    """
+    params3 = []
+    if baslangic_tarihi:
+        gunluk_giris_query += " AND bosaltim_tarihi >= ?"
+        params3.append(baslangic_tarihi)
+    if bitis_tarihi:
+        gunluk_giris_query += " AND bosaltim_tarihi <= ?"
+        params3.append(bitis_tarihi)
+    gunluk_giris_query += " GROUP BY bosaltim_tarihi, bosaltim_isletmesi ORDER BY bosaltim_tarihi DESC"
+    
+    async with db.execute(gunluk_giris_query, params3) as cursor:
+        gunluk_giris_rows = await cursor.fetchall()
+    gunluk_giris = [{"tarih": r[0], "isletme": r[1], "miktar_ton": r[2]} for r in gunluk_giris_rows]
+    
+    # 5. Günlük harcanan detayları (tarih bazlı)
+    gunluk_harcanan_query = """
+        SELECT COALESCE(production_date, DATE(created_at)) as tarih, department_name, 
+               SUM(COALESCE(machine_cement, 0)) as toplam
+        FROM production_records WHERE 1=1
+    """
+    params4 = []
+    if baslangic_tarihi:
+        gunluk_harcanan_query += " AND (production_date >= ? OR created_at >= ?)"
+        params4.extend([baslangic_tarihi, baslangic_tarihi])
+    if bitis_tarihi:
+        gunluk_harcanan_query += " AND (production_date <= ? OR created_at <= ?)"
+        params4.extend([bitis_tarihi, bitis_tarihi])
+    gunluk_harcanan_query += " GROUP BY tarih, department_name ORDER BY tarih DESC"
+    
+    async with db.execute(gunluk_harcanan_query, params4) as cursor:
+        gunluk_harcanan_rows = await cursor.fetchall()
+    gunluk_harcanan = [{"tarih": r[0], "isletme": r[1], "miktar_kg": r[2]} for r in gunluk_harcanan_rows]
+    
+    await db.close()
+    
+    # 6. İşletme bazlı özet hesapla
+    isletme_ozet = []
+    toplam_acilis = 0
+    toplam_gelen = 0
+    toplam_harcanan_toplam = 0
+    toplam_mevcut = 0
+    
+    for isletme in isletmeler:
+        isletme_adi = isletme.get('name', '')
+        acilis_kg = isletme.get('acilis_stok_kg', 0) or 0
+        
+        # Gelen tonaj (TON olarak kaydedilmiş, KG'ye çevir)
+        gelen_ton = giris_data.get(isletme_adi, 0)
+        gelen_kg = gelen_ton * 1000  # TON -> KG
+        
+        # Harcanan (zaten KG)
+        harcanan_kg = harcanan_data.get(isletme_adi, 0)
+        
+        # Mevcut stok hesapla
+        mevcut_kg = acilis_kg + gelen_kg - harcanan_kg
+        
+        isletme_ozet.append({
+            "id": isletme.get('id'),
+            "isletme_adi": isletme_adi,
+            "acilis_stok_kg": acilis_kg,
+            "acilis_stok_ton": round(acilis_kg / 1000, 2),
+            "gelen_kg": gelen_kg,
+            "gelen_ton": round(gelen_kg / 1000, 2),
+            "harcanan_kg": harcanan_kg,
+            "harcanan_ton": round(harcanan_kg / 1000, 2),
+            "mevcut_stok_kg": mevcut_kg,
+            "mevcut_stok_ton": round(mevcut_kg / 1000, 2)
+        })
+        
+        toplam_acilis += acilis_kg
+        toplam_gelen += gelen_kg
+        toplam_harcanan_toplam += harcanan_kg
+        toplam_mevcut += mevcut_kg
+    
+    return {
+        "toplam_ozet": {
+            "toplam_acilis_kg": toplam_acilis,
+            "toplam_acilis_ton": round(toplam_acilis / 1000, 2),
+            "toplam_gelen_kg": toplam_gelen,
+            "toplam_gelen_ton": round(toplam_gelen / 1000, 2),
+            "toplam_harcanan_kg": toplam_harcanan_toplam,
+            "toplam_harcanan_ton": round(toplam_harcanan_toplam / 1000, 2),
+            "toplam_mevcut_kg": toplam_mevcut,
+            "toplam_mevcut_ton": round(toplam_mevcut / 1000, 2)
+        },
+        "isletme_ozet": isletme_ozet,
+        "gunluk_giris": gunluk_giris,
+        "gunluk_harcanan": gunluk_harcanan,
+        "filtreler": {
+            "baslangic_tarihi": baslangic_tarihi,
+            "bitis_tarihi": bitis_tarihi
+        }
+    }
+
 # Uploads klasörü
 UPLOAD_DIR = ROOT_DIR / "uploads"
 UPLOAD_DIR.mkdir(exist_ok=True)
