@@ -17,6 +17,8 @@ import BimsStok from '@/pages/BimsStok';
 import CimentoDashboard from '@/pages/CimentoDashboard';
 import CimentoResources from '@/pages/CimentoResources';
 import CimentoEntry from '@/pages/CimentoEntry';
+import CimentoReports from '@/pages/CimentoReports';
+import CimentoList from '@/pages/CimentoList';
 import PersonelDashboard from '@/pages/PersonelDashboard';
 import PersonelListesi from '@/pages/PersonelListesi';
 import Puantaj from '@/pages/Puantaj';
