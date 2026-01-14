@@ -84,6 +84,7 @@ const CimentoEntry = () => {
   const [sehirler, setSehirler] = useState([]);
   const [cimentoFirmalar, setCimentoFirmalar] = useState([]);
   const [cimentoCinsleri, setCimentoCinsleri] = useState([]);
+  const [cimentoIsletmeler, setCimentoIsletmeler] = useState([]);
   
   // Hızlı kaynak ekleme modalı
   const [quickAddModal, setQuickAddModal] = useState({ open: false, type: '', title: '' });
