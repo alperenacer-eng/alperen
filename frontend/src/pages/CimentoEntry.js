@@ -83,6 +83,10 @@ const CimentoEntry = () => {
   const [sehirler, setSehirler] = useState([]);
   const [cimentoFirmalar, setCimentoFirmalar] = useState([]);
   const [cimentoCinsleri, setCimentoCinsleri] = useState([]);
+  
+  // Hızlı kaynak ekleme modalı
+  const [quickAddModal, setQuickAddModal] = useState({ open: false, type: '', title: '' });
+  const [quickAddValue, setQuickAddValue] = useState('');
 
   const headers = { Authorization: `Bearer ${token}` };
 
