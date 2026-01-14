@@ -254,16 +254,15 @@ const CimentoEntry = () => {
   };
 
   const handleDeleteRecord = async (id) => {
-    if (window.confirm("Bu kaydı silmek istediğinizden emin misiniz?")) {
-      try {
-        await axios.delete(`${API_URL}/cimento-giris/${id}`, { headers });
-        toast.success("Kayıt silindi");
-        fetchRecords();
-        fetchOzet();
-      } catch (e) {
-        console.error(e);
-        toast.error("Kayıt silinirken hata oluştu");
-      }
+    try {
+      await axios.delete(`${API_URL}/cimento-giris/${id}`, { headers });
+      toast.success("Kayıt silindi");
+      setDeleteConfirm({ open: false, id: null });
+      fetchRecords();
+      fetchOzet();
+    } catch (e) {
+      console.error(e);
+      toast.error("Kayıt silinirken hata oluştu");
     }
   };
 
