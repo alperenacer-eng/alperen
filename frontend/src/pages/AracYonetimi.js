@@ -771,23 +771,34 @@ const AracYonetimi = () => {
               {/* Kayıtlı Şirket */}
               <div className="space-y-2">
                 <Label htmlFor="kayitli_sirket" className="text-slate-300">Kayıtlı Olduğu Şirket</Label>
-                <Select
-                  value={formData.kayitli_sirket || undefined}
-                  onValueChange={(value) => setFormData({...formData, kayitli_sirket: value})}
-                >
-                  <SelectTrigger className="bg-slate-800/50 border-slate-700">
-                    <SelectValue placeholder="Seçiniz" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-slate-800 border-slate-700">
-                    {sirketler.length === 0 ? (
-                      <SelectItem value="_empty" disabled>Önce Kaynaklar'dan ekleyin</SelectItem>
-                    ) : (
-                      sirketler.map(s => (
-                        <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
-                      ))
-                    )}
-                  </SelectContent>
-                </Select>
+                <div className="flex gap-2">
+                  <Select
+                    value={formData.kayitli_sirket || undefined}
+                    onValueChange={(value) => setFormData({...formData, kayitli_sirket: value})}
+                  >
+                    <SelectTrigger className="bg-slate-800/50 border-slate-700 flex-1">
+                      <SelectValue placeholder="Seçiniz" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-slate-800 border-slate-700">
+                      {sirketler.length === 0 ? (
+                        <SelectItem value="_empty" disabled>Henüz kayıt yok</SelectItem>
+                      ) : (
+                        sirketler.map(s => (
+                          <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
+                        ))
+                      )}
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="outline"
+                    className="border-green-500/50 text-green-400 hover:bg-green-500/20"
+                    onClick={() => openQuickAddModal('sirket', 'Şirket')}
+                  >
+                    <PlusCircle className="w-4 h-4" />
+                  </Button>
+                </div>
               </div>
 
               {/* Muayene Tarihi */}
