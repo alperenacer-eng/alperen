@@ -534,6 +534,19 @@ const CimentoEntry = () => {
                     </Button>
                   </div>
                 </div>
+                <div>
+                  <label className="text-sm font-medium text-blue-400">Boşaltım İşletmesi *</label>
+                  <Select value={newRecord.bosaltim_isletmesi} onValueChange={(val) => setNewRecord({ ...newRecord, bosaltim_isletmesi: val })}>
+                    <SelectTrigger className="bg-slate-950 border-slate-700">
+                      <SelectValue placeholder="İşletme seçin" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-slate-900 border-slate-700">
+                      {cimentoIsletmeler.map((item) => (
+                        <SelectItem key={item.id} value={item.name}>{item.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
                 <div className="border-t border-slate-700 col-span-3 pt-2 mt-2"></div>
                 <div>
                   <label className="text-sm font-medium">Yükleme Tarihi</label>
