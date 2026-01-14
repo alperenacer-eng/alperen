@@ -108,6 +108,57 @@ const MotorinAlim = () => {
     }
   };
 
+  // Hızlı kaynak ekleme fonksiyonu
+  const handleQuickAdd = async () => {
+    if (!quickAddValue.trim()) {
+      toast.error('Lütfen bir değer girin');
+      return;
+    }
+
+    const endpoints = {
+      'tedarikci': '/motorin-tedarikciler',
+      'akaryakit_markasi': '/akaryakit-markalari',
+      'bosaltim_tesisi': '/bosaltim-tesisleri'
+    };
+
+    try {
+      const response = await axios.post(`${API_URL}${endpoints[quickAddModal.type]}`, 
+        { name: quickAddValue.trim() },
+        { headers: { Authorization: `Bearer ${token}` }}
+      );
+
+      if (response.data) {
+        toast.success(`${quickAddModal.title} eklendi`);
+        setQuickAddModal({ open: false, type: '', title: '' });
+        setQuickAddValue('');
+        
+        // İlgili listeyi yenile ve eklenen değeri seç
+        if (quickAddModal.type === 'tedarikci') {
+          fetchTedarikciler();
+          setFormData(prev => ({ 
+            ...prev, 
+            tedarikci_id: response.data.id,
+            tedarikci_adi: quickAddValue.trim() 
+          }));
+        } else if (quickAddModal.type === 'akaryakit_markasi') {
+          fetchMarkalar();
+          setFormData(prev => ({ ...prev, akaryakit_markasi: quickAddValue.trim() }));
+        } else if (quickAddModal.type === 'bosaltim_tesisi') {
+          fetchTesisler();
+          setFormData(prev => ({ ...prev, bosaltim_tesisi: quickAddValue.trim() }));
+        }
+      }
+    } catch (error) {
+      console.error('Kaynak ekleme hatası:', error);
+      toast.error('Ekleme başarısız');
+    }
+  };
+
+  const openQuickAddModal = (type, title) => {
+    setQuickAddModal({ open: true, type, title });
+    setQuickAddValue('');
+  };
+
   const handleTedarikciChange = (e) => {
     const tedarikciId = e.target.value;
     const tedarikci = tedarikciler.find(t => t.id === tedarikciId);
