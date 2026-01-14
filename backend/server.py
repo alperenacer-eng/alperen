@@ -1477,9 +1477,9 @@ async def update_product(product_id: str, product: ProductCreate, current_user: 
     updated_at = datetime.now(timezone.utc).isoformat()
     
     await db.execute(
-        """UPDATE products SET name=?, unit=?, sevk_agirligi=?, adet_basi_cimento=?, harcanan_hisir=?,
+        """UPDATE products SET name=?, unit=?, sira_no=?, sevk_agirligi=?, adet_basi_cimento=?, harcanan_hisir=?,
            paket_adet_7_boy=?, paket_adet_5_boy=?, uretim_palet_adetleri=?, updated_at=? WHERE id=?""",
-        (product.name, product.unit, product.sevk_agirligi, product.adet_basi_cimento, harcanan_hisir,
+        (product.name, product.unit, product.sira_no, product.sevk_agirligi, product.adet_basi_cimento, harcanan_hisir,
          product.paket_adet_7_boy, product.paket_adet_5_boy, json.dumps(product.uretim_palet_adetleri),
          updated_at, product_id)
     )
