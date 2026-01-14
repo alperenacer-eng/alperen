@@ -485,28 +485,26 @@ const BimsResources = () => {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>Sıra No *</Label>
+                    <Label>Sıra No</Label>
                     <Input
                       type="number"
                       value={newProduct.sira_no}
                       onChange={(e) => setNewProduct({ ...newProduct, sira_no: e.target.value })}
                       placeholder="1"
-                      min="1"
-                      required
+                      min="0"
                       className="h-12 bg-slate-950 border-slate-800 text-white text-center font-bold text-orange-400"
                     />
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label>Sevk Ağırlığı (kg) *</Label>
+                    <Label>Sevk Ağırlığı (kg)</Label>
                     <Input
                       type="number"
                       value={newProduct.sevk_agirligi}
                       onChange={(e) => setNewProduct({ ...newProduct, sevk_agirligi: e.target.value })}
                       placeholder="0"
                       step="0.01"
-                      required
                       className="h-12 bg-slate-950 border-slate-800 text-white"
                     />
                   </div>
