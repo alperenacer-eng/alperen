@@ -263,17 +263,97 @@ const BimsResources = () => {
 
   const handleAddMold = async (e) => {
     e.preventDefault();
-    if (!newMold.mold_no.trim()) return;
+    if (!newMold.mold_no.trim()) {
+      toast.error('Kalıp adı zorunludur');
+      return;
+    }
+    if (!newMold.product_id) {
+      toast.error('Ürün seçimi zorunludur');
+      return;
+    }
     try {
-      await axios.post(`${API_URL}/molds`, newMold, {
-        headers: { Authorization: `Bearer ${token}` }
+      if (editingMold) {
+        await axios.put(`${API_URL}/molds/${editingMold.id}`, newMold, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        toast.success('Kalıp güncellendi');
+        setEditingMold(null);
+      } else {
+        await axios.post(`${API_URL}/molds`, newMold, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        toast.success('Kalıp eklendi');
+      }
+      setNewMold({ 
+        mold_no: '', 
+        description: '', 
+        product_id: '',
+        product_name: '',
+        kalip_no_1: '',
+        kalip_no_2: '',
+        kalip_no_3: '',
+        kalip_no_4: '',
+        kalip_no_5: '',
+        kalip_no_6: '',
+        kalip_no_7: '',
+        kalip_no_8: '',
+        kalip_no_9: '',
+        kalip_no_10: ''
       });
-      toast.success('Kalıp eklendi');
-      setNewMold({ mold_no: '', description: '' });
       fetchMolds();
     } catch (error) {
-      toast.error('Kalıp eklenemedi');
+      toast.error('İşlem başarısız');
     }
+  };
+
+  const handleEditMold = (mold) => {
+    setEditingMold(mold);
+    setNewMold({
+      mold_no: mold.mold_no || '',
+      description: mold.description || '',
+      product_id: mold.product_id || '',
+      product_name: mold.product_name || '',
+      kalip_no_1: mold.kalip_no_1 || '',
+      kalip_no_2: mold.kalip_no_2 || '',
+      kalip_no_3: mold.kalip_no_3 || '',
+      kalip_no_4: mold.kalip_no_4 || '',
+      kalip_no_5: mold.kalip_no_5 || '',
+      kalip_no_6: mold.kalip_no_6 || '',
+      kalip_no_7: mold.kalip_no_7 || '',
+      kalip_no_8: mold.kalip_no_8 || '',
+      kalip_no_9: mold.kalip_no_9 || '',
+      kalip_no_10: mold.kalip_no_10 || ''
+    });
+    setActiveTab('molds');
+  };
+
+  const cancelEditMold = () => {
+    setEditingMold(null);
+    setNewMold({ 
+      mold_no: '', 
+      description: '', 
+      product_id: '',
+      product_name: '',
+      kalip_no_1: '',
+      kalip_no_2: '',
+      kalip_no_3: '',
+      kalip_no_4: '',
+      kalip_no_5: '',
+      kalip_no_6: '',
+      kalip_no_7: '',
+      kalip_no_8: '',
+      kalip_no_9: '',
+      kalip_no_10: ''
+    });
+  };
+
+  const handleProductSelectForMold = (productId) => {
+    const product = products.find(p => p.id === productId);
+    setNewMold(prev => ({
+      ...prev,
+      product_id: productId,
+      product_name: product ? product.name : ''
+    }));
   };
 
   const handleDeleteMold = async () => {
