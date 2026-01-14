@@ -95,7 +95,7 @@ const AracYonetimi = () => {
 
   const fetchOzet = useCallback(async () => {
     try {
-      const response = await fetch(`${BACKEND_URL}/api/arac-ozet`, { headers });
+      const response = await fetch(`${BACKEND_URL}/api/arac-ozet`, { headers: getHeaders() });
       if (response.ok) {
         const data = await response.json();
         setOzet(data);
