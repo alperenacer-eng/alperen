@@ -862,6 +862,8 @@ class ProductCreate(BaseModel):
     paket_adet_7_boy: int = 0
     paket_adet_5_boy: int = 0
     uretim_palet_adetleri: dict = {}
+    paket_adetleri_7_boy: dict = {}
+    paket_adetleri_5_boy: dict = {}
 
 class ProductResponse(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -875,6 +877,8 @@ class ProductResponse(BaseModel):
     paket_adet_7_boy: Optional[int] = 0
     paket_adet_5_boy: Optional[int] = 0
     uretim_palet_adetleri: Optional[dict] = {}
+    paket_adetleri_7_boy: Optional[dict] = {}
+    paket_adetleri_5_boy: Optional[dict] = {}
     created_at: str
 
 class DepartmentCreate(BaseModel):
