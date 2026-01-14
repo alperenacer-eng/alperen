@@ -367,6 +367,47 @@ const CimentoEntry = () => {
     { key: "urun_nakliye_genel_toplam", label: "Ü-N Genel Toplam", type: "currency", editable: false },
   ];
 
+  // Excel'e aktar fonksiyonu
+  const exportToExcel = () => {
+    const exportData = records.map(record => ({
+      'Plaka': record.plaka,
+      'Nakliye Firması': record.nakliye_firmasi,
+      'Şoför': record.sofor,
+      'Şehir': record.sehir,
+      'Çimento Firma': record.cimento_alinan_firma,
+      'Çimento Cinsi': record.cimento_cinsi,
+      'Boşaltım İşletmesi': record.bosaltim_isletmesi,
+      'Yükleme Tarihi': formatDate(record.yukleme_tarihi),
+      'Boşaltım Tarihi': formatDate(record.bosaltim_tarihi),
+      'İrsaliye No': record.irsaliye_no,
+      'Fatura No': record.fatura_no,
+      'Vade Tarihi': formatDate(record.vade_tarihi),
+      'Giriş TON': record.giris_miktari,
+      'Kantar TON': record.kantar_kg_miktari,
+      'Fark TON': record.aradaki_fark,
+      'Birim Fiyat': record.birim_fiyat,
+      'Giriş Tutarı': record.giris_tutari,
+      'Giriş KDV %': record.giris_kdv_orani,
+      'Giriş KDV Tutarı': record.giris_kdv_tutari,
+      'Giriş KDV Dahil': record.giris_kdv_dahil_toplam,
+      'Nakliye B.Fiyat': record.nakliye_birim_fiyat,
+      'Nakliye Matrahı': record.nakliye_matrahi,
+      'Nakliye KDV %': record.nakliye_kdv_orani,
+      'Nakliye KDV Tutarı': record.nakliye_kdv_tutari,
+      'Nakliye G.Toplam': record.nakliye_genel_toplam,
+      'Genel Toplam': record.urun_nakliye_genel_toplam,
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Çimento Giriş');
+    
+    const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+    const data = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    saveAs(data, `Cimento_Giris_${new Date().toLocaleDateString('tr-TR').replace(/\./g, '_')}.xlsx`);
+    toast.success('Excel dosyası indirildi');
+  };
+
   const renderCell = (record, column) => {
     const value = record[column.key];
 
