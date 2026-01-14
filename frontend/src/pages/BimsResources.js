@@ -145,18 +145,18 @@ const BimsResources = () => {
       toast.error('Adet başı çimento zorunludur');
       return;
     }
-    if (!newProduct.paket_adet_7_boy || parseInt(newProduct.paket_adet_7_boy) <= 0) {
-      toast.error('Paket adet (7 Boy) zorunludur');
-      return;
-    }
-    if (!newProduct.paket_adet_5_boy || parseInt(newProduct.paket_adet_5_boy) <= 0) {
-      toast.error('Paket adet (5 Boy) zorunludur');
-      return;
-    }
-    // İşletme palet adetleri kontrolü
+    // İşletme bazlı kontroller
     for (const dept of departments) {
       if (!newProduct.uretim_palet_adetleri[dept.id] || parseInt(newProduct.uretim_palet_adetleri[dept.id]) <= 0) {
         toast.error(`${dept.name} için üretim palet adeti zorunludur`);
+        return;
+      }
+      if (!newProduct.paket_adetleri_7_boy[dept.id] || parseInt(newProduct.paket_adetleri_7_boy[dept.id]) <= 0) {
+        toast.error(`${dept.name} için çıkan paket (7 Boy) zorunludur`);
+        return;
+      }
+      if (!newProduct.paket_adetleri_5_boy[dept.id] || parseInt(newProduct.paket_adetleri_5_boy[dept.id]) <= 0) {
+        toast.error(`${dept.name} için çıkan paket (5 Boy) zorunludur`);
         return;
       }
     }
@@ -167,10 +167,16 @@ const BimsResources = () => {
         sira_no: parseInt(newProduct.sira_no) || 0,
         sevk_agirligi: parseFloat(newProduct.sevk_agirligi) || 0,
         adet_basi_cimento: parseFloat(newProduct.adet_basi_cimento) || 0,
-        paket_adet_7_boy: parseInt(newProduct.paket_adet_7_boy) || 0,
-        paket_adet_5_boy: parseInt(newProduct.paket_adet_5_boy) || 0,
+        paket_adet_7_boy: 0,
+        paket_adet_5_boy: 0,
         uretim_palet_adetleri: Object.fromEntries(
           Object.entries(newProduct.uretim_palet_adetleri).map(([k, v]) => [k, parseInt(v) || 0])
+        ),
+        paket_adetleri_7_boy: Object.fromEntries(
+          Object.entries(newProduct.paket_adetleri_7_boy).map(([k, v]) => [k, parseInt(v) || 0])
+        ),
+        paket_adetleri_5_boy: Object.fromEntries(
+          Object.entries(newProduct.paket_adetleri_5_boy).map(([k, v]) => [k, parseInt(v) || 0])
         )
       };
       
@@ -195,7 +201,9 @@ const BimsResources = () => {
         adet_basi_cimento: '',
         paket_adet_7_boy: '',
         paket_adet_5_boy: '',
-        uretim_palet_adetleri: {}
+        uretim_palet_adetleri: {},
+        paket_adetleri_7_boy: {},
+        paket_adetleri_5_boy: {}
       });
       fetchProducts();
     } catch (error) {
