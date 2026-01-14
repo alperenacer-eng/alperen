@@ -103,15 +103,16 @@ const AracYonetimi = () => {
     } catch (error) {
       console.error('Özet alınamadı:', error);
     }
-  }, []);
+  }, [getHeaders]);
 
   const fetchKaynaklar = useCallback(async () => {
     try {
+      const hdrs = getHeaders();
       const [cinsleriRes, markalarRes, modellerRes, sirketlerRes] = await Promise.all([
-        fetch(`${BACKEND_URL}/api/arac-cinsleri`, { headers }),
-        fetch(`${BACKEND_URL}/api/markalar`, { headers }),
-        fetch(`${BACKEND_URL}/api/modeller`, { headers }),
-        fetch(`${BACKEND_URL}/api/sirketler`, { headers })
+        fetch(`${BACKEND_URL}/api/arac-cinsleri`, { headers: hdrs }),
+        fetch(`${BACKEND_URL}/api/markalar`, { headers: hdrs }),
+        fetch(`${BACKEND_URL}/api/modeller`, { headers: hdrs }),
+        fetch(`${BACKEND_URL}/api/sirketler`, { headers: hdrs })
       ]);
       
       if (cinsleriRes.ok) setAracCinsleri(await cinsleriRes.json());
@@ -121,7 +122,7 @@ const AracYonetimi = () => {
     } catch (error) {
       console.error('Kaynaklar alınamadı:', error);
     }
-  }, []);
+  }, [getHeaders]);
 
   // Hızlı kaynak ekleme fonksiyonu
   const handleQuickAdd = async () => {
