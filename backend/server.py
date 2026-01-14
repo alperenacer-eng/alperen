@@ -1689,20 +1689,55 @@ async def create_mold(mold: MoldCreate, current_user: dict = Depends(get_current
     mold_id = generate_id()
     created_at = datetime.now(timezone.utc).isoformat()
     
-    await db.execute("INSERT INTO molds (id, mold_no, description, created_at) VALUES (?, ?, ?, ?)",
-                     (mold_id, mold.mold_no, mold.description, created_at))
+    await db.execute("""
+        INSERT INTO molds (id, mold_no, description, product_id, product_name, 
+                          kalip_no_1, kalip_no_2, kalip_no_3, kalip_no_4, kalip_no_5,
+                          kalip_no_6, kalip_no_7, kalip_no_8, kalip_no_9, kalip_no_10, created_at) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        (mold_id, mold.mold_no, mold.description, mold.product_id, mold.product_name,
+         mold.kalip_no_1, mold.kalip_no_2, mold.kalip_no_3, mold.kalip_no_4, mold.kalip_no_5,
+         mold.kalip_no_6, mold.kalip_no_7, mold.kalip_no_8, mold.kalip_no_9, mold.kalip_no_10, created_at))
     await db.commit()
     await db.close()
     
-    return MoldResponse(id=mold_id, mold_no=mold.mold_no, description=mold.description, created_at=created_at)
+    return MoldResponse(
+        id=mold_id, mold_no=mold.mold_no, description=mold.description,
+        product_id=mold.product_id, product_name=mold.product_name,
+        kalip_no_1=mold.kalip_no_1, kalip_no_2=mold.kalip_no_2, kalip_no_3=mold.kalip_no_3,
+        kalip_no_4=mold.kalip_no_4, kalip_no_5=mold.kalip_no_5, kalip_no_6=mold.kalip_no_6,
+        kalip_no_7=mold.kalip_no_7, kalip_no_8=mold.kalip_no_8, kalip_no_9=mold.kalip_no_9,
+        kalip_no_10=mold.kalip_no_10, created_at=created_at
+    )
 
 @api_router.get("/molds", response_model=List[MoldResponse])
 async def get_molds(current_user: dict = Depends(get_current_user)):
     db = await get_db()
-    async with db.execute("SELECT * FROM molds ORDER BY mold_no") as cursor:
+    async with db.execute("SELECT * FROM molds ORDER BY product_name, mold_no") as cursor:
         rows = await cursor.fetchall()
     await db.close()
     return [MoldResponse(**row_to_dict(row)) for row in rows]
+
+@api_router.put("/molds/{mold_id}", response_model=MoldResponse)
+async def update_mold(mold_id: str, mold: MoldCreate, current_user: dict = Depends(get_current_user)):
+    db = await get_db()
+    
+    await db.execute("""
+        UPDATE molds SET mold_no=?, description=?, product_id=?, product_name=?,
+                        kalip_no_1=?, kalip_no_2=?, kalip_no_3=?, kalip_no_4=?, kalip_no_5=?,
+                        kalip_no_6=?, kalip_no_7=?, kalip_no_8=?, kalip_no_9=?, kalip_no_10=?
+        WHERE id=?""",
+        (mold.mold_no, mold.description, mold.product_id, mold.product_name,
+         mold.kalip_no_1, mold.kalip_no_2, mold.kalip_no_3, mold.kalip_no_4, mold.kalip_no_5,
+         mold.kalip_no_6, mold.kalip_no_7, mold.kalip_no_8, mold.kalip_no_9, mold.kalip_no_10, mold_id))
+    await db.commit()
+    
+    async with db.execute("SELECT * FROM molds WHERE id=?", (mold_id,)) as cursor:
+        row = await cursor.fetchone()
+    await db.close()
+    
+    if not row:
+        raise HTTPException(status_code=404, detail="Mold not found")
+    return MoldResponse(**row_to_dict(row))
 
 @api_router.delete("/molds/{mold_id}")
 async def delete_mold(mold_id: str, current_user: dict = Depends(get_current_user)):
