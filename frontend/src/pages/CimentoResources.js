@@ -332,6 +332,55 @@ const CimentoResources = () => {
     }
   };
 
+  // İşletmeler
+  const fetchIsletmeler = async () => {
+    try {
+      const response = await axios.get(`${API_URL}/cimento-isletmeler`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setIsletmeler(response.data);
+    } catch (error) {
+      toast.error('İşletmeler yüklenemedi');
+    }
+  };
+
+  const handleAddIsletme = async (e) => {
+    e.preventDefault();
+    if (!newIsletme.name.trim()) return;
+    try {
+      await axios.post(`${API_URL}/cimento-isletmeler`, newIsletme, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      toast.success('İşletme eklendi');
+      setNewIsletme({ 
+        name: '', 
+        adres: '', 
+        yetkili_kisi: '', 
+        telefon: '', 
+        acilis_stok_kg: 0, 
+        acilis_tarihi: '', 
+        notlar: '' 
+      });
+      fetchIsletmeler();
+    } catch (error) {
+      toast.error('İşletme eklenemedi');
+    }
+  };
+
+  const handleDeleteIsletme = async () => {
+    try {
+      await axios.delete(`${API_URL}/cimento-isletmeler/${deleteIsletmeId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      toast.success('İşletme silindi');
+      fetchIsletmeler();
+    } catch (error) {
+      toast.error('İşletme silinemedi');
+    } finally {
+      setDeleteIsletmeId(null);
+    }
+  };
+
   return (
     <div className="animate-fade-in" data-testid="cimento-resources-page">
       <div className="mb-8">
