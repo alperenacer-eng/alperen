@@ -40,8 +40,24 @@ const BimsResources = () => {
   
   // Molds
   const [molds, setMolds] = useState([]);
-  const [newMold, setNewMold] = useState({ mold_no: '', description: '' });
+  const [newMold, setNewMold] = useState({ 
+    mold_no: '', 
+    description: '', 
+    product_id: '',
+    product_name: '',
+    kalip_no_1: '',
+    kalip_no_2: '',
+    kalip_no_3: '',
+    kalip_no_4: '',
+    kalip_no_5: '',
+    kalip_no_6: '',
+    kalip_no_7: '',
+    kalip_no_8: '',
+    kalip_no_9: '',
+    kalip_no_10: ''
+  });
   const [deleteMoldId, setDeleteMoldId] = useState(null);
+  const [editingMold, setEditingMold] = useState(null);
   
   // Operators
   const [operators, setOperators] = useState([]);
