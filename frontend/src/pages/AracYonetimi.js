@@ -723,23 +723,34 @@ const AracYonetimi = () => {
               {/* Model */}
               <div className="space-y-2">
                 <Label htmlFor="model" className="text-slate-300">Model</Label>
-                <Select
-                  value={formData.model || undefined}
-                  onValueChange={(value) => setFormData({...formData, model: value})}
-                >
-                  <SelectTrigger className="bg-slate-800/50 border-slate-700">
-                    <SelectValue placeholder="Seçiniz" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-slate-800 border-slate-700">
-                    {modeller.length === 0 ? (
-                      <SelectItem value="_empty" disabled>Önce Kaynaklar'dan ekleyin</SelectItem>
-                    ) : (
-                      modeller.map(m => (
-                        <SelectItem key={m.id} value={m.name}>{m.name}</SelectItem>
-                      ))
-                    )}
-                  </SelectContent>
-                </Select>
+                <div className="flex gap-2">
+                  <Select
+                    value={formData.model || undefined}
+                    onValueChange={(value) => setFormData({...formData, model: value})}
+                  >
+                    <SelectTrigger className="bg-slate-800/50 border-slate-700 flex-1">
+                      <SelectValue placeholder="Seçiniz" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-slate-800 border-slate-700">
+                      {modeller.length === 0 ? (
+                        <SelectItem value="_empty" disabled>Henüz kayıt yok</SelectItem>
+                      ) : (
+                        modeller.map(m => (
+                          <SelectItem key={m.id} value={m.name}>{m.name}</SelectItem>
+                        ))
+                      )}
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="outline"
+                    className="border-green-500/50 text-green-400 hover:bg-green-500/20"
+                    onClick={() => openQuickAddModal('model', 'Model')}
+                  >
+                    <PlusCircle className="w-4 h-4" />
+                  </Button>
+                </div>
               </div>
 
               {/* Model Yılı */}
