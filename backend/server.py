@@ -103,12 +103,24 @@ async def init_db():
             )
         ''')
         
-        # Molds table
+        # Molds table - Ürün ve 10 adet kalıp numarası ile
         await db.execute('''
             CREATE TABLE IF NOT EXISTS molds (
                 id TEXT PRIMARY KEY,
                 mold_no TEXT NOT NULL,
                 description TEXT,
+                product_id TEXT DEFAULT '',
+                product_name TEXT DEFAULT '',
+                kalip_no_1 TEXT DEFAULT '',
+                kalip_no_2 TEXT DEFAULT '',
+                kalip_no_3 TEXT DEFAULT '',
+                kalip_no_4 TEXT DEFAULT '',
+                kalip_no_5 TEXT DEFAULT '',
+                kalip_no_6 TEXT DEFAULT '',
+                kalip_no_7 TEXT DEFAULT '',
+                kalip_no_8 TEXT DEFAULT '',
+                kalip_no_9 TEXT DEFAULT '',
+                kalip_no_10 TEXT DEFAULT '',
                 created_at TEXT NOT NULL
             )
         ''')
