@@ -73,6 +73,7 @@ async def init_db():
                 id TEXT PRIMARY KEY,
                 name TEXT NOT NULL,
                 unit TEXT DEFAULT 'adet',
+                sira_no INTEGER DEFAULT 0,
                 sevk_agirligi REAL DEFAULT 0,
                 adet_basi_cimento REAL DEFAULT 0,
                 harcanan_hisir REAL DEFAULT 0,
