@@ -131,6 +131,16 @@ async def init_db():
                 duvar_kalinlik_8 TEXT DEFAULT '',
                 duvar_kalinlik_9 TEXT DEFAULT '',
                 duvar_kalinlik_10 TEXT DEFAULT '',
+                makina_cinsi_1 TEXT DEFAULT '',
+                makina_cinsi_2 TEXT DEFAULT '',
+                makina_cinsi_3 TEXT DEFAULT '',
+                makina_cinsi_4 TEXT DEFAULT '',
+                makina_cinsi_5 TEXT DEFAULT '',
+                makina_cinsi_6 TEXT DEFAULT '',
+                makina_cinsi_7 TEXT DEFAULT '',
+                makina_cinsi_8 TEXT DEFAULT '',
+                makina_cinsi_9 TEXT DEFAULT '',
+                makina_cinsi_10 TEXT DEFAULT '',
                 created_at TEXT NOT NULL
             )
         ''')
