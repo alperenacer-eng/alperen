@@ -130,6 +130,66 @@ const CimentoEntry = () => {
     }
   }, [token]);
 
+  // Hızlı kaynak ekleme fonksiyonu
+  const handleQuickAdd = async () => {
+    if (!quickAddValue.trim()) {
+      toast.error('Lütfen bir değer girin');
+      return;
+    }
+
+    const endpoints = {
+      'plaka': '/plakalar',
+      'nakliyeci': '/nakliyeci-firmalar',
+      'sofor': '/soforler',
+      'sehir': '/sehirler',
+      'cimento_firma': '/cimento-firmalar',
+      'cimento_cins': '/cimento-cinsleri'
+    };
+
+    const fieldMap = {
+      'plaka': 'plaka',
+      'nakliyeci': 'name',
+      'sofor': 'name',
+      'sehir': 'name',
+      'cimento_firma': 'name',
+      'cimento_cins': 'name'
+    };
+
+    try {
+      const body = quickAddModal.type === 'plaka' 
+        ? { plaka: quickAddValue.trim() } 
+        : { name: quickAddValue.trim() };
+        
+      const response = await axios.post(`${API_URL}${endpoints[quickAddModal.type]}`, body, { headers });
+
+      if (response.data) {
+        toast.success(`${quickAddModal.title} eklendi`);
+        setQuickAddModal({ open: false, type: '', title: '' });
+        setQuickAddValue('');
+        fetchKaynaklar();
+        
+        // Eklenen değeri form'a otomatik seç
+        const formFieldMap = {
+          'plaka': 'plaka',
+          'nakliyeci': 'nakliye_firmasi',
+          'sofor': 'sofor',
+          'sehir': 'sehir',
+          'cimento_firma': 'cimento_alinan_firma',
+          'cimento_cins': 'cimento_cinsi'
+        };
+        setNewRecord(prev => ({ ...prev, [formFieldMap[quickAddModal.type]]: quickAddValue.trim() }));
+      }
+    } catch (error) {
+      console.error('Kaynak ekleme hatası:', error);
+      toast.error('Ekleme başarısız');
+    }
+  };
+
+  const openQuickAddModal = (type, title) => {
+    setQuickAddModal({ open: true, type, title });
+    setQuickAddValue('');
+  };
+
   useEffect(() => {
     if (!currentModule || currentModule.id !== 'cimento') {
       navigate('/');
