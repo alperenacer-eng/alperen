@@ -331,7 +331,7 @@ const CimentoEntry = () => {
     { key: "fatura_no", label: "Fatura No", type: "text", editable: true },
     { key: "vade_tarihi", label: "Vade Tarihi", type: "date", editable: true },
     { key: "giris_miktari", label: "Giriş Miktarı", type: "number", editable: true },
-    { key: "kantar_kg_miktari", label: "Kantar KG", type: "number", editable: true },
+    { key: "kantar_kg_miktari", label: "Kantar TON", type: "number", editable: true },
     { key: "aradaki_fark", label: "Aradaki Fark", type: "calculated", editable: false },
     { key: "birim_fiyat", label: "Birim Fiyat", type: "currency", editable: true },
     { key: "giris_tutari", label: "Giriş Tutarı", type: "currency", editable: false },
