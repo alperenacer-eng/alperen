@@ -424,81 +424,111 @@ const CimentoEntry = () => {
                 {/* Kaynak alanları */}
                 <div>
                   <label className="text-sm font-medium text-red-400">Plaka *</label>
-                  <Select value={newRecord.plaka} onValueChange={(val) => setNewRecord({ ...newRecord, plaka: val })}>
-                    <SelectTrigger className="bg-slate-950 border-slate-700">
-                      <SelectValue placeholder="Plaka seçin" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-slate-900 border-slate-700">
-                      {plakalar.map((item) => (
-                        <SelectItem key={item.id} value={item.plaka}>{item.plaka}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <div className="flex gap-2">
+                    <Select value={newRecord.plaka} onValueChange={(val) => setNewRecord({ ...newRecord, plaka: val })}>
+                      <SelectTrigger className="bg-slate-950 border-slate-700 flex-1">
+                        <SelectValue placeholder="Plaka seçin" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-slate-900 border-slate-700">
+                        {plakalar.map((item) => (
+                          <SelectItem key={item.id} value={item.plaka}>{item.plaka}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button type="button" size="icon" variant="outline" className="border-green-500/50 text-green-400 hover:bg-green-500/20" onClick={() => openQuickAddModal('plaka', 'Plaka')}>
+                      <PlusCircle className="w-4 h-4" />
+                    </Button>
+                  </div>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-red-400">Nakliye Firması *</label>
-                  <Select value={newRecord.nakliye_firmasi} onValueChange={(val) => setNewRecord({ ...newRecord, nakliye_firmasi: val })}>
-                    <SelectTrigger className="bg-slate-950 border-slate-700">
-                      <SelectValue placeholder="Firma seçin" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-slate-900 border-slate-700">
-                      {nakliyeciFirmalar.map((item) => (
-                        <SelectItem key={item.id} value={item.name}>{item.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <div className="flex gap-2">
+                    <Select value={newRecord.nakliye_firmasi} onValueChange={(val) => setNewRecord({ ...newRecord, nakliye_firmasi: val })}>
+                      <SelectTrigger className="bg-slate-950 border-slate-700 flex-1">
+                        <SelectValue placeholder="Firma seçin" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-slate-900 border-slate-700">
+                        {nakliyeciFirmalar.map((item) => (
+                          <SelectItem key={item.id} value={item.name}>{item.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button type="button" size="icon" variant="outline" className="border-green-500/50 text-green-400 hover:bg-green-500/20" onClick={() => openQuickAddModal('nakliyeci', 'Nakliye Firması')}>
+                      <PlusCircle className="w-4 h-4" />
+                    </Button>
+                  </div>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-red-400">Şoför *</label>
-                  <Select value={newRecord.sofor} onValueChange={(val) => setNewRecord({ ...newRecord, sofor: val })}>
-                    <SelectTrigger className="bg-slate-950 border-slate-700">
-                      <SelectValue placeholder="Şoför seçin" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-slate-900 border-slate-700">
-                      {soforler.map((item) => (
-                        <SelectItem key={item.id} value={item.name}>{item.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <div className="flex gap-2">
+                    <Select value={newRecord.sofor} onValueChange={(val) => setNewRecord({ ...newRecord, sofor: val })}>
+                      <SelectTrigger className="bg-slate-950 border-slate-700 flex-1">
+                        <SelectValue placeholder="Şoför seçin" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-slate-900 border-slate-700">
+                        {soforler.map((item) => (
+                          <SelectItem key={item.id} value={item.name}>{item.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button type="button" size="icon" variant="outline" className="border-green-500/50 text-green-400 hover:bg-green-500/20" onClick={() => openQuickAddModal('sofor', 'Şoför')}>
+                      <PlusCircle className="w-4 h-4" />
+                    </Button>
+                  </div>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-red-400">Şehir *</label>
-                  <Select value={newRecord.sehir} onValueChange={(val) => setNewRecord({ ...newRecord, sehir: val })}>
-                    <SelectTrigger className="bg-slate-950 border-slate-700">
-                      <SelectValue placeholder="Şehir seçin" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-slate-900 border-slate-700">
-                      {sehirler.map((item) => (
-                        <SelectItem key={item.id} value={item.name}>{item.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <div className="flex gap-2">
+                    <Select value={newRecord.sehir} onValueChange={(val) => setNewRecord({ ...newRecord, sehir: val })}>
+                      <SelectTrigger className="bg-slate-950 border-slate-700 flex-1">
+                        <SelectValue placeholder="Şehir seçin" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-slate-900 border-slate-700">
+                        {sehirler.map((item) => (
+                          <SelectItem key={item.id} value={item.name}>{item.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button type="button" size="icon" variant="outline" className="border-green-500/50 text-green-400 hover:bg-green-500/20" onClick={() => openQuickAddModal('sehir', 'Şehir')}>
+                      <PlusCircle className="w-4 h-4" />
+                    </Button>
+                  </div>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-red-400">Çimento Alınan Firma *</label>
-                  <Select value={newRecord.cimento_alinan_firma} onValueChange={(val) => setNewRecord({ ...newRecord, cimento_alinan_firma: val })}>
-                    <SelectTrigger className="bg-slate-950 border-slate-700">
-                      <SelectValue placeholder="Firma seçin" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-slate-900 border-slate-700">
-                      {cimentoFirmalar.map((item) => (
-                        <SelectItem key={item.id} value={item.name}>{item.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <div className="flex gap-2">
+                    <Select value={newRecord.cimento_alinan_firma} onValueChange={(val) => setNewRecord({ ...newRecord, cimento_alinan_firma: val })}>
+                      <SelectTrigger className="bg-slate-950 border-slate-700 flex-1">
+                        <SelectValue placeholder="Firma seçin" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-slate-900 border-slate-700">
+                        {cimentoFirmalar.map((item) => (
+                          <SelectItem key={item.id} value={item.name}>{item.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button type="button" size="icon" variant="outline" className="border-green-500/50 text-green-400 hover:bg-green-500/20" onClick={() => openQuickAddModal('cimento_firma', 'Çimento Firması')}>
+                      <PlusCircle className="w-4 h-4" />
+                    </Button>
+                  </div>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-red-400">Çimento Cinsi *</label>
-                  <Select value={newRecord.cimento_cinsi} onValueChange={(val) => setNewRecord({ ...newRecord, cimento_cinsi: val })}>
-                    <SelectTrigger className="bg-slate-950 border-slate-700">
-                      <SelectValue placeholder="Cins seçin" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-slate-900 border-slate-700">
-                      {cimentoCinsleri.map((item) => (
-                        <SelectItem key={item.id} value={item.name}>{item.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <div className="flex gap-2">
+                    <Select value={newRecord.cimento_cinsi} onValueChange={(val) => setNewRecord({ ...newRecord, cimento_cinsi: val })}>
+                      <SelectTrigger className="bg-slate-950 border-slate-700 flex-1">
+                        <SelectValue placeholder="Cins seçin" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-slate-900 border-slate-700">
+                        {cimentoCinsleri.map((item) => (
+                          <SelectItem key={item.id} value={item.name}>{item.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button type="button" size="icon" variant="outline" className="border-green-500/50 text-green-400 hover:bg-green-500/20" onClick={() => openQuickAddModal('cimento_cins', 'Çimento Cinsi')}>
+                      <PlusCircle className="w-4 h-4" />
+                    </Button>
+                  </div>
                 </div>
                 <div className="border-t border-slate-700 col-span-3 pt-2 mt-2"></div>
                 <div>
