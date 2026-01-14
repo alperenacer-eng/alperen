@@ -801,6 +801,24 @@ const CimentoEntry = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Silme Onay Modalı */}
+      <Dialog open={deleteConfirm.open} onOpenChange={(open) => setDeleteConfirm({ open, id: null })}>
+        <DialogContent className="bg-slate-900 border-slate-700 max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-white">Kaydı Sil</DialogTitle>
+          </DialogHeader>
+          <p className="text-slate-300 py-4">Bu kaydı silmek istediğinizden emin misiniz?</p>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setDeleteConfirm({ open: false, id: null })}>
+              İptal
+            </Button>
+            <Button className="bg-red-500 hover:bg-red-600" onClick={() => handleDeleteRecord(deleteConfirm.id)}>
+              Sil
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
