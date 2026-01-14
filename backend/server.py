@@ -759,6 +759,21 @@ async def init_db():
             )
         ''')
         
+        # Migration: Add new columns to molds table if they don't exist
+        try:
+            await db.execute("ALTER TABLE molds ADD COLUMN product_id TEXT DEFAULT ''")
+        except:
+            pass
+        try:
+            await db.execute("ALTER TABLE molds ADD COLUMN product_name TEXT DEFAULT ''")
+        except:
+            pass
+        for i in range(1, 11):
+            try:
+                await db.execute(f"ALTER TABLE molds ADD COLUMN kalip_no_{i} TEXT DEFAULT ''")
+            except:
+                pass
+        
         await db.commit()
 
 def row_to_dict(row):
