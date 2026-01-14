@@ -393,7 +393,11 @@ const CimentoResources = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-6 bg-slate-900 border border-slate-800 mb-6">
+        <TabsList className="grid w-full grid-cols-7 bg-slate-900 border border-slate-800 mb-6">
+          <TabsTrigger value="isletmeler" className="data-[state=active]:bg-emerald-500 data-[state=active]:text-white">
+            <Factory className="w-4 h-4 mr-2" />
+            İşletmeler
+          </TabsTrigger>
           <TabsTrigger value="cimento-firmalar" className="data-[state=active]:bg-blue-500 data-[state=active]:text-white">
             <Building2 className="w-4 h-4 mr-2" />
             Çimento Firmaları
@@ -419,6 +423,134 @@ const CimentoResources = () => {
             Şehirler
           </TabsTrigger>
         </TabsList>
+
+        {/* İşletmeler Tab */}
+        <TabsContent value="isletmeler">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="glass-effect rounded-xl p-6 border border-slate-800">
+              <h2 className="text-xl font-semibold text-white mb-6">Yeni İşletme Ekle</h2>
+              <form onSubmit={handleAddIsletme} className="space-y-4">
+                <div className="space-y-2">
+                  <Label>İşletme Adı *</Label>
+                  <Input
+                    value={newIsletme.name}
+                    onChange={(e) => setNewIsletme({ ...newIsletme, name: e.target.value })}
+                    placeholder="Örn: Merkez Fabrika, Şantiye-1"
+                    required
+                    className="h-12 bg-slate-950 border-slate-800 text-white"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Açılış Stok (KG)</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={newIsletme.acilis_stok_kg}
+                      onChange={(e) => setNewIsletme({ ...newIsletme, acilis_stok_kg: parseFloat(e.target.value) || 0 })}
+                      placeholder="0"
+                      className="h-12 bg-slate-950 border-slate-800 text-white"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Açılış Tarihi</Label>
+                    <Input
+                      type="date"
+                      value={newIsletme.acilis_tarihi}
+                      onChange={(e) => setNewIsletme({ ...newIsletme, acilis_tarihi: e.target.value })}
+                      className="h-12 bg-slate-950 border-slate-800 text-white"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>Adres</Label>
+                  <Textarea
+                    value={newIsletme.adres}
+                    onChange={(e) => setNewIsletme({ ...newIsletme, adres: e.target.value })}
+                    placeholder="İşletme adresi"
+                    rows={2}
+                    className="bg-slate-950 border-slate-800 text-white"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Yetkili Kişi</Label>
+                    <Input
+                      value={newIsletme.yetkili_kisi}
+                      onChange={(e) => setNewIsletme({ ...newIsletme, yetkili_kisi: e.target.value })}
+                      placeholder="Yetkili kişi adı"
+                      className="h-12 bg-slate-950 border-slate-800 text-white"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Telefon</Label>
+                    <Input
+                      value={newIsletme.telefon}
+                      onChange={(e) => setNewIsletme({ ...newIsletme, telefon: e.target.value })}
+                      placeholder="0532 XXX XX XX"
+                      className="h-12 bg-slate-950 border-slate-800 text-white"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>Notlar</Label>
+                  <Textarea
+                    value={newIsletme.notlar}
+                    onChange={(e) => setNewIsletme({ ...newIsletme, notlar: e.target.value })}
+                    placeholder="Ek notlar..."
+                    rows={2}
+                    className="bg-slate-950 border-slate-800 text-white"
+                  />
+                </div>
+                <Button type="submit" className="w-full h-12 bg-emerald-500 hover:bg-emerald-600">
+                  <Plus className="w-5 h-5 mr-2" />
+                  İşletme Ekle
+                </Button>
+              </form>
+            </div>
+
+            <div className="glass-effect rounded-xl p-6 border border-slate-800">
+              <h2 className="text-xl font-semibold text-white mb-6">İşletme Listesi ({isletmeler.length})</h2>
+              <div className="space-y-3 max-h-[600px] overflow-y-auto">
+                {isletmeler.length === 0 ? (
+                  <p className="text-slate-400 text-center py-8">Henüz işletme eklenmemiş</p>
+                ) : (
+                  isletmeler.map((isletme) => (
+                    <div key={isletme.id} className="flex items-center justify-between p-4 bg-slate-900 rounded-lg border border-slate-800 hover:border-emerald-500/50 transition-colors">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3">
+                          <Factory className="w-5 h-5 text-emerald-400" />
+                          <div>
+                            <p className="font-medium text-white">{isletme.name}</p>
+                            <div className="flex gap-4 mt-1">
+                              <span className="text-sm text-emerald-400">
+                                Mevcut Stok: {((isletme.mevcut_stok_kg || 0) / 1000).toFixed(2)} Ton
+                              </span>
+                              <span className="text-sm text-slate-400">
+                                Açılış: {((isletme.acilis_stok_kg || 0) / 1000).toFixed(2)} Ton
+                              </span>
+                            </div>
+                            {isletme.adres && (
+                              <p className="text-xs text-slate-500 mt-1">{isletme.adres}</p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                        onClick={() => setDeleteIsletmeId(isletme.id)}
+                      >
+                        <Trash2 className="w-5 h-5" />
+                      </Button>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+        </TabsContent>
 
         {/* Çimento Firmaları Tab */}
         <TabsContent value="cimento-firmalar">
