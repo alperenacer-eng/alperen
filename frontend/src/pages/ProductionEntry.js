@@ -902,37 +902,29 @@ const ProductionEntry = () => {
             })}
             
             {/* Genel Toplam Satırı */}
-            <div className="grid grid-cols-10 gap-4 mt-4 p-4 bg-gradient-to-r from-emerald-900/30 to-purple-900/30 rounded-xl border border-slate-700">
+            <div className="grid grid-cols-6 gap-4 mt-4 p-4 bg-gradient-to-r from-cyan-900/30 to-amber-900/30 rounded-xl border border-slate-700">
               <div className="col-span-1"></div>
-              <div className="col-span-3"></div>
-              <div className="col-span-1"></div>
-              <div className="col-span-1 text-right flex items-center justify-end">
-                <span className="text-slate-400 text-sm font-medium">TOPLAM:</span>
+              <div className="col-span-2 flex items-center justify-end">
+                <span className="text-slate-300 text-sm font-medium">TOPLAM:</span>
               </div>
-              <div className="col-span-1"></div>
               <div className="col-span-1">
-                <div className="h-12 bg-emerald-500/20 border-2 border-emerald-500/50 rounded-lg flex items-center justify-center">
-                  <span className="font-mono text-emerald-400 text-xl font-bold">{calculations.toplam_7_boy}</span>
+                <div className="h-14 bg-cyan-500/20 border-2 border-cyan-500/50 rounded-lg flex flex-col items-center justify-center">
+                  <span className="font-mono text-cyan-400 text-2xl font-bold">{calculations.toplam_7_boy}</span>
+                  <span className="text-cyan-400/70 text-xs">7 Boy</span>
                 </div>
               </div>
               <div className="col-span-1">
-                <div className="h-12 bg-purple-500/20 border-2 border-purple-500/50 rounded-lg flex items-center justify-center">
-                  <span className="font-mono text-purple-400 text-xl font-bold">{calculations.toplam_5_boy}</span>
+                <div className="h-14 bg-amber-500/20 border-2 border-amber-500/50 rounded-lg flex flex-col items-center justify-center">
+                  <span className="font-mono text-amber-400 text-2xl font-bold">{calculations.toplam_5_boy}</span>
+                  <span className="text-amber-400/70 text-xs">5 Boy</span>
                 </div>
               </div>
               <div className="col-span-1">
-                <div className="h-12 bg-cyan-500/20 border-2 border-cyan-500/50 rounded-lg flex items-center justify-center">
-                  <span className="font-mono text-cyan-400 text-xl font-bold">{calculations.genel_toplam_paket}</span>
+                <div className="h-14 bg-emerald-500/20 border-2 border-emerald-500/50 rounded-lg flex flex-col items-center justify-center">
+                  <span className="font-mono text-emerald-400 text-2xl font-bold">{calculations.genel_toplam_paket}</span>
+                  <span className="text-emerald-400/70 text-xs">Toplam</span>
                 </div>
               </div>
-            </div>
-            
-            {/* Toplam Etiketleri */}
-            <div className="grid grid-cols-10 gap-4 mt-2 px-4">
-              <div className="col-span-7"></div>
-              <div className="col-span-1 text-center text-xs text-emerald-400">7 Boy Toplam</div>
-              <div className="col-span-1 text-center text-xs text-purple-400">5 Boy Toplam</div>
-              <div className="col-span-1 text-center text-xs text-cyan-400">Genel Toplam</div>
             </div>
           </div>
 
