@@ -2661,15 +2661,18 @@ async def create_production_record(record: ProductionRecordCreate, current_user:
            operator_id, operator_name, shift, notes, module, user_id, user_name, created_at, updated_at,
            production_date, shift_type, shift_number, worked_hours, required_hours, product_type, mold_no,
            strip_used, pallet_count, pallet_quantity, waste, pieces_per_pallet, mix_count, cement_in_mix,
-           machine_cement, product_to_field, product_length, breakdown_1, breakdown_2, breakdown_3)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+           machine_cement, product_to_field, product_length, breakdown_1, breakdown_2, breakdown_3,
+           cikan_paket_1, cikan_paket_2, cikan_paket_3, cikan_paket_4, cikan_paket_5, toplam_7_boy, toplam_5_boy)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
         (record_id, record.product_id, record.product_name, record.quantity, record.unit, record.department_id,
          record.department_name, record.operator_id, record.operator_name, record.shift, record.notes, record.module,
          current_user["id"], current_user["name"], created_at, created_at, record.production_date, record.shift_type,
          record.shift_number, record.worked_hours, record.required_hours, record.product_type, record.mold_no,
          record.strip_used, record.pallet_count, record.pallet_quantity, record.waste, record.pieces_per_pallet,
          record.mix_count, record.cement_in_mix, record.machine_cement, record.product_to_field, record.product_length,
-         record.breakdown_1, record.breakdown_2, record.breakdown_3)
+         record.breakdown_1, record.breakdown_2, record.breakdown_3,
+         record.cikan_paket_1, record.cikan_paket_2, record.cikan_paket_3, record.cikan_paket_4, record.cikan_paket_5,
+         record.toplam_7_boy, record.toplam_5_boy)
     )
     await db.commit()
     
