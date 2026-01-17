@@ -192,6 +192,7 @@ const BimsStok = () => {
                 <tr className="border-b border-slate-700">
                   <th className="text-left py-3 px-2 text-slate-400 font-medium">Ürün Adı</th>
                   <th className="text-center py-3 px-2 text-slate-400 font-medium">Birim</th>
+                  <th className="text-center py-3 px-2 text-blue-400 font-medium">Açılış Fişi</th>
                   <th className="text-right py-3 px-2 text-slate-400 font-medium">Mevcut Stok</th>
                   <th className="text-center py-3 px-2 text-slate-400 font-medium">İşlemler</th>
                 </tr>
@@ -204,6 +205,26 @@ const BimsStok = () => {
                     </td>
                     <td className="py-4 px-2 text-center">
                       <span className="px-2 py-1 bg-slate-700 text-slate-300 text-xs rounded">{urun.birim}</span>
+                    </td>
+                    <td className="py-4 px-2">
+                      <div className="flex items-center justify-center gap-2">
+                        <Input
+                          type="number"
+                          value={acilisFisleri[urun.id] !== undefined ? acilisFisleri[urun.id] : (urun.acilis_miktari || '')}
+                          onChange={(e) => setAcilisFisleri({...acilisFisleri, [urun.id]: e.target.value})}
+                          placeholder="0"
+                          className="w-24 h-9 bg-blue-500/10 border border-blue-500/30 text-blue-400 font-mono text-center text-sm"
+                        />
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleAcilisFisiKaydet(urun)}
+                          className="text-blue-400 hover:text-blue-300 hover:bg-blue-400/10 h-9 px-2"
+                          title="Açılış Fişi Kaydet"
+                        >
+                          ✓
+                        </Button>
+                      </div>
                     </td>
                     <td className="py-4 px-2 text-right">
                       <span className={`text-lg font-bold ${(urun.mevcut_stok || 0) > 10 ? 'text-teal-400' : (urun.mevcut_stok || 0) > 0 ? 'text-yellow-400' : 'text-red-400'}`}>
