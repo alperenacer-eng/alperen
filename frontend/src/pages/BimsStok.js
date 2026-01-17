@@ -180,7 +180,7 @@ const BimsStok = () => {
             </div>
             <div>
               <p className="text-slate-400 text-sm">Toplam Ürün</p>
-              <p className="text-2xl font-bold text-white">{ozet.toplam_urun}</p>
+              <p className="text-2xl font-bold text-white">{formatInteger(ozet.toplam_urun)}</p>
             </div>
           </div>
         </div>
@@ -192,7 +192,7 @@ const BimsStok = () => {
             </div>
             <div>
               <p className="text-slate-400 text-sm">Toplam Stok</p>
-              <p className="text-2xl font-bold text-white">{ozet.toplam_stok}</p>
+              <p className="text-2xl font-bold text-white">{formatInteger(ozet.toplam_stok)}</p>
             </div>
           </div>
         </div>
@@ -204,7 +204,7 @@ const BimsStok = () => {
             </div>
             <div>
               <p className="text-slate-400 text-sm">Düşük Stok</p>
-              <p className="text-2xl font-bold text-white">{ozet.dusuk_stok}</p>
+              <p className="text-2xl font-bold text-white">{formatInteger(ozet.dusuk_stok)}</p>
             </div>
           </div>
         </div>
