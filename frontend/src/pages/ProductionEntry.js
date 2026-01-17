@@ -832,10 +832,10 @@ const ProductionEntry = () => {
             <div className="grid grid-cols-12 gap-3 mb-3 px-2">
               <div className="col-span-1 text-xs text-slate-500 font-medium">#</div>
               <div className="col-span-3 text-xs text-slate-500 font-medium">Ürün</div>
-              <div className="col-span-2 text-xs text-slate-500 font-medium">Miktar</div>
-              <div className="col-span-2 text-xs text-slate-500 font-medium">7 Boy (Birim)</div>
-              <div className="col-span-2 text-xs text-slate-500 font-medium">5 Boy (Birim)</div>
-              <div className="col-span-1 text-xs text-slate-500 font-medium">7 Boy Top.</div>
+              <div className="col-span-1 text-xs text-slate-500 font-medium">Miktar</div>
+              <div className="col-span-2 text-xs text-slate-500 font-medium">7 Boy Paket</div>
+              <div className="col-span-2 text-xs text-slate-500 font-medium">5 Boy Paket</div>
+              <div className="col-span-2 text-xs text-slate-500 font-medium">7 Boy Toplam</div>
               <div className="col-span-1 text-xs text-slate-500 font-medium">5 Boy Top.</div>
             </div>
             
