@@ -826,31 +826,33 @@ const ProductionEntry = () => {
           {/* Çıkan Paket Bilgileri - 5 Satır */}
           <div>
             <h2 className="text-xl font-semibold text-white mb-4 pb-2 border-b border-slate-700">📦 Çıkan Paket</h2>
-            <p className="text-sm text-slate-400 mb-4">Ürün seçtiğinizde, seçilen işletmeye ait paket adetleri otomatik getirilir. Miktar girin ve otomatik çarpım yapılır.</p>
+            <p className="text-sm text-slate-400 mb-4">Ürün seçin, miktar ve paket adetlerini girin. Toplam otomatik hesaplanır.</p>
             
             {/* Başlık Satırı */}
-            <div className="grid grid-cols-12 gap-3 mb-3 px-2">
+            <div className="grid grid-cols-10 gap-4 mb-3 px-2">
               <div className="col-span-1 text-xs text-slate-500 font-medium">#</div>
               <div className="col-span-3 text-xs text-slate-500 font-medium">Ürün</div>
               <div className="col-span-1 text-xs text-slate-500 font-medium">Miktar</div>
-              <div className="col-span-2 text-xs text-slate-500 font-medium">7 Boy Paket</div>
-              <div className="col-span-2 text-xs text-slate-500 font-medium">5 Boy Paket</div>
-              <div className="col-span-2 text-xs text-slate-500 font-medium">7 Boy Toplam</div>
-              <div className="col-span-1 text-xs text-slate-500 font-medium">5 Boy Top.</div>
+              <div className="col-span-1 text-xs text-cyan-400 font-medium">7 Boy Paket</div>
+              <div className="col-span-1 text-xs text-amber-400 font-medium">5 Boy Paket</div>
+              <div className="col-span-1 text-xs text-emerald-400 font-medium">7 Boy Top.</div>
+              <div className="col-span-1 text-xs text-purple-400 font-medium">5 Boy Top.</div>
+              <div className="col-span-1 text-xs text-slate-500 font-medium">Satır Top.</div>
             </div>
             
             {/* 5 Satır */}
             {[1, 2, 3, 4, 5].map((rowIndex) => {
               const paket = formData[`cikan_paket_${rowIndex}`] || { urun_id: '', urun_adi: '', miktar: '', paket_7_boy: 0, paket_5_boy: 0 };
               const miktar = parseInt(paket.miktar) || 0;
-              const toplam7 = miktar * (paket.paket_7_boy || 0);
-              const toplam5 = miktar * (paket.paket_5_boy || 0);
+              const toplam7 = miktar * (parseInt(paket.paket_7_boy) || 0);
+              const toplam5 = miktar * (parseInt(paket.paket_5_boy) || 0);
+              const satirToplam = toplam7 + toplam5;
               
               return (
-                <div key={rowIndex} className="grid grid-cols-12 gap-3 mb-3 items-center bg-slate-900/50 p-3 rounded-lg border border-slate-800">
+                <div key={rowIndex} className="grid grid-cols-10 gap-4 mb-3 items-center bg-slate-900/50 p-3 rounded-lg border border-slate-800">
                   {/* Satır Numarası */}
                   <div className="col-span-1">
-                    <span className="text-slate-500 font-mono">{rowIndex}</span>
+                    <span className="text-slate-500 font-mono text-lg">{rowIndex}</span>
                   </div>
                   
                   {/* Ürün Seçimi */}
@@ -878,46 +880,55 @@ const ProductionEntry = () => {
                       value={paket.miktar}
                       onChange={(e) => handleCikanPaketChange(rowIndex, 'miktar', e.target.value)}
                       placeholder="0"
-                      className="h-10 bg-slate-950 border-slate-800 text-white font-mono text-sm"
+                      className="h-10 bg-slate-950 border-slate-800 text-white font-mono text-center"
                     />
                   </div>
                   
-                  {/* 7 Boy Birim Paket (Girilebilir - Otomatik doldurulur) */}
-                  <div className="col-span-2">
+                  {/* 7 Boy Paket Girişi */}
+                  <div className="col-span-1">
                     <Input
                       type="number"
                       value={paket.paket_7_boy || ''}
                       onChange={(e) => handleCikanPaketChange(rowIndex, 'paket_7_boy', parseInt(e.target.value) || 0)}
                       placeholder="0"
-                      className="h-10 bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 font-mono text-sm"
+                      className="h-10 bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 font-mono text-center"
                     />
                   </div>
                   
-                  {/* 5 Boy Birim Paket (Girilebilir - Otomatik doldurulur) */}
-                  <div className="col-span-2">
+                  {/* 5 Boy Paket Girişi */}
+                  <div className="col-span-1">
                     <Input
                       type="number"
                       value={paket.paket_5_boy || ''}
                       onChange={(e) => handleCikanPaketChange(rowIndex, 'paket_5_boy', parseInt(e.target.value) || 0)}
                       placeholder="0"
-                      className="h-10 bg-amber-500/10 border border-amber-500/30 text-amber-400 font-mono text-sm"
+                      className="h-10 bg-amber-500/10 border border-amber-500/30 text-amber-400 font-mono text-center"
                     />
                   </div>
                   
-                  {/* 7 Boy Toplam (Miktar × Birim) */}
-                  <div className="col-span-2">
-                    <div className="h-10 bg-emerald-500/10 border border-emerald-500/30 rounded-lg flex items-center justify-center font-mono text-emerald-400 text-sm font-bold">
+                  {/* 7 Boy Toplam (Miktar × 7 Boy Paket) */}
+                  <div className="col-span-1">
+                    <div className="h-10 bg-emerald-500/20 border border-emerald-500/40 rounded-lg flex items-center justify-center font-mono text-emerald-400 font-bold">
                       {toplam7}
                     </div>
                   </div>
                   
-                  {/* 5 Boy Toplam (Miktar × Birim) */}
+                  {/* 5 Boy Toplam (Miktar × 5 Boy Paket) */}
                   <div className="col-span-1">
-                    <div className="h-10 bg-purple-500/10 border border-purple-500/30 rounded-lg flex items-center justify-center font-mono text-purple-400 text-sm font-bold">
+                    <div className="h-10 bg-purple-500/20 border border-purple-500/40 rounded-lg flex items-center justify-center font-mono text-purple-400 font-bold">
                       {toplam5}
                     </div>
                   </div>
+                  
+                  {/* Satır Toplam */}
+                  <div className="col-span-1">
+                    <div className="h-10 bg-slate-700/50 border border-slate-600 rounded-lg flex items-center justify-center font-mono text-white font-bold">
+                      {satirToplam}
+                    </div>
+                  </div>
                 </div>
+              );
+            })}
               );
             })}
             
