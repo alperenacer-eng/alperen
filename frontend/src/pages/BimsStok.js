@@ -260,7 +260,7 @@ const BimsStok = () => {
                     </td>
                     <td className="py-4 px-2 text-right">
                       <span className={`text-lg font-bold ${(urun.mevcut_stok || 0) > 10 ? 'text-teal-400' : (urun.mevcut_stok || 0) > 0 ? 'text-yellow-400' : 'text-red-400'}`}>
-                        {urun.mevcut_stok || 0}
+                        {formatInteger(urun.mevcut_stok || 0)}
                       </span>
                     </td>
                     <td className="py-4 px-2">
