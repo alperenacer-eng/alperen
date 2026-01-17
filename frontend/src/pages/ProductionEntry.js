@@ -918,14 +918,14 @@ const ProductionEntry = () => {
                   {/* 7 Boy Toplam */}
                   <div className="col-span-1">
                     <div className="h-12 bg-emerald-500/20 border border-emerald-500/40 rounded-lg flex items-center justify-center font-mono text-emerald-400 font-bold text-lg">
-                      {toplam7}
+                      {formatInteger(toplam7)}
                     </div>
                   </div>
                   
                   {/* 5 Boy Toplam */}
                   <div className="col-span-1">
                     <div className="h-12 bg-purple-500/20 border border-purple-500/40 rounded-lg flex items-center justify-center font-mono text-purple-400 font-bold text-lg">
-                      {toplam5}
+                      {formatInteger(toplam5)}
                     </div>
                   </div>
                 </div>
@@ -944,13 +944,13 @@ const ProductionEntry = () => {
               </div>
               <div className="col-span-1">
                 <div className="h-14 bg-emerald-500/20 border-2 border-emerald-500/50 rounded-lg flex flex-col items-center justify-center">
-                  <span className="font-mono text-emerald-400 text-2xl font-bold">{calculations.toplam_7_boy}</span>
+                  <span className="font-mono text-emerald-400 text-2xl font-bold">{formatInteger(calculations.toplam_7_boy)}</span>
                   <span className="text-emerald-400/70 text-xs">7 Boy</span>
                 </div>
               </div>
               <div className="col-span-1">
                 <div className="h-14 bg-purple-500/20 border-2 border-purple-500/50 rounded-lg flex flex-col items-center justify-center">
-                  <span className="font-mono text-purple-400 text-2xl font-bold">{calculations.toplam_5_boy}</span>
+                  <span className="font-mono text-purple-400 text-2xl font-bold">{formatInteger(calculations.toplam_5_boy)}</span>
                   <span className="text-purple-400/70 text-xs">5 Boy</span>
                 </div>
               </div>
@@ -960,7 +960,7 @@ const ProductionEntry = () => {
             <div className="mt-4 flex justify-end">
               <div className="bg-gradient-to-r from-cyan-900/40 to-blue-900/40 p-4 rounded-xl border border-cyan-500/30">
                 <span className="text-slate-400 text-sm mr-4">GENEL TOPLAM:</span>
-                <span className="font-mono text-cyan-400 text-3xl font-bold">{calculations.genel_toplam_paket}</span>
+                <span className="font-mono text-cyan-400 text-3xl font-bold">{formatInteger(calculations.genel_toplam_paket)}</span>
               </div>
             </div>
           </div>
