@@ -72,6 +72,8 @@ const ProductionEntry = () => {
     cement_per_mix: '',
     machine_cement: '',
     // Çıkan Paket
+    cikan_paket_urun_id: '',
+    cikan_paket_urun_adi: '',
     paket_7_boy: '',
     paket_5_boy: '',
     // Arızalar (opsiyonel)
