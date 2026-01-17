@@ -1631,8 +1631,48 @@ async def get_bims_stok_urunler(current_user: dict = Depends(get_current_user)):
     """
     async with db.execute(query) as cursor:
         rows = await cursor.fetchall()
+    
+    stok_urunler = rows_to_list(rows)
+    
+    # Üretim kayıtlarından saha çıkan verileri hesapla
+    async with db.execute("SELECT cikan_paket_1, cikan_paket_2, cikan_paket_3, cikan_paket_4, cikan_paket_5, toplam_7_boy, toplam_5_boy FROM production_records") as cursor:
+        production_rows = await cursor.fetchall()
+    
     await db.close()
-    return rows_to_list(rows)
+    
+    # Her ürün için saha çıkan toplamını hesapla
+    saha_cikan_by_product = {}
+    
+    for row in production_rows:
+        prod = row_to_dict(row)
+        for i in range(1, 6):
+            paket_str = prod.get(f'cikan_paket_{i}')
+            if paket_str:
+                try:
+                    paket = json.loads(paket_str) if isinstance(paket_str, str) else paket_str
+                    if paket and paket.get('urun_id'):
+                        urun_id = paket['urun_id']
+                        # Stok ID formatı: product_id + "_stok"
+                        stok_id = urun_id + "_stok" if not urun_id.endswith("_stok") else urun_id
+                        
+                        paket_7 = int(paket.get('paket_7_boy') or 0)
+                        paket_5 = int(paket.get('paket_5_boy') or 0)
+                        birim_7 = int(paket.get('birim_7_boy') or 0)
+                        birim_5 = int(paket.get('birim_5_boy') or 0)
+                        
+                        toplam = (paket_7 * birim_7) + (paket_5 * birim_5)
+                        
+                        if stok_id not in saha_cikan_by_product:
+                            saha_cikan_by_product[stok_id] = 0
+                        saha_cikan_by_product[stok_id] += toplam
+                except:
+                    pass
+    
+    # Stok ürünlerine saha_cikan değerini ekle
+    for urun in stok_urunler:
+        urun['saha_cikan'] = saha_cikan_by_product.get(urun['id'], 0)
+    
+    return stok_urunler
 
 @api_router.get("/bims-stok-urunler/{id}")
 async def get_bims_stok_urun(id: str, current_user: dict = Depends(get_current_user)):
