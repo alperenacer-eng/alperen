@@ -1685,6 +1685,74 @@ async def delete_bims_stok_urun(id: str, current_user: dict = Depends(get_curren
         raise HTTPException(status_code=404, detail="Stok ürün bulunamadı")
     return {"message": "Stok ürün silindi"}
 
+# Açılış Fişi Kaydet
+class AcilisFisiInput(BaseModel):
+    urun_id: str
+    miktar: float
+    tarih: str
+
+@api_router.post("/bims-stok-acilis-fisi")
+async def create_acilis_fisi(input: AcilisFisiInput, current_user: dict = Depends(get_current_user)):
+    db = await get_db()
+    
+    async with db.execute("SELECT * FROM bims_stok_urunler WHERE id = ?", (input.urun_id,)) as cursor:
+        urun_row = await cursor.fetchone()
+    if not urun_row:
+        await db.close()
+        raise HTTPException(status_code=404, detail="Ürün bulunamadı")
+    
+    urun = row_to_dict(urun_row)
+    hareket_id = generate_id()
+    created_at = datetime.now(timezone.utc).isoformat()
+    
+    # Önce eski açılış fişlerini sil (her ürün için tek açılış fişi)
+    await db.execute(
+        "DELETE FROM bims_stok_hareketler WHERE urun_id = ? AND hareket_tipi = 'acilis'",
+        (input.urun_id,)
+    )
+    
+    # Yeni açılış fişi ekle
+    await db.execute(
+        """INSERT INTO bims_stok_hareketler (id, urun_id, urun_adi, hareket_tipi, miktar, tarih, aciklama, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+        (hareket_id, input.urun_id, urun['urun_adi'], 'acilis', input.miktar, input.tarih, 'Açılış Fişi', created_at)
+    )
+    
+    # Açılış miktarını ürün kaydında güncelle
+    await db.execute(
+        "UPDATE bims_stok_urunler SET acilis_miktari = ?, updated_at = ? WHERE id = ?",
+        (input.miktar, created_at, input.urun_id)
+    )
+    
+    # Stoku yeniden hesapla (açılış + giriş - çıkış)
+    async with db.execute(
+        """SELECT hareket_tipi, SUM(miktar) as toplam FROM bims_stok_hareketler 
+           WHERE urun_id = ? GROUP BY hareket_tipi""",
+        (input.urun_id,)
+    ) as cursor:
+        hareketler = await cursor.fetchall()
+    
+    toplam_giris = 0
+    toplam_cikis = 0
+    for h in hareketler:
+        h_dict = row_to_dict(h)
+        if h_dict['hareket_tipi'] in ['giris', 'acilis']:
+            toplam_giris += h_dict['toplam'] or 0
+        else:
+            toplam_cikis += h_dict['toplam'] or 0
+    
+    yeni_stok = toplam_giris - toplam_cikis
+    
+    await db.execute(
+        "UPDATE bims_stok_urunler SET mevcut_stok = ?, updated_at = ? WHERE id = ?",
+        (yeni_stok, created_at, input.urun_id)
+    )
+    
+    await db.commit()
+    await db.close()
+    
+    return {"message": "Açılış fişi kaydedildi", "mevcut_stok": yeni_stok}
+
 # Stok Hareketleri
 @api_router.post("/bims-stok-hareketler")
 async def create_bims_stok_hareket(input: BimsStokHareketCreate, current_user: dict = Depends(get_current_user)):
