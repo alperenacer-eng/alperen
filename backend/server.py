@@ -1176,6 +1176,8 @@ class ProductionRecordUpdate(BaseModel):
     breakdown_3: Optional[str] = None
     paket_7_boy: Optional[int] = None
     paket_5_boy: Optional[int] = None
+    cikan_paket_urun_id: Optional[str] = None
+    cikan_paket_urun_adi: Optional[str] = None
 
 class ProductionRecordResponse(BaseModel):
     model_config = ConfigDict(extra="ignore")
