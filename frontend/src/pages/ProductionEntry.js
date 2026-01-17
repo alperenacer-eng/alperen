@@ -185,8 +185,11 @@ const ProductionEntry = () => {
     formData.machine_cement,
     formData.worked_hours,
     formData.required_hours,
-    formData.paket_7_boy,
-    formData.paket_5_boy
+    formData.cikan_paket_1,
+    formData.cikan_paket_2,
+    formData.cikan_paket_3,
+    formData.cikan_paket_4,
+    formData.cikan_paket_5
   ]);
 
   const calculateValues = () => {
@@ -198,8 +201,6 @@ const ProductionEntry = () => {
     const machineCement = parseFloat(formData.machine_cement) || 0;
     const workedHours = parseFloat(formData.worked_hours) || 0;
     const requiredHours = parseFloat(formData.required_hours) || 0;
-    const paket7Boy = parseInt(formData.paket_7_boy) || 0;
-    const paket5Boy = parseInt(formData.paket_5_boy) || 0;
 
     // Net Üretim Paleti = Üretilen Palet - Fire
     const netProductionPallets = producedPallets - waste;
@@ -219,8 +220,18 @@ const ProductionEntry = () => {
     // Kayıp Zaman = Çalışılması Gereken - Çalışılan
     const lostTimeHours = requiredHours - workedHours;
 
-    // Toplam Paket = 7 Boy + 5 Boy
-    const toplamPaket = paket7Boy + paket5Boy;
+    // Çıkan Paket Toplamları - Her satırda miktar × paket adedi
+    let toplam7Boy = 0;
+    let toplam5Boy = 0;
+    
+    for (let i = 1; i <= 5; i++) {
+      const paket = formData[`cikan_paket_${i}`];
+      if (paket && paket.miktar) {
+        const miktar = parseInt(paket.miktar) || 0;
+        toplam7Boy += miktar * (paket.paket_7_boy || 0);
+        toplam5Boy += miktar * (paket.paket_5_boy || 0);
+      }
+    }
 
     setCalculations({
       net_production_pallets: netProductionPallets,
@@ -232,7 +243,9 @@ const ProductionEntry = () => {
       lost_time_minutes: hoursToMinutes(lostTimeHours),
       worked_minutes: hoursToMinutes(workedHours),
       required_minutes: hoursToMinutes(requiredHours),
-      toplam_paket: toplamPaket
+      toplam_7_boy: toplam7Boy,
+      toplam_5_boy: toplam5Boy,
+      genel_toplam_paket: toplam7Boy + toplam5Boy
     });
   };
 
