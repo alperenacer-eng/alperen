@@ -1623,7 +1623,13 @@ async def create_bims_stok_urun(input: BimsStokUrunCreate, current_user: dict = 
 @api_router.get("/bims-stok-urunler")
 async def get_bims_stok_urunler(current_user: dict = Depends(get_current_user)):
     db = await get_db()
-    async with db.execute("SELECT * FROM bims_stok_urunler ORDER BY urun_adi") as cursor:
+    # Products tablosundaki sira_no'ya göre sırala
+    query = """
+        SELECT s.* FROM bims_stok_urunler s
+        LEFT JOIN products p ON s.id = p.id || '_stok'
+        ORDER BY COALESCE(p.sira_no, 999999) ASC, s.urun_adi ASC
+    """
+    async with db.execute(query) as cursor:
         rows = await cursor.fetchall()
     await db.close()
     return rows_to_list(rows)
