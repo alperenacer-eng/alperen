@@ -300,39 +300,57 @@ const ProductionEntry = () => {
             }
           }
         }
+        // İşletme değişince tüm çıkan paket satırlarının paket adetlerini güncelle
+        for (let i = 1; i <= 5; i++) {
+          const paketKey = `cikan_paket_${i}`;
+          const paket = prev[paketKey];
+          if (paket && paket.urun_id) {
+            const product = products.find(p => p.id === paket.urun_id);
+            if (product) {
+              updated[paketKey] = {
+                ...paket,
+                paket_7_boy: product.paket_adetleri_7_boy?.[value] || 0,
+                paket_5_boy: product.paket_adetleri_5_boy?.[value] || 0
+              };
+            }
+          }
+        }
       }
       if (field === 'operator_id') {
         const op = operators.find(o => o.id === value);
         updated.operator_name = op ? op.name : '';
       }
       
-      // Çıkan paket ürün seçimi
-      if (field === 'cikan_paket_urun_id') {
+      return updated;
+    });
+  };
+
+  // Çıkan paket satırı güncelleme
+  const handleCikanPaketChange = (rowIndex, field, value) => {
+    setFormData(prev => {
+      const paketKey = `cikan_paket_${rowIndex}`;
+      const currentPaket = prev[paketKey] || { urun_id: '', urun_adi: '', miktar: '', paket_7_boy: 0, paket_5_boy: 0 };
+      
+      let updatedPaket = { ...currentPaket, [field]: value };
+      
+      // Ürün seçildiğinde paket adetlerini getir
+      if (field === 'urun_id') {
         const product = products.find(p => p.id === value);
         if (product) {
-          updated.cikan_paket_urun_adi = product.name;
+          updatedPaket.urun_adi = product.name;
           // İşletme seçiliyse paket adetlerini getir
           if (prev.department_id) {
-            const paket7 = product.paket_adetleri_7_boy?.[prev.department_id];
-            const paket5 = product.paket_adetleri_5_boy?.[prev.department_id];
-            if (paket7) updated.paket_7_boy = String(paket7);
-            if (paket5) updated.paket_5_boy = String(paket5);
+            updatedPaket.paket_7_boy = product.paket_adetleri_7_boy?.[prev.department_id] || 0;
+            updatedPaket.paket_5_boy = product.paket_adetleri_5_boy?.[prev.department_id] || 0;
           }
+        } else {
+          updatedPaket.urun_adi = '';
+          updatedPaket.paket_7_boy = 0;
+          updatedPaket.paket_5_boy = 0;
         }
       }
       
-      // İşletme değiştiğinde çıkan paket adetlerini de güncelle
-      if (field === 'department_id' && prev.cikan_paket_urun_id) {
-        const product = products.find(p => p.id === prev.cikan_paket_urun_id);
-        if (product) {
-          const paket7 = product.paket_adetleri_7_boy?.[value];
-          const paket5 = product.paket_adetleri_5_boy?.[value];
-          if (paket7) updated.paket_7_boy = String(paket7);
-          if (paket5) updated.paket_5_boy = String(paket5);
-        }
-      }
-      
-      return updated;
+      return { ...prev, [paketKey]: updatedPaket };
     });
   };
 
