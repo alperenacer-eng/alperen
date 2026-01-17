@@ -355,6 +355,8 @@ const ProductionEntry = () => {
         mix_count: parseInt(formData.mix_count) || null,
         cement_in_mix: parseFloat(formData.cement_per_mix) || null,
         machine_cement: parseFloat(formData.machine_cement) || null,
+        paket_7_boy: parseInt(formData.paket_7_boy) || 0,
+        paket_5_boy: parseInt(formData.paket_5_boy) || 0,
       };
 
       if (isEditMode && editId) {
