@@ -44,6 +44,7 @@ const ProductionEntry = () => {
   const [departments, setDepartments] = useState([]);
   const [operators, setOperators] = useState([]);
   const [molds, setMolds] = useState([]);
+  const [kalipNoListesi, setKalipNoListesi] = useState([]);
   const [validationErrors, setValidationErrors] = useState({});
   const [formData, setFormData] = useState({
     // Temel alanlar
