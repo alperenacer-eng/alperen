@@ -328,24 +328,24 @@ const ProductionEntry = () => {
   const handleCikanPaketChange = (rowIndex, field, value) => {
     setFormData(prev => {
       const paketKey = `cikan_paket_${rowIndex}`;
-      const currentPaket = prev[paketKey] || { urun_id: '', urun_adi: '', miktar: '', paket_7_boy: 0, paket_5_boy: 0 };
+      const currentPaket = prev[paketKey] || { urun_id: '', urun_adi: '', paket_7_boy: '', paket_5_boy: '', birim_7_boy: 0, birim_5_boy: 0 };
       
       let updatedPaket = { ...currentPaket, [field]: value };
       
-      // Ürün seçildiğinde paket adetlerini getir
+      // Ürün seçildiğinde BİRİM paket adetlerini getir (kaynaklardan)
       if (field === 'urun_id') {
         const product = products.find(p => p.id === value);
         if (product) {
           updatedPaket.urun_adi = product.name;
-          // İşletme seçiliyse paket adetlerini getir
+          // İşletme seçiliyse birim paket adetlerini getir
           if (prev.department_id) {
-            updatedPaket.paket_7_boy = product.paket_adetleri_7_boy?.[prev.department_id] || 0;
-            updatedPaket.paket_5_boy = product.paket_adetleri_5_boy?.[prev.department_id] || 0;
+            updatedPaket.birim_7_boy = product.paket_adetleri_7_boy?.[prev.department_id] || 0;
+            updatedPaket.birim_5_boy = product.paket_adetleri_5_boy?.[prev.department_id] || 0;
           }
         } else {
           updatedPaket.urun_adi = '';
-          updatedPaket.paket_7_boy = 0;
-          updatedPaket.paket_5_boy = 0;
+          updatedPaket.birim_7_boy = 0;
+          updatedPaket.birim_5_boy = 0;
         }
       }
       
