@@ -387,6 +387,8 @@ const ProductionEntry = () => {
         machine_cement: parseFloat(formData.machine_cement) || null,
         paket_7_boy: parseInt(formData.paket_7_boy) || 0,
         paket_5_boy: parseInt(formData.paket_5_boy) || 0,
+        cikan_paket_urun_id: formData.cikan_paket_urun_id || '',
+        cikan_paket_urun_adi: formData.cikan_paket_urun_adi || '',
       };
 
       if (isEditMode && editId) {
