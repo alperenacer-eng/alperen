@@ -751,6 +751,42 @@ const ProductionEntry = () => {
             </div>
           </div>
 
+          {/* Çıkan Paket Bilgileri */}
+          <div>
+            <h2 className="text-xl font-semibold text-white mb-4 pb-2 border-b border-slate-700">📦 Çıkan Paket</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="space-y-2">
+                <Label>7 Boy Paket Sayısı</Label>
+                <Input
+                  type="number"
+                  value={formData.paket_7_boy}
+                  onChange={(e) => handleChange('paket_7_boy', e.target.value)}
+                  placeholder="0"
+                  className="h-12 bg-slate-950 border-slate-800 text-white font-mono"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>5 Boy Paket Sayısı</Label>
+                <Input
+                  type="number"
+                  value={formData.paket_5_boy}
+                  onChange={(e) => handleChange('paket_5_boy', e.target.value)}
+                  placeholder="0"
+                  className="h-12 bg-slate-950 border-slate-800 text-white font-mono"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Toplam Paket</Label>
+                <div className="h-12 bg-emerald-500/10 border border-emerald-500/30 rounded-lg flex items-center px-4 font-mono text-emerald-400 font-bold text-lg">
+                  <Calculator className="w-5 h-5 mr-2" />
+                  {calculations.toplam_paket}
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* Arızalar - Opsiyonel */}
           <div>
             <h2 className="text-xl font-semibold text-white mb-4 pb-2 border-b border-slate-700">⚠️ Arızalar <span className="text-sm font-normal text-slate-500">(Opsiyonel)</span></h2>
