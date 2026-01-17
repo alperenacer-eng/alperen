@@ -813,7 +813,7 @@ const ProductionEntry = () => {
                     : 'bg-red-500/10 border border-red-500/30 text-red-400'
                 }`}>
                   <Calculator className="w-4 h-4 mr-2" />
-                  {calculations.cement_difference.toFixed(1)}
+                  {formatDecimal(calculations.cement_difference, 1)}
                 </div>
               </div>
 
@@ -821,7 +821,7 @@ const ProductionEntry = () => {
                 <Label>Adet Başı Harcanan (kg)</Label>
                 <div className="h-12 bg-purple-500/10 border border-purple-500/30 rounded-lg flex items-center px-4 font-mono text-purple-400 font-semibold">
                   <Calculator className="w-4 h-4 mr-2" />
-                  {calculations.cement_per_piece.toFixed(3)}
+                  {formatDecimal(calculations.cement_per_piece, 3)}
                 </div>
               </div>
             </div>
