@@ -265,6 +265,24 @@ const ProductionEntry = () => {
       setDepartments(departmentsRes.data);
       setOperators(operatorsRes.data);
       setMolds(moldsRes.data);
+      
+      // Tüm kalıp numaralarını çıkar ve sırala
+      const allKalipNos = [];
+      moldsRes.data.forEach(mold => {
+        for (let i = 1; i <= 10; i++) {
+          const kalipNo = mold[`kalip_no_${i}`];
+          if (kalipNo && kalipNo.trim() !== '') {
+            allKalipNos.push(kalipNo);
+          }
+        }
+      });
+      // Sayısal sıralama yap
+      allKalipNos.sort((a, b) => {
+        const numA = parseInt(a) || 0;
+        const numB = parseInt(b) || 0;
+        return numA - numB;
+      });
+      setKalipNoListesi([...new Set(allKalipNos)]); // Tekrarları kaldır
     } catch (error) {
       toast.error('Veriler yüklenemedi');
     }
