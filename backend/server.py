@@ -322,9 +322,21 @@ async def init_db():
                 product_length REAL,
                 breakdown_1 TEXT,
                 breakdown_2 TEXT,
-                breakdown_3 TEXT
+                breakdown_3 TEXT,
+                paket_7_boy INTEGER DEFAULT 0,
+                paket_5_boy INTEGER DEFAULT 0
             )
         ''')
+        
+        # Migration: Add paket columns to production_records if not exists
+        try:
+            await db.execute("ALTER TABLE production_records ADD COLUMN paket_7_boy INTEGER DEFAULT 0")
+        except:
+            pass
+        try:
+            await db.execute("ALTER TABLE production_records ADD COLUMN paket_5_boy INTEGER DEFAULT 0")
+        except:
+            pass
         
         # Cimento Giris table
         await db.execute('''
