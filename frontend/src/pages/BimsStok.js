@@ -128,6 +128,36 @@ const BimsStok = () => {
     }
   };
 
+  // Açılış Fişi Kaydet
+  const handleAcilisFisiKaydet = async (urun) => {
+    const miktar = parseFloat(acilisFisleri[urun.id]);
+    if (isNaN(miktar) || miktar < 0) {
+      toast.error('Geçerli bir miktar girin');
+      return;
+    }
+    
+    try {
+      await axios.post(`${API_URL}/bims-stok-acilis-fisi`, {
+        urun_id: urun.id,
+        miktar: miktar,
+        tarih: new Date().toISOString().split('T')[0]
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      toast.success('Açılış fişi kaydedildi');
+      fetchStokUrunler();
+      fetchOzet();
+      // Input'u temizle
+      setAcilisFisleri(prev => {
+        const updated = {...prev};
+        delete updated[urun.id];
+        return updated;
+      });
+    } catch (error) {
+      toast.error('Açılış fişi kaydedilemedi');
+    }
+  };
+
   return (
     <div className="animate-fade-in">
       {/* Header */}
