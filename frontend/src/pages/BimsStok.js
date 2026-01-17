@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { Trash2, ArrowLeft, Edit, History, Boxes, TrendingUp, TrendingDown, Plus, X } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { formatNumber, formatInteger } from '@/utils/formatNumber';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL + '/api';
 
