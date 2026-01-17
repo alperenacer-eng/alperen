@@ -823,71 +823,125 @@ const ProductionEntry = () => {
             </div>
           </div>
 
-          {/* Çıkan Paket Bilgileri */}
+          {/* Çıkan Paket Bilgileri - 5 Satır */}
           <div>
             <h2 className="text-xl font-semibold text-white mb-4 pb-2 border-b border-slate-700">📦 Çıkan Paket</h2>
-            <p className="text-sm text-slate-400 mb-4">Ürün seçtiğinizde, seçilen işletmeye ait paket adetleri otomatik getirilir.</p>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-              <div className="space-y-2">
-                <Label>Ürün Seçin</Label>
-                <Select value={formData.cikan_paket_urun_id} onValueChange={(value) => handleChange('cikan_paket_urun_id', value)}>
-                  <SelectTrigger className="h-12 bg-slate-950 border-slate-800 text-white">
-                    <SelectValue placeholder="Ürün seçin" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-slate-900 border-slate-800 text-white max-h-60">
-                    {products.length > 0 ? (
-                      products.map((product) => (
-                        <SelectItem key={product.id} value={product.id}>{product.name}</SelectItem>
-                      ))
-                    ) : (
-                      <div className="p-4 text-sm text-slate-500">Henüz ürün eklenmemiş</div>
-                    )}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label>7 Boy Paket Sayısı</Label>
-                <Input
-                  type="number"
-                  value={formData.paket_7_boy}
-                  onChange={(e) => handleChange('paket_7_boy', e.target.value)}
-                  placeholder="0"
-                  className="h-12 bg-slate-950 border-slate-800 text-white font-mono"
-                />
-                {formData.cikan_paket_urun_id && formData.department_id && (
-                  <p className="text-xs text-cyan-400">
-                    {products.find(p => p.id === formData.cikan_paket_urun_id)?.paket_adetleri_7_boy?.[formData.department_id] 
-                      ? `Tanımlı: ${products.find(p => p.id === formData.cikan_paket_urun_id)?.paket_adetleri_7_boy?.[formData.department_id]}`
-                      : 'Bu işletme için tanım yok'}
-                  </p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label>5 Boy Paket Sayısı</Label>
-                <Input
-                  type="number"
-                  value={formData.paket_5_boy}
-                  onChange={(e) => handleChange('paket_5_boy', e.target.value)}
-                  placeholder="0"
-                  className="h-12 bg-slate-950 border-slate-800 text-white font-mono"
-                />
-                {formData.cikan_paket_urun_id && formData.department_id && (
-                  <p className="text-xs text-cyan-400">
-                    {products.find(p => p.id === formData.cikan_paket_urun_id)?.paket_adetleri_5_boy?.[formData.department_id] 
-                      ? `Tanımlı: ${products.find(p => p.id === formData.cikan_paket_urun_id)?.paket_adetleri_5_boy?.[formData.department_id]}`
-                      : 'Bu işletme için tanım yok'}
-                  </p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label>Toplam Paket</Label>
-                <div className="h-12 bg-emerald-500/10 border border-emerald-500/30 rounded-lg flex items-center px-4 font-mono text-emerald-400 font-bold text-lg">
-                  <Calculator className="w-5 h-5 mr-2" />
-                  {calculations.toplam_paket}
+            <p className="text-sm text-slate-400 mb-4">Ürün seçtiğinizde, seçilen işletmeye ait paket adetleri otomatik getirilir. Miktar girin ve otomatik çarpım yapılır.</p>
+            
+            {/* Başlık Satırı */}
+            <div className="grid grid-cols-12 gap-3 mb-3 px-2">
+              <div className="col-span-1 text-xs text-slate-500 font-medium">#</div>
+              <div className="col-span-3 text-xs text-slate-500 font-medium">Ürün</div>
+              <div className="col-span-2 text-xs text-slate-500 font-medium">Miktar</div>
+              <div className="col-span-2 text-xs text-slate-500 font-medium">7 Boy (Birim)</div>
+              <div className="col-span-2 text-xs text-slate-500 font-medium">5 Boy (Birim)</div>
+              <div className="col-span-1 text-xs text-slate-500 font-medium">7 Boy Top.</div>
+              <div className="col-span-1 text-xs text-slate-500 font-medium">5 Boy Top.</div>
+            </div>
+            
+            {/* 5 Satır */}
+            {[1, 2, 3, 4, 5].map((rowIndex) => {
+              const paket = formData[`cikan_paket_${rowIndex}`] || { urun_id: '', urun_adi: '', miktar: '', paket_7_boy: 0, paket_5_boy: 0 };
+              const miktar = parseInt(paket.miktar) || 0;
+              const toplam7 = miktar * (paket.paket_7_boy || 0);
+              const toplam5 = miktar * (paket.paket_5_boy || 0);
+              
+              return (
+                <div key={rowIndex} className="grid grid-cols-12 gap-3 mb-3 items-center bg-slate-900/50 p-3 rounded-lg border border-slate-800">
+                  {/* Satır Numarası */}
+                  <div className="col-span-1">
+                    <span className="text-slate-500 font-mono">{rowIndex}</span>
+                  </div>
+                  
+                  {/* Ürün Seçimi */}
+                  <div className="col-span-3">
+                    <Select value={paket.urun_id} onValueChange={(value) => handleCikanPaketChange(rowIndex, 'urun_id', value)}>
+                      <SelectTrigger className="h-10 bg-slate-950 border-slate-800 text-white text-sm">
+                        <SelectValue placeholder="Ürün seçin" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-slate-900 border-slate-800 text-white max-h-60">
+                        {products.length > 0 ? (
+                          products.map((product) => (
+                            <SelectItem key={product.id} value={product.id}>{product.name}</SelectItem>
+                          ))
+                        ) : (
+                          <div className="p-4 text-sm text-slate-500">Henüz ürün eklenmemiş</div>
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  {/* Miktar Girişi */}
+                  <div className="col-span-2">
+                    <Input
+                      type="number"
+                      value={paket.miktar}
+                      onChange={(e) => handleCikanPaketChange(rowIndex, 'miktar', e.target.value)}
+                      placeholder="0"
+                      className="h-10 bg-slate-950 border-slate-800 text-white font-mono text-sm"
+                    />
+                  </div>
+                  
+                  {/* 7 Boy Birim Paket (Otomatik) */}
+                  <div className="col-span-2">
+                    <div className="h-10 bg-cyan-500/10 border border-cyan-500/30 rounded-lg flex items-center px-3 font-mono text-cyan-400 text-sm">
+                      {paket.paket_7_boy || 0}
+                    </div>
+                  </div>
+                  
+                  {/* 5 Boy Birim Paket (Otomatik) */}
+                  <div className="col-span-2">
+                    <div className="h-10 bg-amber-500/10 border border-amber-500/30 rounded-lg flex items-center px-3 font-mono text-amber-400 text-sm">
+                      {paket.paket_5_boy || 0}
+                    </div>
+                  </div>
+                  
+                  {/* 7 Boy Toplam (Miktar × Birim) */}
+                  <div className="col-span-1">
+                    <div className="h-10 bg-emerald-500/10 border border-emerald-500/30 rounded-lg flex items-center justify-center font-mono text-emerald-400 text-sm font-bold">
+                      {toplam7}
+                    </div>
+                  </div>
+                  
+                  {/* 5 Boy Toplam (Miktar × Birim) */}
+                  <div className="col-span-1">
+                    <div className="h-10 bg-purple-500/10 border border-purple-500/30 rounded-lg flex items-center justify-center font-mono text-purple-400 text-sm font-bold">
+                      {toplam5}
+                    </div>
+                  </div>
                 </div>
+              );
+            })}
+            
+            {/* Genel Toplam Satırı */}
+            <div className="grid grid-cols-12 gap-3 mt-4 p-4 bg-gradient-to-r from-emerald-900/30 to-purple-900/30 rounded-xl border border-slate-700">
+              <div className="col-span-1"></div>
+              <div className="col-span-3"></div>
+              <div className="col-span-2"></div>
+              <div className="col-span-2 text-right">
+                <span className="text-slate-400 text-sm font-medium">TOPLAM:</span>
+              </div>
+              <div className="col-span-2">
+                <div className="h-12 bg-emerald-500/20 border-2 border-emerald-500/50 rounded-lg flex items-center justify-center">
+                  <Calculator className="w-4 h-4 mr-2 text-emerald-400" />
+                  <span className="font-mono text-emerald-400 text-xl font-bold">{calculations.toplam_7_boy}</span>
+                  <span className="text-emerald-400/70 text-xs ml-1">7 Boy</span>
+                </div>
+              </div>
+              <div className="col-span-2">
+                <div className="h-12 bg-purple-500/20 border-2 border-purple-500/50 rounded-lg flex items-center justify-center">
+                  <Calculator className="w-4 h-4 mr-2 text-purple-400" />
+                  <span className="font-mono text-purple-400 text-xl font-bold">{calculations.toplam_5_boy}</span>
+                  <span className="text-purple-400/70 text-xs ml-1">5 Boy</span>
+                </div>
+              </div>
+            </div>
+            
+            {/* Genel Toplam */}
+            <div className="mt-4 flex justify-end">
+              <div className="bg-gradient-to-r from-cyan-900/40 to-blue-900/40 p-4 rounded-xl border border-cyan-500/30">
+                <span className="text-slate-400 text-sm mr-4">GENEL TOPLAM PAKET:</span>
+                <span className="font-mono text-cyan-400 text-2xl font-bold">{calculations.genel_toplam_paket}</span>
               </div>
             </div>
           </div>
