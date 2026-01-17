@@ -926,7 +926,8 @@ const ProductionEntry = () => {
               <div className="col-span-1"></div>
               <div className="col-span-3"></div>
               <div className="col-span-1"></div>
-              <div className="col-span-2 text-right">
+              <div className="col-span-2"></div>
+              <div className="col-span-2 text-right flex items-center justify-end">
                 <span className="text-slate-400 text-sm font-medium">TOPLAM:</span>
               </div>
               <div className="col-span-2">
@@ -936,11 +937,9 @@ const ProductionEntry = () => {
                   <span className="text-emerald-400/70 text-xs ml-1">7 Boy</span>
                 </div>
               </div>
-              <div className="col-span-2">
+              <div className="col-span-1">
                 <div className="h-12 bg-purple-500/20 border-2 border-purple-500/50 rounded-lg flex items-center justify-center">
-                  <Calculator className="w-4 h-4 mr-2 text-purple-400" />
-                  <span className="font-mono text-purple-400 text-xl font-bold">{calculations.toplam_5_boy}</span>
-                  <span className="text-purple-400/70 text-xs ml-1">5 Boy</span>
+                  <span className="font-mono text-purple-400 text-lg font-bold">{calculations.toplam_5_boy}</span>
                 </div>
               </div>
             </div>
