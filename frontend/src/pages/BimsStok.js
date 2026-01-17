@@ -246,17 +246,20 @@ const BimsStok = () => {
                           value={acilisFisleri[urun.id] !== undefined ? acilisFisleri[urun.id] : (urun.acilis_miktari || '')}
                           onChange={(e) => setAcilisFisleri({...acilisFisleri, [urun.id]: e.target.value})}
                           placeholder="0"
-                          className="w-24 h-9 bg-blue-500/10 border border-blue-500/30 text-blue-400 font-mono text-center text-sm"
+                          className="w-28 h-10 bg-blue-500/10 border border-blue-500/30 text-blue-400 font-mono text-center font-bold"
                         />
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleAcilisFisiKaydet(urun)}
-                          className="text-blue-400 hover:text-blue-300 hover:bg-blue-400/10 h-9 px-2"
-                          title="Açılış Fişi Kaydet"
-                        >
-                          ✓
-                        </Button>
+                        {(acilisFisleri[urun.id] !== undefined && acilisFisleri[urun.id] !== String(urun.acilis_miktari || '')) && (
+                          <Button
+                            size="sm"
+                            onClick={() => handleAcilisFisiKaydet(urun)}
+                            className="bg-blue-600 hover:bg-blue-500 text-white h-10 px-3"
+                          >
+                            Kaydet
+                          </Button>
+                        )}
+                        {urun.acilis_miktari > 0 && !acilisFisleri[urun.id] && (
+                          <span className="text-xs text-green-400">✓ Kayıtlı</span>
+                        )}
                       </div>
                     </td>
                     <td className="py-4 px-2 text-right">
