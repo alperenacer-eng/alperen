@@ -172,7 +172,7 @@ const Layout = () => {
           <Button
             onClick={handleLogout}
             data-testid="logout-button"
-            className="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white"
+            className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 hover:text-gray-900"
           >
             <LogOut className="w-4 h-4 mr-2" />
             Çıkış Yap
@@ -181,21 +181,21 @@ const Layout = () => {
       </aside>
 
       {/* Mobile Header */}
-      <div className="md:hidden fixed top-0 left-0 right-0 z-50 bg-slate-900/95 backdrop-blur-sm border-b border-slate-800">
+      <div className="md:hidden fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-200 shadow-sm">
         <div className="flex items-center justify-between p-4">
           <div className="flex items-center gap-2">
             <Factory className="w-6 h-6 text-orange-500" />
             <div>
-              <h1 className="text-sm font-bold text-white">Acerler Bims Takip</h1>
+              <h1 className="text-sm font-bold text-gray-900">Acerler Bims Takip</h1>
               {currentModule && (
-                <p className="text-xs text-slate-400">{currentModule.icon} {currentModule.name}</p>
+                <p className="text-xs text-gray-500">{currentModule.icon} {currentModule.name}</p>
               )}
             </div>
           </div>
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             data-testid="mobile-menu-button"
-            className="text-slate-400 hover:text-white"
+            className="text-gray-600 hover:text-gray-900"
           >
             {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
           </button>
@@ -203,7 +203,7 @@ const Layout = () => {
 
         {/* Mobile Menu */}
         {mobileMenuOpen && (
-          <div className="bg-slate-900 border-b border-slate-800 p-4 space-y-2 animate-fade-in">
+          <div className="bg-white border-b border-gray-200 p-4 space-y-2 animate-fade-in">
             {currentModule && (
               <button
                 onClick={() => {
@@ -211,7 +211,7 @@ const Layout = () => {
                   navigate('/');
                   setMobileMenuOpen(false);
                 }}
-                className="w-full flex items-center gap-3 px-4 py-3 rounded-md text-slate-400 hover:bg-slate-800 hover:text-white transition-all"
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-md text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-all"
               >
                 <ArrowLeft className="w-5 h-5" />
                 <span className="font-medium">Modül Değiştir</span>
