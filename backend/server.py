@@ -1152,10 +1152,13 @@ class ProductionRecordCreate(BaseModel):
     breakdown_1: Optional[str] = None
     breakdown_2: Optional[str] = None
     breakdown_3: Optional[str] = None
-    paket_7_boy: Optional[int] = None
-    paket_5_boy: Optional[int] = None
-    cikan_paket_urun_id: Optional[str] = None
-    cikan_paket_urun_adi: Optional[str] = None
+    cikan_paket_1: Optional[str] = None
+    cikan_paket_2: Optional[str] = None
+    cikan_paket_3: Optional[str] = None
+    cikan_paket_4: Optional[str] = None
+    cikan_paket_5: Optional[str] = None
+    toplam_7_boy: Optional[int] = None
+    toplam_5_boy: Optional[int] = None
 
 class ProductionRecordUpdate(BaseModel):
     product_id: Optional[str] = None
