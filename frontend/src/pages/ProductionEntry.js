@@ -784,7 +784,26 @@ const ProductionEntry = () => {
           {/* Çıkan Paket Bilgileri */}
           <div>
             <h2 className="text-xl font-semibold text-white mb-4 pb-2 border-b border-slate-700">📦 Çıkan Paket</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <p className="text-sm text-slate-400 mb-4">Ürün seçtiğinizde, seçilen işletmeye ait paket adetleri otomatik getirilir.</p>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+              <div className="space-y-2">
+                <Label>Ürün Seçin</Label>
+                <Select value={formData.cikan_paket_urun_id} onValueChange={(value) => handleChange('cikan_paket_urun_id', value)}>
+                  <SelectTrigger className="h-12 bg-slate-950 border-slate-800 text-white">
+                    <SelectValue placeholder="Ürün seçin" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-slate-900 border-slate-800 text-white max-h-60">
+                    {products.length > 0 ? (
+                      products.map((product) => (
+                        <SelectItem key={product.id} value={product.id}>{product.name}</SelectItem>
+                      ))
+                    ) : (
+                      <div className="p-4 text-sm text-slate-500">Henüz ürün eklenmemiş</div>
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+
               <div className="space-y-2">
                 <Label>7 Boy Paket Sayısı</Label>
                 <Input
@@ -794,6 +813,13 @@ const ProductionEntry = () => {
                   placeholder="0"
                   className="h-12 bg-slate-950 border-slate-800 text-white font-mono"
                 />
+                {formData.cikan_paket_urun_id && formData.department_id && (
+                  <p className="text-xs text-cyan-400">
+                    {products.find(p => p.id === formData.cikan_paket_urun_id)?.paket_adetleri_7_boy?.[formData.department_id] 
+                      ? `Tanımlı: ${products.find(p => p.id === formData.cikan_paket_urun_id)?.paket_adetleri_7_boy?.[formData.department_id]}`
+                      : 'Bu işletme için tanım yok'}
+                  </p>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -805,6 +831,13 @@ const ProductionEntry = () => {
                   placeholder="0"
                   className="h-12 bg-slate-950 border-slate-800 text-white font-mono"
                 />
+                {formData.cikan_paket_urun_id && formData.department_id && (
+                  <p className="text-xs text-cyan-400">
+                    {products.find(p => p.id === formData.cikan_paket_urun_id)?.paket_adetleri_5_boy?.[formData.department_id] 
+                      ? `Tanımlı: ${products.find(p => p.id === formData.cikan_paket_urun_id)?.paket_adetleri_5_boy?.[formData.department_id]}`
+                      : 'Bu işletme için tanım yok'}
+                  </p>
+                )}
               </div>
 
               <div className="space-y-2">
