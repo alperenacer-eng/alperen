@@ -872,7 +872,7 @@ const ProductionEntry = () => {
                   </div>
                   
                   {/* Miktar Girişi */}
-                  <div className="col-span-2">
+                  <div className="col-span-1">
                     <Input
                       type="number"
                       value={paket.miktar}
@@ -882,22 +882,30 @@ const ProductionEntry = () => {
                     />
                   </div>
                   
-                  {/* 7 Boy Birim Paket (Otomatik) */}
+                  {/* 7 Boy Birim Paket (Girilebilir - Otomatik doldurulur) */}
                   <div className="col-span-2">
-                    <div className="h-10 bg-cyan-500/10 border border-cyan-500/30 rounded-lg flex items-center px-3 font-mono text-cyan-400 text-sm">
-                      {paket.paket_7_boy || 0}
-                    </div>
+                    <Input
+                      type="number"
+                      value={paket.paket_7_boy || ''}
+                      onChange={(e) => handleCikanPaketChange(rowIndex, 'paket_7_boy', parseInt(e.target.value) || 0)}
+                      placeholder="0"
+                      className="h-10 bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 font-mono text-sm"
+                    />
                   </div>
                   
-                  {/* 5 Boy Birim Paket (Otomatik) */}
+                  {/* 5 Boy Birim Paket (Girilebilir - Otomatik doldurulur) */}
                   <div className="col-span-2">
-                    <div className="h-10 bg-amber-500/10 border border-amber-500/30 rounded-lg flex items-center px-3 font-mono text-amber-400 text-sm">
-                      {paket.paket_5_boy || 0}
-                    </div>
+                    <Input
+                      type="number"
+                      value={paket.paket_5_boy || ''}
+                      onChange={(e) => handleCikanPaketChange(rowIndex, 'paket_5_boy', parseInt(e.target.value) || 0)}
+                      placeholder="0"
+                      className="h-10 bg-amber-500/10 border border-amber-500/30 text-amber-400 font-mono text-sm"
+                    />
                   </div>
                   
                   {/* 7 Boy Toplam (Miktar × Birim) */}
-                  <div className="col-span-1">
+                  <div className="col-span-2">
                     <div className="h-10 bg-emerald-500/10 border border-emerald-500/30 rounded-lg flex items-center justify-center font-mono text-emerald-400 text-sm font-bold">
                       {toplam7}
                     </div>
@@ -917,7 +925,7 @@ const ProductionEntry = () => {
             <div className="grid grid-cols-12 gap-3 mt-4 p-4 bg-gradient-to-r from-emerald-900/30 to-purple-900/30 rounded-xl border border-slate-700">
               <div className="col-span-1"></div>
               <div className="col-span-3"></div>
-              <div className="col-span-2"></div>
+              <div className="col-span-1"></div>
               <div className="col-span-2 text-right">
                 <span className="text-slate-400 text-sm font-medium">TOPLAM:</span>
               </div>
