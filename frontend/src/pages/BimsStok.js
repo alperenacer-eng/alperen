@@ -323,7 +323,7 @@ const BimsStok = () => {
                     <span className={`font-bold ${
                       hareket.hareket_tipi === 'cikis' ? 'text-red-400' : 'text-green-400'
                     }`}>
-                      {hareket.hareket_tipi === 'cikis' ? '-' : '+'}{hareket.miktar}
+                      {hareket.hareket_tipi === 'cikis' ? '-' : '+'}{formatInteger(hareket.miktar)}
                     </span>
                   </div>
                   <div className="flex items-center justify-between mt-2">
