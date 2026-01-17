@@ -288,6 +288,32 @@ const ProductionEntry = () => {
         updated.operator_name = op ? op.name : '';
       }
       
+      // Çıkan paket ürün seçimi
+      if (field === 'cikan_paket_urun_id') {
+        const product = products.find(p => p.id === value);
+        if (product) {
+          updated.cikan_paket_urun_adi = product.name;
+          // İşletme seçiliyse paket adetlerini getir
+          if (prev.department_id) {
+            const paket7 = product.paket_adetleri_7_boy?.[prev.department_id];
+            const paket5 = product.paket_adetleri_5_boy?.[prev.department_id];
+            if (paket7) updated.paket_7_boy = String(paket7);
+            if (paket5) updated.paket_5_boy = String(paket5);
+          }
+        }
+      }
+      
+      // İşletme değiştiğinde çıkan paket adetlerini de güncelle
+      if (field === 'department_id' && prev.cikan_paket_urun_id) {
+        const product = products.find(p => p.id === prev.cikan_paket_urun_id);
+        if (product) {
+          const paket7 = product.paket_adetleri_7_boy?.[value];
+          const paket5 = product.paket_adetleri_5_boy?.[value];
+          if (paket7) updated.paket_7_boy = String(paket7);
+          if (paket5) updated.paket_5_boy = String(paket5);
+        }
+      }
+      
       return updated;
     });
   };
