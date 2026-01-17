@@ -229,7 +229,7 @@ const Layout = () => {
                   className={`flex items-center gap-3 px-4 py-3 rounded-md transition-all ${
                     isActive
                       ? 'bg-orange-500 text-white'
-                      : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                      : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
                   }`}
                 >
                   <Icon className="w-5 h-5" />
@@ -240,7 +240,7 @@ const Layout = () => {
             <button
               onClick={handleLogout}
               data-testid="mobile-logout-button"
-              className="w-full flex items-center gap-3 px-4 py-3 rounded-md text-slate-400 hover:bg-slate-800 hover:text-white transition-all"
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-md text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-all"
             >
               <LogOut className="w-5 h-5" />
               <span className="font-medium">Çıkış Yap</span>
@@ -250,7 +250,7 @@ const Layout = () => {
       </div>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-auto md:pt-0 pt-16">
+      <main className="flex-1 overflow-auto md:pt-0 pt-16 bg-gray-50">
         <div className="p-4 md:p-8 max-w-7xl mx-auto">
           <Outlet />
         </div>
