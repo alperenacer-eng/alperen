@@ -103,17 +103,17 @@ const Layout = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 flex">
+    <div className="min-h-screen bg-gray-50 flex">
       {/* Sidebar - Desktop */}
-      <aside className="hidden md:flex flex-col w-64 bg-slate-900/50 backdrop-blur-sm border-r border-slate-800">
-        <div className="p-6 border-b border-slate-800">
+      <aside className="hidden md:flex flex-col w-64 bg-white border-r border-gray-200 shadow-sm">
+        <div className="p-6 border-b border-gray-200">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg flex items-center justify-center">
               <Factory className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h1 className="text-lg font-bold text-white">Acerler Bims</h1>
-              <p className="text-xs text-slate-400">Üretim Takip</p>
+              <h1 className="text-lg font-bold text-gray-900">Acerler Bims</h1>
+              <p className="text-xs text-gray-500">Üretim Takip</p>
             </div>
           </div>
           
@@ -124,11 +124,11 @@ const Layout = () => {
                 clearModule();
                 navigate('/');
               }}
-              className="mt-4 w-full flex items-center gap-2 px-3 py-2 bg-slate-800/50 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white transition-all text-sm"
+              className="mt-4 w-full flex items-center gap-2 px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-gray-600 hover:text-gray-900 transition-all text-sm"
             >
               <ArrowLeft className="w-4 h-4" />
               <div className="flex-1 text-left">
-                <div className="text-xs text-slate-500">Modül Değiştir</div>
+                <div className="text-xs text-gray-500">Modül Değiştir</div>
                 <div className="text-sm font-medium">{currentModule.icon} {currentModule.name}</div>
               </div>
             </button>
@@ -147,7 +147,7 @@ const Layout = () => {
                 className={`flex items-center gap-3 px-4 py-3 rounded-md transition-all ${
                   isActive
                     ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/20'
-                    : 'text-slate-400 hover:bg-slate-800/50 hover:text-white'
+                    : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
                 }`}
               >
                 <Icon className="w-5 h-5" />
@@ -157,16 +157,16 @@ const Layout = () => {
           })}
         </nav>
 
-        <div className="p-4 border-t border-slate-800">
+        <div className="p-4 border-t border-gray-200">
           <div className="flex items-center gap-3 mb-3 px-2">
-            <div className="w-10 h-10 bg-slate-800 rounded-full flex items-center justify-center">
+            <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
               <span className="text-sm font-semibold text-orange-500">
                 {user?.name?.charAt(0).toUpperCase()}
               </span>
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-white truncate">{user?.name}</p>
-              <p className="text-xs text-slate-500 truncate">{user?.email}</p>
+              <p className="text-sm font-medium text-gray-900 truncate">{user?.name}</p>
+              <p className="text-xs text-gray-500 truncate">{user?.email}</p>
             </div>
           </div>
           <Button
