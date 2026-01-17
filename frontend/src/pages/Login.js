@@ -52,11 +52,11 @@ const Login = () => {
             <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl mb-4 shadow-lg shadow-orange-500/30">
               <Factory className="w-8 h-8 text-white" />
             </div>
-            <h1 className="text-3xl font-bold text-white mb-2">Acerler Bims Takip</h1>
-            <p className="text-slate-400">Verimli üretim yönetimi için gelişmiş çözüm</p>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">Acerler Bims Takip</h1>
+            <p className="text-gray-500">Verimli üretim yönetimi için gelişmiş çözüm</p>
           </div>
 
-          <div className="glass-effect rounded-2xl p-8 border border-slate-800">
+          <div className="bg-white rounded-2xl p-8 border border-gray-200 shadow-lg">
             <div className="flex gap-2 mb-6">
               <button
                 type="button"
@@ -65,7 +65,7 @@ const Login = () => {
                 className={`flex-1 py-2 px-4 rounded-lg font-medium transition-all ${
                   isLogin
                     ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/20'
-                    : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                    : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'
                 }`}
               >
                 Giriş Yap
@@ -77,7 +77,7 @@ const Login = () => {
                 className={`flex-1 py-2 px-4 rounded-lg font-medium transition-all ${
                   !isLogin
                     ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/20'
-                    : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                    : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'
                 }`}
               >
                 Kayıt Ol
@@ -87,11 +87,11 @@ const Login = () => {
             <form onSubmit={handleSubmit} className="space-y-5">
               {!isLogin && (
                 <div className="space-y-2">
-                  <Label htmlFor="name" className="text-slate-300 font-medium">
+                  <Label htmlFor="name" className="text-gray-700 font-medium">
                     Ad Soyad
                   </Label>
                   <div className="relative">
-                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                     <Input
                       id="name"
                       type="text"
@@ -100,18 +100,18 @@ const Login = () => {
                       placeholder="Adınızı girin"
                       data-testid="register-name-input"
                       required
-                      className="pl-11 h-12 bg-slate-950 border-slate-800 text-white placeholder:text-slate-500 focus:border-orange-500 focus:ring-orange-500"
+                      className="pl-11 h-12 bg-white border-gray-300 text-gray-900 placeholder:text-gray-400 focus:border-orange-500 focus:ring-orange-500"
                     />
                   </div>
                 </div>
               )}
 
               <div className="space-y-2">
-                <Label htmlFor="email" className="text-slate-300 font-medium">
+                <Label htmlFor="email" className="text-gray-700 font-medium">
                   E-posta
                 </Label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                   <Input
                     id="email"
                     type="email"
