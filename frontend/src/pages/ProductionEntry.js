@@ -150,7 +150,9 @@ const ProductionEntry = () => {
         machine_cement: record.machine_cement ? String(record.machine_cement) : '',
         breakdown_1: record.breakdown_1 || '',
         breakdown_2: record.breakdown_2 || '',
-        breakdown_3: record.breakdown_3 || ''
+        breakdown_3: record.breakdown_3 || '',
+        paket_7_boy: record.paket_7_boy ? String(record.paket_7_boy) : '',
+        paket_5_boy: record.paket_5_boy ? String(record.paket_5_boy) : ''
       });
       
       toast.success('Kayıt verileri yüklendi');
