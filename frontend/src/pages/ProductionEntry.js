@@ -289,6 +289,35 @@ const ProductionEntry = () => {
     }
   };
 
+  // Seçili ürüne ait kalıp numaralarını getir
+  const getKalipNoListesiByProduct = (productId) => {
+    if (!productId) return [];
+    
+    // Bu ürüne ait kalıpları bul
+    const productMolds = molds.filter(mold => mold.product_id === productId);
+    
+    // Kalıp numaralarını çıkar
+    const kalipNos = [];
+    productMolds.forEach(mold => {
+      for (let i = 1; i <= 10; i++) {
+        const kalipNo = mold[`kalip_no_${i}`];
+        if (kalipNo && kalipNo.trim() !== '') {
+          kalipNos.push(kalipNo);
+        }
+      }
+    });
+    
+    // Sayısal sıralama yap ve tekrarları kaldır
+    const uniqueKalipNos = [...new Set(kalipNos)];
+    uniqueKalipNos.sort((a, b) => {
+      const numA = parseInt(a) || 0;
+      const numB = parseInt(b) || 0;
+      return numA - numB;
+    });
+    
+    return uniqueKalipNos;
+  };
+
   const handleChange = (field, value) => {
     // Validation error'ı temizle
     setValidationErrors(prev => ({ ...prev, [field]: null }));
@@ -301,6 +330,8 @@ const ProductionEntry = () => {
         if (product) {
           updated.product_name = product.name;
           updated.unit = product.unit;
+          // Ürün değiştiğinde kalıp seçimini sıfırla
+          updated.mold_no = '';
           // İşletme seçiliyse palet adetini getir
           if (prev.department_id && product.uretim_palet_adetleri) {
             const paletAdet = product.uretim_palet_adetleri[prev.department_id];
