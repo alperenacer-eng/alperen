@@ -90,7 +90,8 @@ const ProductionEntry = () => {
     lost_time_hours: 0,
     lost_time_minutes: 0,
     worked_minutes: 0,
-    required_minutes: 0
+    required_minutes: 0,
+    toplam_paket: 0
   });
 
   const [isEditMode, setIsEditMode] = useState(false);
