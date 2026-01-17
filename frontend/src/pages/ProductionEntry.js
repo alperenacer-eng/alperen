@@ -71,11 +71,12 @@ const ProductionEntry = () => {
     mix_count: '',
     cement_per_mix: '',
     machine_cement: '',
-    // Çıkan Paket
-    cikan_paket_urun_id: '',
-    cikan_paket_urun_adi: '',
-    paket_7_boy: '',
-    paket_5_boy: '',
+    // Çıkan Paket - 5 satır
+    cikan_paket_1: { urun_id: '', urun_adi: '', miktar: '', paket_7_boy: 0, paket_5_boy: 0 },
+    cikan_paket_2: { urun_id: '', urun_adi: '', miktar: '', paket_7_boy: 0, paket_5_boy: 0 },
+    cikan_paket_3: { urun_id: '', urun_adi: '', miktar: '', paket_7_boy: 0, paket_5_boy: 0 },
+    cikan_paket_4: { urun_id: '', urun_adi: '', miktar: '', paket_7_boy: 0, paket_5_boy: 0 },
+    cikan_paket_5: { urun_id: '', urun_adi: '', miktar: '', paket_7_boy: 0, paket_5_boy: 0 },
     // Arızalar (opsiyonel)
     breakdown_1: '',
     breakdown_2: '',
@@ -93,7 +94,9 @@ const ProductionEntry = () => {
     lost_time_minutes: 0,
     worked_minutes: 0,
     required_minutes: 0,
-    toplam_paket: 0
+    toplam_7_boy: 0,
+    toplam_5_boy: 0,
+    genel_toplam_paket: 0
   });
 
   const [isEditMode, setIsEditMode] = useState(false);
