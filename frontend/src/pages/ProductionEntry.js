@@ -156,10 +156,12 @@ const ProductionEntry = () => {
         breakdown_1: record.breakdown_1 || '',
         breakdown_2: record.breakdown_2 || '',
         breakdown_3: record.breakdown_3 || '',
-        cikan_paket_urun_id: record.cikan_paket_urun_id || '',
-        cikan_paket_urun_adi: record.cikan_paket_urun_adi || '',
-        paket_7_boy: record.paket_7_boy ? String(record.paket_7_boy) : '',
-        paket_5_boy: record.paket_5_boy ? String(record.paket_5_boy) : ''
+        // Çıkan paket verileri
+        cikan_paket_1: record.cikan_paket_1 || { urun_id: '', urun_adi: '', miktar: '', paket_7_boy: 0, paket_5_boy: 0 },
+        cikan_paket_2: record.cikan_paket_2 || { urun_id: '', urun_adi: '', miktar: '', paket_7_boy: 0, paket_5_boy: 0 },
+        cikan_paket_3: record.cikan_paket_3 || { urun_id: '', urun_adi: '', miktar: '', paket_7_boy: 0, paket_5_boy: 0 },
+        cikan_paket_4: record.cikan_paket_4 || { urun_id: '', urun_adi: '', miktar: '', paket_7_boy: 0, paket_5_boy: 0 },
+        cikan_paket_5: record.cikan_paket_5 || { urun_id: '', urun_adi: '', miktar: '', paket_7_boy: 0, paket_5_boy: 0 },
       });
       
       toast.success('Kayıt verileri yüklendi');
