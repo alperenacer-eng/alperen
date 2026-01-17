@@ -729,7 +729,7 @@ const ProductionEntry = () => {
                 <Label>Net Üretim Paleti</Label>
                 <div className="h-12 bg-green-500/10 border border-green-500/30 rounded-lg flex items-center px-4 font-mono text-green-400 font-semibold">
                   <Calculator className="w-4 h-4 mr-2" />
-                  {calculations.net_production_pallets}
+                  {formatInteger(calculations.net_production_pallets)}
                 </div>
               </div>
 
@@ -749,7 +749,7 @@ const ProductionEntry = () => {
                 <Label>Toplam Üretim (Adet)</Label>
                 <div className="h-12 bg-orange-500/10 border border-orange-500/30 rounded-lg flex items-center px-4 font-mono text-orange-400 font-bold text-lg">
                   <Calculator className="w-5 h-5 mr-2" />
-                  {calculations.total_production.toLocaleString('tr-TR')}
+                  {formatInteger(calculations.total_production)}
                 </div>
               </div>
             </div>
@@ -788,7 +788,7 @@ const ProductionEntry = () => {
                 <Label>Harcanan Çimento (kg)</Label>
                 <div className="h-12 bg-blue-500/10 border border-blue-500/30 rounded-lg flex items-center px-4 font-mono text-blue-400 font-semibold">
                   <Calculator className="w-4 h-4 mr-2" />
-                  {calculations.total_cement_used.toFixed(1)}
+                  {formatDecimal(calculations.total_cement_used, 1)}
                 </div>
               </div>
 
