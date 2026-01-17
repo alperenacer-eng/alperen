@@ -687,13 +687,17 @@ const ProductionEntry = () => {
               <div className="space-y-2">
                 <Label>Kalıp No *</Label>
                 <Select value={formData.mold_no} onValueChange={(value) => handleChange('mold_no', value)}>
-                  <SelectTrigger className={`h-12 bg-slate-950 border-slate-800 text-white ${validationErrors.mold_no ? 'border-red-500' : ''}`}>
-                    <SelectValue placeholder="Kalıp seçin" />
+                  <SelectTrigger className={`h-12 bg-white border-gray-300 text-gray-900 ${validationErrors.mold_no ? 'border-red-500' : ''}`}>
+                    <SelectValue placeholder="Kalıp No seçin" />
                   </SelectTrigger>
-                  <SelectContent className="bg-slate-900 border-slate-800 text-white">
-                    {molds.map((mold) => (
-                      <SelectItem key={mold.id} value={mold.mold_no}>{mold.mold_no}</SelectItem>
-                    ))}
+                  <SelectContent className="bg-white border-gray-200 text-gray-900 max-h-60">
+                    {kalipNoListesi.length > 0 ? (
+                      kalipNoListesi.map((kalipNo) => (
+                        <SelectItem key={kalipNo} value={kalipNo}>{kalipNo}</SelectItem>
+                      ))
+                    ) : (
+                      <div className="p-4 text-sm text-gray-500">Kalıp numarası bulunamadı</div>
+                    )}
                   </SelectContent>
                 </Select>
                 <FieldError field="mold_no" />
