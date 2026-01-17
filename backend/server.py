@@ -323,28 +323,43 @@ async def init_db():
                 breakdown_1 TEXT,
                 breakdown_2 TEXT,
                 breakdown_3 TEXT,
-                paket_7_boy INTEGER DEFAULT 0,
-                paket_5_boy INTEGER DEFAULT 0,
-                cikan_paket_urun_id TEXT DEFAULT '',
-                cikan_paket_urun_adi TEXT DEFAULT ''
+                cikan_paket_1 TEXT DEFAULT '{}',
+                cikan_paket_2 TEXT DEFAULT '{}',
+                cikan_paket_3 TEXT DEFAULT '{}',
+                cikan_paket_4 TEXT DEFAULT '{}',
+                cikan_paket_5 TEXT DEFAULT '{}',
+                toplam_7_boy INTEGER DEFAULT 0,
+                toplam_5_boy INTEGER DEFAULT 0
             )
         ''')
         
-        # Migration: Add paket columns to production_records if not exists
+        # Migration: Add cikan paket columns to production_records if not exists
         try:
-            await db.execute("ALTER TABLE production_records ADD COLUMN paket_7_boy INTEGER DEFAULT 0")
+            await db.execute("ALTER TABLE production_records ADD COLUMN cikan_paket_1 TEXT DEFAULT '{}'")
         except:
             pass
         try:
-            await db.execute("ALTER TABLE production_records ADD COLUMN paket_5_boy INTEGER DEFAULT 0")
+            await db.execute("ALTER TABLE production_records ADD COLUMN cikan_paket_2 TEXT DEFAULT '{}'")
         except:
             pass
         try:
-            await db.execute("ALTER TABLE production_records ADD COLUMN cikan_paket_urun_id TEXT DEFAULT ''")
+            await db.execute("ALTER TABLE production_records ADD COLUMN cikan_paket_3 TEXT DEFAULT '{}'")
         except:
             pass
         try:
-            await db.execute("ALTER TABLE production_records ADD COLUMN cikan_paket_urun_adi TEXT DEFAULT ''")
+            await db.execute("ALTER TABLE production_records ADD COLUMN cikan_paket_4 TEXT DEFAULT '{}'")
+        except:
+            pass
+        try:
+            await db.execute("ALTER TABLE production_records ADD COLUMN cikan_paket_5 TEXT DEFAULT '{}'")
+        except:
+            pass
+        try:
+            await db.execute("ALTER TABLE production_records ADD COLUMN toplam_7_boy INTEGER DEFAULT 0")
+        except:
+            pass
+        try:
+            await db.execute("ALTER TABLE production_records ADD COLUMN toplam_5_boy INTEGER DEFAULT 0")
         except:
             pass
         
