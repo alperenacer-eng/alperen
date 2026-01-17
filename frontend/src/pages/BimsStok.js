@@ -19,6 +19,9 @@ const BimsStok = () => {
   const [loading, setLoading] = useState(true);
   const [deleteStokId, setDeleteStokId] = useState(null);
   
+  // Açılış Fişleri
+  const [acilisFisleri, setAcilisFisleri] = useState({});
+  
   // Stok Hareketleri
   const [showStokHareket, setShowStokHareket] = useState(null);
   const [stokHareketler, setStokHareketler] = useState([]);
