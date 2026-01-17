@@ -717,17 +717,21 @@ const ProductionEntry = () => {
 
               <div className="space-y-2">
                 <Label>Kalıp No *</Label>
-                <Select value={formData.mold_no} onValueChange={(value) => handleChange('mold_no', value)}>
-                  <SelectTrigger className={`h-12 bg-white border-gray-300 text-gray-900 ${validationErrors.mold_no ? 'border-red-500' : ''}`}>
-                    <SelectValue placeholder="Kalıp No seçin" />
+                <Select 
+                  value={formData.mold_no} 
+                  onValueChange={(value) => handleChange('mold_no', value)}
+                  disabled={!formData.product_id}
+                >
+                  <SelectTrigger className={`h-12 bg-white border-gray-300 text-gray-900 ${validationErrors.mold_no ? 'border-red-500' : ''} ${!formData.product_id ? 'opacity-50' : ''}`}>
+                    <SelectValue placeholder={formData.product_id ? "Kalıp No seçin" : "Önce ürün seçin"} />
                   </SelectTrigger>
                   <SelectContent className="bg-white border-gray-200 text-gray-900 max-h-60">
-                    {kalipNoListesi.length > 0 ? (
-                      kalipNoListesi.map((kalipNo) => (
+                    {getKalipNoListesiByProduct(formData.product_id).length > 0 ? (
+                      getKalipNoListesiByProduct(formData.product_id).map((kalipNo) => (
                         <SelectItem key={kalipNo} value={kalipNo}>{kalipNo}</SelectItem>
                       ))
                     ) : (
-                      <div className="p-4 text-sm text-gray-500">Kalıp numarası bulunamadı</div>
+                      <div className="p-4 text-sm text-gray-500">Bu ürüne ait kalıp numarası bulunamadı</div>
                     )}
                   </SelectContent>
                 </Select>
