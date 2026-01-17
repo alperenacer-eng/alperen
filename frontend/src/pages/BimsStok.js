@@ -223,22 +223,23 @@ const BimsStok = () => {
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-slate-700">
-                  <th className="text-left py-3 px-2 text-slate-400 font-medium">Ürün Adı</th>
-                  <th className="text-center py-3 px-2 text-slate-400 font-medium">Birim</th>
-                  <th className="text-center py-3 px-2 text-blue-400 font-medium">Açılış Fişi</th>
-                  <th className="text-right py-3 px-2 text-slate-400 font-medium">Mevcut Stok</th>
-                  <th className="text-center py-3 px-2 text-slate-400 font-medium">İşlemler</th>
+                <tr className="border-b border-gray-200">
+                  <th className="text-left py-3 px-2 text-gray-600 font-medium">Ürün Adı</th>
+                  <th className="text-center py-3 px-2 text-gray-600 font-medium">Birim</th>
+                  <th className="text-center py-3 px-2 text-blue-600 font-medium">Açılış Fişi</th>
+                  <th className="text-center py-3 px-2 text-orange-600 font-medium">Saha Çıkan</th>
+                  <th className="text-right py-3 px-2 text-gray-600 font-medium">Mevcut Stok</th>
+                  <th className="text-center py-3 px-2 text-gray-600 font-medium">İşlemler</th>
                 </tr>
               </thead>
               <tbody>
                 {stokUrunler.map((urun) => (
-                  <tr key={urun.id} className="border-b border-slate-800/50 hover:bg-slate-800/30">
+                  <tr key={urun.id} className="border-b border-gray-100 hover:bg-gray-50">
                     <td className="py-4 px-2">
-                      <span className="text-white font-medium">{urun.urun_adi}</span>
+                      <span className="text-gray-900 font-medium">{urun.urun_adi}</span>
                     </td>
                     <td className="py-4 px-2 text-center">
-                      <span className="px-2 py-1 bg-slate-700 text-slate-300 text-xs rounded">{urun.birim}</span>
+                      <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded">{urun.birim}</span>
                     </td>
                     <td className="py-4 px-2">
                       <div className="flex items-center justify-center gap-2">
@@ -247,7 +248,7 @@ const BimsStok = () => {
                           value={acilisFisleri[urun.id] !== undefined ? acilisFisleri[urun.id] : (urun.acilis_miktari || '')}
                           onChange={(e) => setAcilisFisleri({...acilisFisleri, [urun.id]: e.target.value})}
                           placeholder="0"
-                          className="w-24 h-10 bg-blue-500/10 border border-blue-500/30 text-blue-400 font-mono text-center font-bold"
+                          className="w-24 h-10 bg-blue-50 border border-blue-300 text-blue-600 font-mono text-center font-bold"
                         />
                         <Button
                           size="sm"
@@ -258,8 +259,13 @@ const BimsStok = () => {
                         </Button>
                       </div>
                     </td>
+                    <td className="py-4 px-2 text-center">
+                      <span className="text-lg font-bold text-orange-600 bg-orange-50 px-3 py-1 rounded">
+                        {formatInteger(urun.saha_cikan || 0)}
+                      </span>
+                    </td>
                     <td className="py-4 px-2 text-right">
-                      <span className={`text-lg font-bold ${(urun.mevcut_stok || 0) > 10 ? 'text-teal-400' : (urun.mevcut_stok || 0) > 0 ? 'text-yellow-400' : 'text-red-400'}`}>
+                      <span className={`text-lg font-bold ${(urun.mevcut_stok || 0) > 10 ? 'text-teal-600' : (urun.mevcut_stok || 0) > 0 ? 'text-yellow-600' : 'text-red-600'}`}>
                         {formatInteger(urun.mevcut_stok || 0)}
                       </span>
                     </td>
@@ -269,7 +275,7 @@ const BimsStok = () => {
                           variant="ghost" 
                           size="sm" 
                           onClick={() => setShowHareketModal(urun)}
-                          className="text-green-400 hover:text-green-300 hover:bg-green-400/10"
+                          className="text-green-600 hover:text-green-500 hover:bg-green-50"
                           title="Giriş/Çıkış Ekle"
                         >
                           <Plus className="w-4 h-4" />
