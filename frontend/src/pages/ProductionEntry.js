@@ -299,7 +299,7 @@ const ProductionEntry = () => {
             }
           }
         }
-        // İşletme değişince tüm çıkan paket satırlarının paket adetlerini güncelle
+        // İşletme değişince tüm çıkan paket satırlarının BİRİM adetlerini güncelle
         for (let i = 1; i <= 5; i++) {
           const paketKey = `cikan_paket_${i}`;
           const paket = prev[paketKey];
@@ -308,8 +308,8 @@ const ProductionEntry = () => {
             if (product) {
               updated[paketKey] = {
                 ...paket,
-                paket_7_boy: product.paket_adetleri_7_boy?.[value] || 0,
-                paket_5_boy: product.paket_adetleri_5_boy?.[value] || 0
+                birim_7_boy: product.paket_adetleri_7_boy?.[value] || 0,
+                birim_5_boy: product.paket_adetleri_5_boy?.[value] || 0
               };
             }
           }
