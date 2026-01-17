@@ -71,6 +71,9 @@ const ProductionEntry = () => {
     mix_count: '',
     cement_per_mix: '',
     machine_cement: '',
+    // Çıkan Paket
+    paket_7_boy: '',
+    paket_5_boy: '',
     // Arızalar (opsiyonel)
     breakdown_1: '',
     breakdown_2: '',
