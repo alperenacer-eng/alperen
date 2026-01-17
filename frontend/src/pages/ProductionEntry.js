@@ -156,12 +156,12 @@ const ProductionEntry = () => {
         breakdown_1: record.breakdown_1 || '',
         breakdown_2: record.breakdown_2 || '',
         breakdown_3: record.breakdown_3 || '',
-        // Çıkan paket verileri
-        cikan_paket_1: record.cikan_paket_1 || { urun_id: '', urun_adi: '', miktar: '', paket_7_boy: 0, paket_5_boy: 0 },
-        cikan_paket_2: record.cikan_paket_2 || { urun_id: '', urun_adi: '', miktar: '', paket_7_boy: 0, paket_5_boy: 0 },
-        cikan_paket_3: record.cikan_paket_3 || { urun_id: '', urun_adi: '', miktar: '', paket_7_boy: 0, paket_5_boy: 0 },
-        cikan_paket_4: record.cikan_paket_4 || { urun_id: '', urun_adi: '', miktar: '', paket_7_boy: 0, paket_5_boy: 0 },
-        cikan_paket_5: record.cikan_paket_5 || { urun_id: '', urun_adi: '', miktar: '', paket_7_boy: 0, paket_5_boy: 0 },
+        // Çıkan paket verileri - JSON string ise parse et
+        cikan_paket_1: typeof record.cikan_paket_1 === 'string' ? JSON.parse(record.cikan_paket_1 || '{}') : (record.cikan_paket_1 || { urun_id: '', urun_adi: '', miktar: '', paket_7_boy: 0, paket_5_boy: 0 }),
+        cikan_paket_2: typeof record.cikan_paket_2 === 'string' ? JSON.parse(record.cikan_paket_2 || '{}') : (record.cikan_paket_2 || { urun_id: '', urun_adi: '', miktar: '', paket_7_boy: 0, paket_5_boy: 0 }),
+        cikan_paket_3: typeof record.cikan_paket_3 === 'string' ? JSON.parse(record.cikan_paket_3 || '{}') : (record.cikan_paket_3 || { urun_id: '', urun_adi: '', miktar: '', paket_7_boy: 0, paket_5_boy: 0 }),
+        cikan_paket_4: typeof record.cikan_paket_4 === 'string' ? JSON.parse(record.cikan_paket_4 || '{}') : (record.cikan_paket_4 || { urun_id: '', urun_adi: '', miktar: '', paket_7_boy: 0, paket_5_boy: 0 }),
+        cikan_paket_5: typeof record.cikan_paket_5 === 'string' ? JSON.parse(record.cikan_paket_5 || '{}') : (record.cikan_paket_5 || { urun_id: '', urun_adi: '', miktar: '', paket_7_boy: 0, paket_5_boy: 0 }),
       });
       
       toast.success('Kayıt verileri yüklendi');
