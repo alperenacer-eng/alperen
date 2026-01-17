@@ -175,7 +175,9 @@ const ProductionEntry = () => {
     formData.cement_per_mix,
     formData.machine_cement,
     formData.worked_hours,
-    formData.required_hours
+    formData.required_hours,
+    formData.paket_7_boy,
+    formData.paket_5_boy
   ]);
 
   const calculateValues = () => {
