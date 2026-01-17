@@ -220,16 +220,15 @@ const ProductionEntry = () => {
     // Kayıp Zaman = Çalışılması Gereken - Çalışılan
     const lostTimeHours = requiredHours - workedHours;
 
-    // Çıkan Paket Toplamları - Her satırda miktar × paket adedi
+    // Çıkan Paket Toplamları - Doğrudan 7 boy ve 5 boy paket adetleri
     let toplam7Boy = 0;
     let toplam5Boy = 0;
     
     for (let i = 1; i <= 5; i++) {
       const paket = formData[`cikan_paket_${i}`];
-      if (paket && paket.miktar) {
-        const miktar = parseInt(paket.miktar) || 0;
-        toplam7Boy += miktar * (paket.paket_7_boy || 0);
-        toplam5Boy += miktar * (paket.paket_5_boy || 0);
+      if (paket) {
+        toplam7Boy += parseInt(paket.paket_7_boy) || 0;
+        toplam5Boy += parseInt(paket.paket_5_boy) || 0;
       }
     }
 
