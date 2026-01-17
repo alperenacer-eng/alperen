@@ -8,14 +8,15 @@
 
 body {
   font-family: 'Public Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  background-color: #0f172a;
-  color: #f8fafc;
+  background-color: #f8fafc;
+  color: #1e293b;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
 h1, h2, h3, h4, h5, h6 {
   font-family: 'Manrope', sans-serif;
+  color: #0f172a;
 }
 
 .font-mono {
@@ -43,30 +44,30 @@ h1, h2, h3, h4, h5, h6 {
 
 .stat-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
 }
 
 .glass-effect {
-  background: rgba(30, 41, 59, 0.5);
+  background: rgba(255, 255, 255, 0.9);
   backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(0, 0, 0, 0.08);
 }
 
 .glow-orange {
-  box-shadow: 0 0 15px rgba(249, 115, 22, 0.3);
+  box-shadow: 0 0 15px rgba(249, 115, 22, 0.2);
 }
 
 .glow-orange:hover {
-  box-shadow: 0 0 25px rgba(249, 115, 22, 0.5);
+  box-shadow: 0 0 25px rgba(249, 115, 22, 0.3);
 }
 
 input:focus,
 select:focus,
 textarea:focus {
   outline: none;
-  border-color: #f97316;
+  border-color: #3b82f6;
   ring: 1px;
-  ring-color: #f97316;
+  ring-color: #3b82f6;
 }
 
 .scroll-smooth {
@@ -79,14 +80,90 @@ textarea:focus {
 }
 
 ::-webkit-scrollbar-track {
-  background: #1e293b;
+  background: #f1f5f9;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #475569;
+  background: #cbd5e1;
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #64748b;
+  background: #94a3b8;
+}
+
+/* Light theme overrides for components */
+.bg-slate-950 { background-color: #ffffff !important; }
+.bg-slate-900 { background-color: #f8fafc !important; }
+.bg-slate-800 { background-color: #f1f5f9 !important; }
+.bg-slate-700 { background-color: #e2e8f0 !important; }
+
+.text-white { color: #0f172a !important; }
+.text-slate-400 { color: #64748b !important; }
+.text-slate-300 { color: #475569 !important; }
+.text-slate-500 { color: #64748b !important; }
+
+.border-slate-800 { border-color: #e2e8f0 !important; }
+.border-slate-700 { border-color: #cbd5e1 !important; }
+
+/* Keep colored elements */
+.text-teal-400, .text-teal-500 { color: #14b8a6 !important; }
+.text-blue-400, .text-blue-500 { color: #3b82f6 !important; }
+.text-green-400, .text-green-500 { color: #22c55e !important; }
+.text-red-400, .text-red-500 { color: #ef4444 !important; }
+.text-yellow-400, .text-yellow-500 { color: #eab308 !important; }
+.text-orange-400, .text-orange-500 { color: #f97316 !important; }
+.text-purple-400, .text-purple-500 { color: #a855f7 !important; }
+.text-cyan-400, .text-cyan-500 { color: #06b6d4 !important; }
+.text-amber-400, .text-amber-500 { color: #f59e0b !important; }
+.text-emerald-400, .text-emerald-500 { color: #10b981 !important; }
+
+/* Input styling for light theme */
+input, select, textarea {
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
+  color: #0f172a !important;
+}
+
+input::placeholder, textarea::placeholder {
+  color: #94a3b8 !important;
+}
+
+/* Cards and containers */
+.rounded-xl, .rounded-lg {
+  background-color: #ffffff;
+  border-color: #e2e8f0;
+}
+
+/* Buttons */
+button {
+  transition: all 0.2s;
+}
+
+/* Tables */
+table th {
+  color: #475569 !important;
+}
+
+table td {
+  color: #1e293b !important;
+}
+
+/* Modal/Dialog backgrounds */
+[role="dialog"] {
+  background-color: #ffffff !important;
+}
+
+/* Dropdown menus */
+[role="listbox"], [role="menu"] {
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
+}
+
+[role="option"] {
+  color: #1e293b !important;
+}
+
+[role="option"]:hover {
+  background-color: #f1f5f9 !important;
 }
