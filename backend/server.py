@@ -324,7 +324,9 @@ async def init_db():
                 breakdown_2 TEXT,
                 breakdown_3 TEXT,
                 paket_7_boy INTEGER DEFAULT 0,
-                paket_5_boy INTEGER DEFAULT 0
+                paket_5_boy INTEGER DEFAULT 0,
+                cikan_paket_urun_id TEXT DEFAULT '',
+                cikan_paket_urun_adi TEXT DEFAULT ''
             )
         ''')
         
@@ -335,6 +337,14 @@ async def init_db():
             pass
         try:
             await db.execute("ALTER TABLE production_records ADD COLUMN paket_5_boy INTEGER DEFAULT 0")
+        except:
+            pass
+        try:
+            await db.execute("ALTER TABLE production_records ADD COLUMN cikan_paket_urun_id TEXT DEFAULT ''")
+        except:
+            pass
+        try:
+            await db.execute("ALTER TABLE production_records ADD COLUMN cikan_paket_urun_adi TEXT DEFAULT ''")
         except:
             pass
         
