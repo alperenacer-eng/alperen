@@ -72,11 +72,11 @@ const ProductionEntry = () => {
     cement_per_mix: '',
     machine_cement: '',
     // Çıkan Paket - 5 satır
-    cikan_paket_1: { urun_id: '', urun_adi: '', miktar: '', paket_7_boy: 0, paket_5_boy: 0 },
-    cikan_paket_2: { urun_id: '', urun_adi: '', miktar: '', paket_7_boy: 0, paket_5_boy: 0 },
-    cikan_paket_3: { urun_id: '', urun_adi: '', miktar: '', paket_7_boy: 0, paket_5_boy: 0 },
-    cikan_paket_4: { urun_id: '', urun_adi: '', miktar: '', paket_7_boy: 0, paket_5_boy: 0 },
-    cikan_paket_5: { urun_id: '', urun_adi: '', miktar: '', paket_7_boy: 0, paket_5_boy: 0 },
+    cikan_paket_1: { urun_id: '', urun_adi: '', paket_7_boy: '', paket_5_boy: '', birim_7_boy: 0, birim_5_boy: 0 },
+    cikan_paket_2: { urun_id: '', urun_adi: '', paket_7_boy: '', paket_5_boy: '', birim_7_boy: 0, birim_5_boy: 0 },
+    cikan_paket_3: { urun_id: '', urun_adi: '', paket_7_boy: '', paket_5_boy: '', birim_7_boy: 0, birim_5_boy: 0 },
+    cikan_paket_4: { urun_id: '', urun_adi: '', paket_7_boy: '', paket_5_boy: '', birim_7_boy: 0, birim_5_boy: 0 },
+    cikan_paket_5: { urun_id: '', urun_adi: '', paket_7_boy: '', paket_5_boy: '', birim_7_boy: 0, birim_5_boy: 0 },
     // Arızalar (opsiyonel)
     breakdown_1: '',
     breakdown_2: '',
