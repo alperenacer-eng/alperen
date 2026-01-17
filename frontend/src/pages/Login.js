@@ -120,17 +120,17 @@ const Login = () => {
                     placeholder="ornek@email.com"
                     data-testid="email-input"
                     required
-                    className="pl-11 h-12 bg-slate-950 border-slate-800 text-white placeholder:text-slate-500 focus:border-orange-500 focus:ring-orange-500"
+                    className="pl-11 h-12 bg-white border-gray-300 text-gray-900 placeholder:text-gray-400 focus:border-orange-500 focus:ring-orange-500"
                   />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password" className="text-slate-300 font-medium">
+                <Label htmlFor="password" className="text-gray-700 font-medium">
                   Şifre
                 </Label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                   <Input
                     id="password"
                     type="password"
@@ -139,7 +139,7 @@ const Login = () => {
                     placeholder="••••••••"
                     data-testid="password-input"
                     required
-                    className="pl-11 h-12 bg-slate-950 border-slate-800 text-white placeholder:text-slate-500 focus:border-orange-500 focus:ring-orange-500"
+                    className="pl-11 h-12 bg-white border-gray-300 text-gray-900 placeholder:text-gray-400 focus:border-orange-500 focus:ring-orange-500"
                   />
                 </div>
               </div>
@@ -155,7 +155,7 @@ const Login = () => {
             </form>
           </div>
 
-          <p className="text-center text-sm text-slate-500 mt-6">
+          <p className="text-center text-sm text-gray-500 mt-6">
             © 2025 Acerler Bims Takip. Tüm hakları saklıdır.
           </p>
         </div>
@@ -168,7 +168,7 @@ const Login = () => {
           backgroundImage: 'url(https://images.unsplash.com/photo-1720036236697-018370867320?crop=entropy&cs=srgb&fm=jpg&q=85)'
         }}
       >
-        <div className="absolute inset-0 bg-gradient-to-br from-slate-950/90 to-orange-950/80 flex items-center justify-center p-12">
+        <div className="absolute inset-0 bg-gradient-to-br from-gray-900/90 to-orange-900/80 flex items-center justify-center p-12">
           <div className="text-center">
             <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
               Verimliği Artırın
