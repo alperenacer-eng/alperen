@@ -11,7 +11,7 @@ import os
 from datetime import datetime
 
 # Backend URL from environment
-BACKEND_URL = "https://hepsini-getir.preview.emergentagent.com/api"
+BACKEND_URL = "https://project-fetch-5.preview.emergentagent.com/api"
 
 class SQLiteMigrationTester:
     def __init__(self):
