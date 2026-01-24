@@ -182,13 +182,14 @@ const Layout = () => {
       <div className="md:hidden fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-200 shadow-sm">
         <div className="flex items-center justify-between p-4">
           <div className="flex items-center gap-2">
-            <Factory className="w-6 h-6 text-orange-500" />
-            <div>
-              <h1 className="text-sm font-bold text-gray-900">Acerler Bims Takip</h1>
-              {currentModule && (
-                <p className="text-xs text-gray-500">{currentModule.icon} {currentModule.name}</p>
-              )}
-            </div>
+            <img 
+              src="/acerler_bims_logo.png" 
+              alt="Acerler BIMS Logo" 
+              className="h-10 object-contain"
+            />
+            {currentModule && (
+              <p className="text-xs text-gray-500">{currentModule.icon} {currentModule.name}</p>
+            )}
           </div>
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
