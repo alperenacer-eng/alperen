@@ -107,14 +107,12 @@ const Layout = () => {
       {/* Sidebar - Desktop */}
       <aside className="hidden md:flex flex-col w-64 bg-white border-r border-gray-200 shadow-sm">
         <div className="p-6 border-b border-gray-200">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg flex items-center justify-center">
-              <Factory className="w-6 h-6 text-white" />
-            </div>
-            <div>
-              <h1 className="text-lg font-bold text-gray-900">Acerler Bims</h1>
-              <p className="text-xs text-gray-500">Üretim Takip</p>
-            </div>
+          <div className="flex items-center justify-center">
+            <img 
+              src="/acerler_bims_logo.png" 
+              alt="Acerler BIMS Logo" 
+              className="h-14 object-contain"
+            />
           </div>
           
           {/* Module Info & Back Button */}
