@@ -23,10 +23,11 @@ const ModuleSelector = () => {
     <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4" data-testid="module-selector-page">
       <div className="w-full max-w-6xl animate-fade-in">
         <div className="text-center mb-12">
-          <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-orange-500 to-orange-600 rounded-3xl mb-6 shadow-2xl shadow-orange-500/30">
-            <span className="text-4xl">🏭</span>
-          </div>
-          <h1 className="text-5xl font-bold text-white mb-4">Acerler Bims Takip</h1>
+          <img 
+            src="/acerler_bims_logo.png" 
+            alt="Acerler BIMS Logo" 
+            className="h-24 mx-auto mb-6 object-contain"
+          />
           <p className="text-xl text-slate-400">Hangi modülü kullanmak istersiniz?</p>
         </div>
 
