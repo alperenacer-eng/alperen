@@ -49,10 +49,11 @@ const Login = () => {
       <div className="w-full lg:w-1/2 flex items-center justify-center p-8">
         <div className="w-full max-w-md animate-fade-in">
           <div className="mb-8 text-center">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl mb-4 shadow-lg shadow-orange-500/30">
-              <Factory className="w-8 h-8 text-white" />
-            </div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Acerler Bims Takip</h1>
+            <img 
+              src="/acerler_bims_logo.png" 
+              alt="Acerler BIMS Logo" 
+              className="h-24 mx-auto mb-4 object-contain"
+            />
             <p className="text-gray-500">Verimli üretim yönetimi için gelişmiş çözüm</p>
           </div>
 
