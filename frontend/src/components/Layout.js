@@ -11,7 +11,6 @@ import {
   LogOut,
   Menu,
   X,
-  Factory,
   Settings,
   ArrowLeft,
   Database,
