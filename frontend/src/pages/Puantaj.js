@@ -138,18 +138,11 @@ const Puantaj = () => {
       const mesaiSuresi = parseFloat(formData.mesai_suresi) || 0;
       const fazlaMesai = parseFloat(formData.fazla_mesai) || 0;
       
-      // Mesai süresinden giriş/çıkış saati hesapla (08:00'dan başlayarak)
-      const toplamSaat = mesaiSuresi + fazlaMesai;
-      const cikisSaat = 8 + toplamSaat;
-      const cikisSaatStr = `${Math.floor(cikisSaat).toString().padStart(2, '0')}:${((cikisSaat % 1) * 60).toString().padStart(2, '0').slice(0, 2)}`;
-      
       const kayitlar = seciliPersoneller.map(personelId => {
         const personel = personeller.find(p => p.id === personelId);
         return {
           personel_id: personelId,
           personel_adi: personel?.ad_soyad || '',
-          giris_saati: formData.durum === 'geldi' ? '08:00' : '',
-          cikis_saati: formData.durum === 'geldi' ? cikisSaatStr : '',
           durum: formData.durum,
           notlar: formData.notlar,
           mesai_suresi: mesaiSuresi,
