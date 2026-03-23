@@ -42,12 +42,14 @@ const Puantaj = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   
-  // Üst form bilgileri - tüm seçili personellere uygulanacak
+  // Üst form bilgileri
   const [formData, setFormData] = useState({
     tarih: new Date().toISOString().split('T')[0],
     durum: 'geldi',
-    mesai_suresi: '8',  // Saat olarak manuel giriş
-    fazla_mesai: '0',   // Fazla mesai manuel giriş
+    giris_saati: '08:00',
+    cikis_saati: '17:00',
+    mesai_suresi: '8',
+    fazla_mesai: '0',
     notlar: ''
   });
   
@@ -93,7 +95,6 @@ const Puantaj = () => {
   const kayitliPersonelIds = filteredPuantajlar.map(p => p.personel_id);
   const kayitSizPersoneller = personeller.filter(p => !kayitliPersonelIds.includes(p.id));
 
-  // Select all sadece kayıtsız personeller için
   const handleSelectAll = (checked) => {
     setSelectAll(checked);
     if (checked) {
@@ -112,7 +113,6 @@ const Puantaj = () => {
     }
   };
 
-  // Seçili personeller listeden kaldırıldığında selectAll'u güncelle
   useEffect(() => {
     if (kayitSizPersoneller.length > 0 && seciliPersoneller.length === kayitSizPersoneller.length) {
       setSelectAll(true);
@@ -121,7 +121,6 @@ const Puantaj = () => {
     }
   }, [seciliPersoneller, kayitSizPersoneller]);
 
-  // Tarih değiştiğinde seçimleri sıfırla
   useEffect(() => {
     setSeciliPersoneller([]);
     setSelectAll(false);
@@ -143,6 +142,8 @@ const Puantaj = () => {
         return {
           personel_id: personelId,
           personel_adi: personel?.ad_soyad || '',
+          giris_saati: formData.durum === 'geldi' ? formData.giris_saati : '',
+          cikis_saati: formData.durum === 'geldi' ? formData.cikis_saati : '',
           durum: formData.durum,
           notlar: formData.notlar,
           mesai_suresi: mesaiSuresi,
@@ -158,10 +159,7 @@ const Puantaj = () => {
       await axios.post(`${API_URL}/puantaj/toplu`, payload, { headers });
       toast.success(`${seciliPersoneller.length} personel için puantaj kaydedildi`);
       
-      // Kayıtları yenile
       await fetchPuantajlar();
-      
-      // Seçimleri temizle
       setSeciliPersoneller([]);
       setSelectAll(false);
     } catch (e) {
@@ -255,7 +253,7 @@ const Puantaj = () => {
           </CardTitle>
         </CardHeader>
         <CardContent className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-6 gap-4 items-end">
+          <div className="grid grid-cols-2 md:grid-cols-8 gap-4 items-end">
             <div>
               <Label className="text-slate-300">Tarih</Label>
               <Input
@@ -299,13 +297,32 @@ const Puantaj = () => {
               </Select>
             </div>
             <div>
-              <Label className="text-slate-300">Çalışma Saati</Label>
+              <Label className="text-slate-300">Giriş Saati</Label>
+              <Input
+                type="time"
+                value={formData.giris_saati}
+                onChange={(e) => setFormData({...formData, giris_saati: e.target.value})}
+                disabled={formData.durum !== 'geldi'}
+                className="bg-slate-950 border-slate-700 mt-1"
+              />
+            </div>
+            <div>
+              <Label className="text-slate-300">Çıkış Saati</Label>
+              <Input
+                type="time"
+                value={formData.cikis_saati}
+                onChange={(e) => setFormData({...formData, cikis_saati: e.target.value})}
+                disabled={formData.durum !== 'geldi'}
+                className="bg-slate-950 border-slate-700 mt-1"
+              />
+            </div>
+            <div>
+              <Label className="text-slate-300">Mesai (Saat)</Label>
               <Input
                 type="number"
                 step="0.5"
                 min="0"
                 max="24"
-                placeholder="8"
                 value={formData.mesai_suresi}
                 onChange={(e) => setFormData({...formData, mesai_suresi: e.target.value})}
                 disabled={formData.durum !== 'geldi'}
@@ -313,20 +330,19 @@ const Puantaj = () => {
               />
             </div>
             <div>
-              <Label className="text-slate-300">Fazla Mesai (Saat)</Label>
+              <Label className="text-slate-300">Fazla Mesai</Label>
               <Input
                 type="number"
                 step="0.5"
                 min="0"
                 max="24"
-                placeholder="0"
                 value={formData.fazla_mesai}
                 onChange={(e) => setFormData({...formData, fazla_mesai: e.target.value})}
                 disabled={formData.durum !== 'geldi'}
                 className="bg-slate-950 border-slate-700 mt-1"
               />
             </div>
-            <div>
+            <div className="col-span-2">
               <Label className="text-slate-300">Not (Opsiyonel)</Label>
               <Input
                 type="text"
@@ -335,15 +351,6 @@ const Puantaj = () => {
                 onChange={(e) => setFormData({...formData, notlar: e.target.value})}
                 className="bg-slate-950 border-slate-700 mt-1"
               />
-            </div>
-            <div className="flex flex-col justify-end">
-              {formData.durum === 'geldi' && (
-                <div className="text-sm text-slate-400 text-center">
-                  Toplam: <span className="text-blue-400 font-medium">
-                    {(parseFloat(formData.mesai_suresi || 0) + parseFloat(formData.fazla_mesai || 0)).toFixed(1)} saat
-                  </span>
-                </div>
-              )}
             </div>
           </div>
         </CardContent>
@@ -454,7 +461,9 @@ const Puantaj = () => {
                 <TableHeader>
                   <TableRow className="border-slate-800 bg-slate-900/50">
                     <TableHead className="text-slate-300">Personel</TableHead>
-                    <TableHead className="text-slate-300">Mesai (Saat)</TableHead>
+                    <TableHead className="text-slate-300">Giriş</TableHead>
+                    <TableHead className="text-slate-300">Çıkış</TableHead>
+                    <TableHead className="text-slate-300">Mesai</TableHead>
                     <TableHead className="text-slate-300">Fazla Mesai</TableHead>
                     <TableHead className="text-slate-300">Toplam</TableHead>
                     <TableHead className="text-slate-300">Not</TableHead>
@@ -465,6 +474,8 @@ const Puantaj = () => {
                   {filteredPuantajlar.map((p, idx) => (
                     <TableRow key={p.id} className={`border-slate-800 ${idx % 2 === 0 ? 'bg-slate-900/30' : 'bg-slate-900/50'}`}>
                       <TableCell className="font-medium text-white">{p.personel_adi}</TableCell>
+                      <TableCell className="text-green-400">{p.giris_saati || '-'}</TableCell>
+                      <TableCell className="text-red-400">{p.cikis_saati || '-'}</TableCell>
                       <TableCell className="text-blue-400">{p.mesai_suresi?.toFixed(1) || '0'}</TableCell>
                       <TableCell className="text-orange-400">{p.fazla_mesai?.toFixed(1) || '0'}</TableCell>
                       <TableCell className="text-green-400 font-medium">

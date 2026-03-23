@@ -3245,6 +3245,8 @@ async def delete_puantaj(id: str, current_user: dict = Depends(get_current_user)
 class TopluPuantajItem(BaseModel):
     personel_id: str
     personel_adi: str
+    giris_saati: str = ""
+    cikis_saati: str = ""
     durum: str = "geldi"  # geldi, gelmedi, izinli, raporlu
     notlar: str = ""
     mesai_suresi: float = 0  # Manuel mesai girişi
@@ -3266,6 +3268,8 @@ async def create_toplu_puantaj(input: TopluPuantajCreate, current_user: dict = D
         
         mesai_suresi = data.get('mesai_suresi', 0)
         fazla_mesai = data.get('fazla_mesai', 0)
+        giris_saati = data.get('giris_saati', '')
+        cikis_saati = data.get('cikis_saati', '')
         
         # Mevcut kaydı kontrol et (aynı tarih ve personel için)
         async with db.execute(
@@ -3277,8 +3281,9 @@ async def create_toplu_puantaj(input: TopluPuantajCreate, current_user: dict = D
         if existing:
             # Güncelle
             await db.execute(
-                """UPDATE puantaj SET mesai_suresi = ?, fazla_mesai = ?, notlar = ? WHERE id = ?""",
-                (mesai_suresi, fazla_mesai, data['notlar'], existing[0])
+                """UPDATE puantaj SET giris_saati = ?, cikis_saati = ?, mesai_suresi = ?, 
+                   fazla_mesai = ?, notlar = ? WHERE id = ?""",
+                (giris_saati, cikis_saati, mesai_suresi, fazla_mesai, data['notlar'], existing[0])
             )
             results.append({"id": existing[0], "personel_id": data['personel_id'], "updated": True})
         else:
@@ -3286,8 +3291,8 @@ async def create_toplu_puantaj(input: TopluPuantajCreate, current_user: dict = D
             await db.execute(
                 """INSERT INTO puantaj (id, personel_id, personel_adi, tarih, giris_saati, cikis_saati,
                    mesai_suresi, fazla_mesai, notlar, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-                (puantaj_id, data['personel_id'], data['personel_adi'], input.tarih, '', '',
-                 mesai_suresi, fazla_mesai, data['notlar'], created_at)
+                (puantaj_id, data['personel_id'], data['personel_adi'], input.tarih, giris_saati,
+                 cikis_saati, mesai_suresi, fazla_mesai, data['notlar'], created_at)
             )
             results.append({"id": puantaj_id, "personel_id": data['personel_id'], "created": True})
     
