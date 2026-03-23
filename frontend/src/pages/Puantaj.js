@@ -25,9 +25,16 @@ import {
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Checkbox } from '@/components/ui/checkbox';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 import { 
   Trash2, ArrowLeft, Clock, Calendar, Users, Save, 
-  CheckCircle2, XCircle, AlertCircle, FileText 
+  CheckCircle2, XCircle, AlertCircle, FileText, Building2, Plus, Pencil
 } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL + '/api';
@@ -39,8 +46,14 @@ const Puantaj = () => {
   
   const [puantajlar, setPuantajlar] = useState([]);
   const [personeller, setPersoneller] = useState([]);
+  const [tesisler, setTesisler] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  
+  // Tesis yönetimi
+  const [tesisDialogOpen, setTesisDialogOpen] = useState(false);
+  const [yeniTesis, setYeniTesis] = useState({ tesis_adi: '', adres: '' });
+  const [editingTesis, setEditingTesis] = useState(null);
   
   // Üst form bilgileri
   const [formData, setFormData] = useState({
@@ -49,6 +62,7 @@ const Puantaj = () => {
     giris_saati: '08:00',
     cikis_saati: '17:00',
     fazla_mesai: '0',
+    tesis_id: '',
     notlar: ''
   });
   
@@ -80,6 +94,15 @@ const Puantaj = () => {
     }
   }, [token]);
 
+  const fetchTesisler = useCallback(async () => {
+    try {
+      const response = await axios.get(`${API_URL}/tesisler`, { headers });
+      setTesisler(response.data.filter(t => t.aktif));
+    } catch (e) {
+      console.error(e);
+    }
+  }, [token]);
+
   useEffect(() => {
     if (!currentModule || currentModule.id !== 'personel') {
       navigate('/');
@@ -87,7 +110,51 @@ const Puantaj = () => {
     }
     fetchPuantajlar();
     fetchPersoneller();
-  }, [currentModule, fetchPuantajlar, fetchPersoneller, navigate]);
+    fetchTesisler();
+  }, [currentModule, fetchPuantajlar, fetchPersoneller, fetchTesisler, navigate]);
+
+  // Tesis Yönetimi Fonksiyonları
+  const handleAddTesis = async () => {
+    if (!yeniTesis.tesis_adi.trim()) {
+      toast.error('Tesis adı gerekli');
+      return;
+    }
+    try {
+      await axios.post(`${API_URL}/tesisler`, yeniTesis, { headers });
+      toast.success('Tesis eklendi');
+      setYeniTesis({ tesis_adi: '', adres: '' });
+      fetchTesisler();
+    } catch (e) {
+      toast.error('Tesis eklenirken hata oluştu');
+    }
+  };
+
+  const handleUpdateTesis = async () => {
+    if (!editingTesis || !editingTesis.tesis_adi.trim()) {
+      toast.error('Tesis adı gerekli');
+      return;
+    }
+    try {
+      await axios.put(`${API_URL}/tesisler/${editingTesis.id}`, editingTesis, { headers });
+      toast.success('Tesis güncellendi');
+      setEditingTesis(null);
+      fetchTesisler();
+    } catch (e) {
+      toast.error('Tesis güncellenirken hata oluştu');
+    }
+  };
+
+  const handleDeleteTesis = async (id) => {
+    if (window.confirm('Bu tesisi silmek istediğinize emin misiniz?')) {
+      try {
+        await axios.delete(`${API_URL}/tesisler/${id}`, { headers });
+        toast.success('Tesis silindi');
+        fetchTesisler();
+      } catch (e) {
+        toast.error('Tesis silinirken hata oluştu');
+      }
+    }
+  };
 
   // O gün için puantajı olmayan personelleri filtrele
   const filteredPuantajlar = puantajlar.filter(p => p.tarih === formData.tarih);
@@ -134,6 +201,7 @@ const Puantaj = () => {
     setSaving(true);
     try {
       const fazlaMesai = parseFloat(formData.fazla_mesai) || 0;
+      const secilenTesis = tesisler.find(t => t.id === formData.tesis_id);
       
       const kayitlar = seciliPersoneller.map(personelId => {
         const personel = personeller.find(p => p.id === personelId);
@@ -145,7 +213,9 @@ const Puantaj = () => {
           durum: formData.durum,
           notlar: formData.notlar,
           mesai_suresi: 0,
-          fazla_mesai: fazlaMesai
+          fazla_mesai: fazlaMesai,
+          tesis_id: formData.tesis_id,
+          tesis_adi: secilenTesis?.tesis_adi || ''
         };
       });
 
@@ -198,6 +268,91 @@ const Puantaj = () => {
             <h1 className="text-3xl font-bold text-white mb-2">Puantaj - Giriş/Çıkış Takibi</h1>
             <p className="text-slate-400">Günlük personel giriş çıkış ve mesai takibi</p>
           </div>
+          {/* Tesis Yönetimi Dialog */}
+          <Dialog open={tesisDialogOpen} onOpenChange={setTesisDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" className="border-slate-700">
+                <Building2 className="w-4 h-4 mr-2" />
+                Tesis Yönetimi
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="bg-slate-900 border-slate-700 max-w-lg">
+              <DialogHeader>
+                <DialogTitle className="text-white">Tesis Yönetimi</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                {/* Yeni Tesis Ekle */}
+                <div className="p-4 bg-slate-800 rounded-lg space-y-3">
+                  <h4 className="text-sm font-medium text-slate-300">Yeni Tesis Ekle</h4>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Input
+                      placeholder="Tesis Adı"
+                      value={yeniTesis.tesis_adi}
+                      onChange={(e) => setYeniTesis({...yeniTesis, tesis_adi: e.target.value})}
+                      className="bg-slate-950 border-slate-700"
+                    />
+                    <Input
+                      placeholder="Adres (Opsiyonel)"
+                      value={yeniTesis.adres}
+                      onChange={(e) => setYeniTesis({...yeniTesis, adres: e.target.value})}
+                      className="bg-slate-950 border-slate-700"
+                    />
+                  </div>
+                  <Button onClick={handleAddTesis} size="sm" className="bg-green-600 hover:bg-green-700">
+                    <Plus className="w-4 h-4 mr-1" /> Ekle
+                  </Button>
+                </div>
+                
+                {/* Mevcut Tesisler */}
+                <div className="space-y-2 max-h-60 overflow-y-auto">
+                  {tesisler.length === 0 ? (
+                    <p className="text-slate-400 text-sm text-center py-4">Henüz tesis eklenmemiş</p>
+                  ) : (
+                    tesisler.map(tesis => (
+                      <div key={tesis.id} className="flex items-center justify-between p-3 bg-slate-800 rounded-lg">
+                        {editingTesis?.id === tesis.id ? (
+                          <div className="flex-1 flex gap-2 mr-2">
+                            <Input
+                              value={editingTesis.tesis_adi}
+                              onChange={(e) => setEditingTesis({...editingTesis, tesis_adi: e.target.value})}
+                              className="bg-slate-950 border-slate-700 h-8"
+                            />
+                            <Button onClick={handleUpdateTesis} size="sm" className="bg-green-600 h-8">Kaydet</Button>
+                            <Button onClick={() => setEditingTesis(null)} size="sm" variant="ghost" className="h-8">İptal</Button>
+                          </div>
+                        ) : (
+                          <>
+                            <div>
+                              <p className="text-white font-medium">{tesis.tesis_adi}</p>
+                              {tesis.adres && <p className="text-slate-400 text-xs">{tesis.adres}</p>}
+                            </div>
+                            <div className="flex gap-1">
+                              <Button 
+                                size="icon" 
+                                variant="ghost" 
+                                className="h-8 w-8 text-blue-400"
+                                onClick={() => setEditingTesis(tesis)}
+                              >
+                                <Pencil className="w-4 h-4" />
+                              </Button>
+                              <Button 
+                                size="icon" 
+                                variant="ghost" 
+                                className="h-8 w-8 text-red-400"
+                                onClick={() => handleDeleteTesis(tesis.id)}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
 
@@ -244,7 +399,7 @@ const Puantaj = () => {
           </CardTitle>
         </CardHeader>
         <CardContent className="p-6">
-          <div className="grid grid-cols-2 md:grid-cols-7 gap-4 items-end">
+          <div className="grid grid-cols-2 md:grid-cols-8 gap-4 items-end">
             <div>
               <Label className="text-slate-300">Tarih</Label>
               <Input
@@ -319,6 +474,27 @@ const Puantaj = () => {
                 disabled={formData.durum !== 'geldi'}
                 className="bg-slate-950 border-slate-700 mt-1"
               />
+            </div>
+            <div>
+              <Label className="text-slate-300">Tesis</Label>
+              <Select 
+                value={formData.tesis_id || "none"} 
+                onValueChange={(value) => setFormData({...formData, tesis_id: value === "none" ? "" : value})}
+              >
+                <SelectTrigger className="bg-slate-950 border-slate-700 mt-1">
+                  <SelectValue placeholder="Tesis seçin" />
+                </SelectTrigger>
+                <SelectContent className="bg-slate-900 border-slate-700">
+                  <SelectItem value="none">Seçiniz</SelectItem>
+                  {tesisler.map(tesis => (
+                    <SelectItem key={tesis.id} value={tesis.id}>
+                      <span className="flex items-center gap-2">
+                        <Building2 className="w-4 h-4 text-blue-400" /> {tesis.tesis_adi}
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="col-span-2">
               <Label className="text-slate-300">Not (Opsiyonel)</Label>
@@ -442,6 +618,7 @@ const Puantaj = () => {
                     <TableHead className="text-slate-300">Giriş</TableHead>
                     <TableHead className="text-slate-300">Çıkış</TableHead>
                     <TableHead className="text-slate-300">Fazla Mesai</TableHead>
+                    <TableHead className="text-slate-300">Tesis</TableHead>
                     <TableHead className="text-slate-300">Not</TableHead>
                     <TableHead className="text-slate-300 w-16">İşlem</TableHead>
                   </TableRow>
@@ -453,6 +630,7 @@ const Puantaj = () => {
                       <TableCell className="text-green-400">{p.giris_saati || '-'}</TableCell>
                       <TableCell className="text-red-400">{p.cikis_saati || '-'}</TableCell>
                       <TableCell className="text-orange-400">{p.fazla_mesai?.toFixed(1) || '0'}</TableCell>
+                      <TableCell className="text-blue-400">{p.tesis_adi || '-'}</TableCell>
                       <TableCell className="text-slate-400 text-sm">{p.notlar || '-'}</TableCell>
                       <TableCell>
                         <Button size="icon" variant="ghost" className="h-8 w-8 text-red-500 hover:text-red-400 hover:bg-red-500/10" onClick={() => handleDeletePuantaj(p.id)}>

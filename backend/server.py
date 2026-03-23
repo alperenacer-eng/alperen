@@ -448,10 +448,33 @@ async def init_db():
                 cikis_saati TEXT DEFAULT '',
                 mesai_suresi REAL DEFAULT 0,
                 fazla_mesai REAL DEFAULT 0,
+                tesis_id TEXT DEFAULT '',
+                tesis_adi TEXT DEFAULT '',
                 notlar TEXT DEFAULT '',
                 created_at TEXT NOT NULL
             )
         ''')
+        
+        # Tesisler table
+        await db.execute('''
+            CREATE TABLE IF NOT EXISTS tesisler (
+                id TEXT PRIMARY KEY,
+                tesis_adi TEXT NOT NULL,
+                adres TEXT DEFAULT '',
+                aktif INTEGER DEFAULT 1,
+                created_at TEXT NOT NULL
+            )
+        ''')
+        
+        # Puantaj tablosuna tesis sütunları ekle (eğer yoksa)
+        try:
+            await db.execute("ALTER TABLE puantaj ADD COLUMN tesis_id TEXT DEFAULT ''")
+        except:
+            pass
+        try:
+            await db.execute("ALTER TABLE puantaj ADD COLUMN tesis_adi TEXT DEFAULT ''")
+        except:
+            pass
         
         # Izinler table
         await db.execute('''
@@ -3241,6 +3264,60 @@ async def delete_puantaj(id: str, current_user: dict = Depends(get_current_user)
         raise HTTPException(status_code=404, detail="Puantaj kaydı bulunamadı")
     return {"message": "Puantaj kaydı silindi"}
 
+# ============== TESİSLER ==============
+
+class TesisCreate(BaseModel):
+    tesis_adi: str
+    adres: str = ""
+    aktif: bool = True
+
+@api_router.get("/tesisler")
+async def get_tesisler(current_user: dict = Depends(get_current_user)):
+    db = await get_db()
+    async with db.execute("SELECT * FROM tesisler ORDER BY tesis_adi") as cursor:
+        rows = await cursor.fetchall()
+    await db.close()
+    return rows_to_list(rows)
+
+@api_router.post("/tesisler")
+async def create_tesis(input: TesisCreate, current_user: dict = Depends(get_current_user)):
+    db = await get_db()
+    tesis_id = generate_id()
+    created_at = datetime.now(timezone.utc).isoformat()
+    
+    await db.execute(
+        "INSERT INTO tesisler (id, tesis_adi, adres, aktif, created_at) VALUES (?, ?, ?, ?, ?)",
+        (tesis_id, input.tesis_adi, input.adres, 1 if input.aktif else 0, created_at)
+    )
+    await db.commit()
+    await db.close()
+    
+    return {"id": tesis_id, "tesis_adi": input.tesis_adi, "adres": input.adres, "aktif": input.aktif}
+
+@api_router.put("/tesisler/{id}")
+async def update_tesis(id: str, input: TesisCreate, current_user: dict = Depends(get_current_user)):
+    db = await get_db()
+    cursor = await db.execute(
+        "UPDATE tesisler SET tesis_adi = ?, adres = ?, aktif = ? WHERE id = ?",
+        (input.tesis_adi, input.adres, 1 if input.aktif else 0, id)
+    )
+    await db.commit()
+    await db.close()
+    
+    if cursor.rowcount == 0:
+        raise HTTPException(status_code=404, detail="Tesis bulunamadı")
+    return {"id": id, "tesis_adi": input.tesis_adi, "adres": input.adres, "aktif": input.aktif}
+
+@api_router.delete("/tesisler/{id}")
+async def delete_tesis(id: str, current_user: dict = Depends(get_current_user)):
+    db = await get_db()
+    cursor = await db.execute("DELETE FROM tesisler WHERE id = ?", (id,))
+    await db.commit()
+    await db.close()
+    if cursor.rowcount == 0:
+        raise HTTPException(status_code=404, detail="Tesis bulunamadı")
+    return {"message": "Tesis silindi"}
+
 # Toplu Puantaj Girişi
 class TopluPuantajItem(BaseModel):
     personel_id: str
@@ -3251,6 +3328,8 @@ class TopluPuantajItem(BaseModel):
     notlar: str = ""
     mesai_suresi: float = 0  # Manuel mesai girişi
     fazla_mesai: float = 0   # Manuel fazla mesai girişi
+    tesis_id: str = ""
+    tesis_adi: str = ""
 
 class TopluPuantajCreate(BaseModel):
     tarih: str
@@ -3270,6 +3349,8 @@ async def create_toplu_puantaj(input: TopluPuantajCreate, current_user: dict = D
         fazla_mesai = data.get('fazla_mesai', 0)
         giris_saati = data.get('giris_saati', '')
         cikis_saati = data.get('cikis_saati', '')
+        tesis_id = data.get('tesis_id', '')
+        tesis_adi = data.get('tesis_adi', '')
         
         # Mevcut kaydı kontrol et (aynı tarih ve personel için)
         async with db.execute(
@@ -3282,17 +3363,17 @@ async def create_toplu_puantaj(input: TopluPuantajCreate, current_user: dict = D
             # Güncelle
             await db.execute(
                 """UPDATE puantaj SET giris_saati = ?, cikis_saati = ?, mesai_suresi = ?, 
-                   fazla_mesai = ?, notlar = ? WHERE id = ?""",
-                (giris_saati, cikis_saati, mesai_suresi, fazla_mesai, data['notlar'], existing[0])
+                   fazla_mesai = ?, tesis_id = ?, tesis_adi = ?, notlar = ? WHERE id = ?""",
+                (giris_saati, cikis_saati, mesai_suresi, fazla_mesai, tesis_id, tesis_adi, data['notlar'], existing[0])
             )
             results.append({"id": existing[0], "personel_id": data['personel_id'], "updated": True})
         else:
             # Yeni kayıt
             await db.execute(
                 """INSERT INTO puantaj (id, personel_id, personel_adi, tarih, giris_saati, cikis_saati,
-                   mesai_suresi, fazla_mesai, notlar, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                   mesai_suresi, fazla_mesai, tesis_id, tesis_adi, notlar, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (puantaj_id, data['personel_id'], data['personel_adi'], input.tarih, giris_saati,
-                 cikis_saati, mesai_suresi, fazla_mesai, data['notlar'], created_at)
+                 cikis_saati, mesai_suresi, fazla_mesai, tesis_id, tesis_adi, data['notlar'], created_at)
             )
             results.append({"id": puantaj_id, "personel_id": data['personel_id'], "created": True})
     
