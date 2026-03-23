@@ -48,7 +48,6 @@ const Puantaj = () => {
     durum: 'geldi',
     giris_saati: '08:00',
     cikis_saati: '17:00',
-    mesai_suresi: '8',
     fazla_mesai: '0',
     notlar: ''
   });
@@ -134,7 +133,6 @@ const Puantaj = () => {
 
     setSaving(true);
     try {
-      const mesaiSuresi = parseFloat(formData.mesai_suresi) || 0;
       const fazlaMesai = parseFloat(formData.fazla_mesai) || 0;
       
       const kayitlar = seciliPersoneller.map(personelId => {
@@ -146,7 +144,7 @@ const Puantaj = () => {
           cikis_saati: formData.durum === 'geldi' ? formData.cikis_saati : '',
           durum: formData.durum,
           notlar: formData.notlar,
-          mesai_suresi: mesaiSuresi,
+          mesai_suresi: 0,
           fazla_mesai: fazlaMesai
         };
       });
@@ -184,9 +182,8 @@ const Puantaj = () => {
   };
 
   const toplam = filteredPuantajlar.reduce((acc, p) => ({
-    mesai: acc.mesai + (p.mesai_suresi || 0),
     fazla: acc.fazla + (p.fazla_mesai || 0),
-  }), { mesai: 0, fazla: 0 });
+  }), { fazla: 0 });
 
   return (
     <div className="animate-fade-in">
@@ -205,7 +202,7 @@ const Puantaj = () => {
       </div>
 
       {/* Özet İstatistikler */}
-      <div className="grid grid-cols-1 md:grid-cols-6 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
         <Card className="glass-effect border-slate-800">
           <CardContent className="p-4">
             <p className="text-sm text-slate-400">Seçili Tarih</p>
@@ -232,13 +229,7 @@ const Puantaj = () => {
         </Card>
         <Card className="glass-effect border-slate-800">
           <CardContent className="p-4">
-            <p className="text-sm text-slate-400">Toplam Mesai</p>
-            <p className="text-2xl font-bold text-blue-500">{toplam.mesai.toFixed(1)} Saat</p>
-          </CardContent>
-        </Card>
-        <Card className="glass-effect border-slate-800">
-          <CardContent className="p-4">
-            <p className="text-sm text-slate-400">Fazla Mesai</p>
+            <p className="text-sm text-slate-400">Toplam Fazla Mesai</p>
             <p className="text-2xl font-bold text-orange-500">{toplam.fazla.toFixed(1)} Saat</p>
           </CardContent>
         </Card>
@@ -253,7 +244,7 @@ const Puantaj = () => {
           </CardTitle>
         </CardHeader>
         <CardContent className="p-6">
-          <div className="grid grid-cols-2 md:grid-cols-8 gap-4 items-end">
+          <div className="grid grid-cols-2 md:grid-cols-7 gap-4 items-end">
             <div>
               <Label className="text-slate-300">Tarih</Label>
               <Input
@@ -317,20 +308,7 @@ const Puantaj = () => {
               />
             </div>
             <div>
-              <Label className="text-slate-300">Mesai (Saat)</Label>
-              <Input
-                type="number"
-                step="0.5"
-                min="0"
-                max="24"
-                value={formData.mesai_suresi}
-                onChange={(e) => setFormData({...formData, mesai_suresi: e.target.value})}
-                disabled={formData.durum !== 'geldi'}
-                className="bg-slate-950 border-slate-700 mt-1"
-              />
-            </div>
-            <div>
-              <Label className="text-slate-300">Fazla Mesai</Label>
+              <Label className="text-slate-300">Fazla Mesai (Saat)</Label>
               <Input
                 type="number"
                 step="0.5"
@@ -463,9 +441,7 @@ const Puantaj = () => {
                     <TableHead className="text-slate-300">Personel</TableHead>
                     <TableHead className="text-slate-300">Giriş</TableHead>
                     <TableHead className="text-slate-300">Çıkış</TableHead>
-                    <TableHead className="text-slate-300">Mesai</TableHead>
                     <TableHead className="text-slate-300">Fazla Mesai</TableHead>
-                    <TableHead className="text-slate-300">Toplam</TableHead>
                     <TableHead className="text-slate-300">Not</TableHead>
                     <TableHead className="text-slate-300 w-16">İşlem</TableHead>
                   </TableRow>
@@ -476,11 +452,7 @@ const Puantaj = () => {
                       <TableCell className="font-medium text-white">{p.personel_adi}</TableCell>
                       <TableCell className="text-green-400">{p.giris_saati || '-'}</TableCell>
                       <TableCell className="text-red-400">{p.cikis_saati || '-'}</TableCell>
-                      <TableCell className="text-blue-400">{p.mesai_suresi?.toFixed(1) || '0'}</TableCell>
                       <TableCell className="text-orange-400">{p.fazla_mesai?.toFixed(1) || '0'}</TableCell>
-                      <TableCell className="text-green-400 font-medium">
-                        {((p.mesai_suresi || 0) + (p.fazla_mesai || 0)).toFixed(1)}
-                      </TableCell>
                       <TableCell className="text-slate-400 text-sm">{p.notlar || '-'}</TableCell>
                       <TableCell>
                         <Button size="icon" variant="ghost" className="h-8 w-8 text-red-500 hover:text-red-400 hover:bg-red-500/10" onClick={() => handleDeletePuantaj(p.id)}>
