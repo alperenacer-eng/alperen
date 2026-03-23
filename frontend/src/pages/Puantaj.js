@@ -55,6 +55,10 @@ const Puantaj = () => {
   const [yeniTesis, setYeniTesis] = useState({ tesis_adi: '', adres: '' });
   const [editingTesis, setEditingTesis] = useState(null);
   
+  // Puantaj düzenleme
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingPuantaj, setEditingPuantaj] = useState(null);
+  
   // Üst form bilgileri
   const [formData, setFormData] = useState({
     tarih: new Date().toISOString().split('T')[0],
@@ -248,6 +252,47 @@ const Puantaj = () => {
         console.error(e);
         toast.error('Silme işlemi başarısız');
       }
+    }
+  };
+
+  // Puantaj düzenleme
+  const handleEditPuantaj = (puantaj) => {
+    setEditingPuantaj({
+      ...puantaj,
+      fazla_mesai: puantaj.fazla_mesai?.toString() || '0'
+    });
+    setEditDialogOpen(true);
+  };
+
+  const handleUpdatePuantaj = async () => {
+    if (!editingPuantaj) return;
+    
+    try {
+      const secilenTesis = tesisler.find(t => t.id === editingPuantaj.tesis_id);
+      const payload = {
+        tarih: editingPuantaj.tarih,
+        kayitlar: [{
+          personel_id: editingPuantaj.personel_id,
+          personel_adi: editingPuantaj.personel_adi,
+          giris_saati: editingPuantaj.giris_saati || '',
+          cikis_saati: editingPuantaj.cikis_saati || '',
+          durum: 'geldi',
+          notlar: editingPuantaj.notlar || '',
+          mesai_suresi: 0,
+          fazla_mesai: parseFloat(editingPuantaj.fazla_mesai) || 0,
+          tesis_id: editingPuantaj.tesis_id || '',
+          tesis_adi: secilenTesis?.tesis_adi || editingPuantaj.tesis_adi || ''
+        }]
+      };
+      
+      await axios.post(`${API_URL}/puantaj/toplu`, payload, { headers });
+      toast.success('Puantaj kaydı güncellendi');
+      setEditDialogOpen(false);
+      setEditingPuantaj(null);
+      fetchPuantajlar();
+    } catch (e) {
+      console.error(e);
+      toast.error('Güncelleme başarısız');
     }
   };
 
@@ -633,9 +678,14 @@ const Puantaj = () => {
                       <TableCell className="text-blue-400">{p.tesis_adi || '-'}</TableCell>
                       <TableCell className="text-slate-400 text-sm">{p.notlar || '-'}</TableCell>
                       <TableCell>
-                        <Button size="icon" variant="ghost" className="h-8 w-8 text-red-500 hover:text-red-400 hover:bg-red-500/10" onClick={() => handleDeletePuantaj(p.id)}>
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
+                        <div className="flex gap-1">
+                          <Button size="icon" variant="ghost" className="h-8 w-8 text-blue-500 hover:text-blue-400 hover:bg-blue-500/10" onClick={() => handleEditPuantaj(p)}>
+                            <Pencil className="w-4 h-4" />
+                          </Button>
+                          <Button size="icon" variant="ghost" className="h-8 w-8 text-red-500 hover:text-red-400 hover:bg-red-500/10" onClick={() => handleDeletePuantaj(p.id)}>
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -645,6 +695,89 @@ const Puantaj = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* Puantaj Düzenleme Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="bg-slate-900 border-slate-700 max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-white">Puantaj Düzenle</DialogTitle>
+          </DialogHeader>
+          {editingPuantaj && (
+            <div className="space-y-4">
+              <div>
+                <Label className="text-slate-300">Personel</Label>
+                <Input value={editingPuantaj.personel_adi} disabled className="bg-slate-950 border-slate-700 mt-1" />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-slate-300">Giriş Saati</Label>
+                  <Input
+                    type="time"
+                    value={editingPuantaj.giris_saati || ''}
+                    onChange={(e) => setEditingPuantaj({...editingPuantaj, giris_saati: e.target.value})}
+                    className="bg-slate-950 border-slate-700 mt-1"
+                  />
+                </div>
+                <div>
+                  <Label className="text-slate-300">Çıkış Saati</Label>
+                  <Input
+                    type="time"
+                    value={editingPuantaj.cikis_saati || ''}
+                    onChange={(e) => setEditingPuantaj({...editingPuantaj, cikis_saati: e.target.value})}
+                    className="bg-slate-950 border-slate-700 mt-1"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-slate-300">Fazla Mesai (Saat)</Label>
+                  <Input
+                    type="number"
+                    step="0.5"
+                    value={editingPuantaj.fazla_mesai}
+                    onChange={(e) => setEditingPuantaj({...editingPuantaj, fazla_mesai: e.target.value})}
+                    className="bg-slate-950 border-slate-700 mt-1"
+                  />
+                </div>
+                <div>
+                  <Label className="text-slate-300">Tesis</Label>
+                  <Select 
+                    value={editingPuantaj.tesis_id || "none"} 
+                    onValueChange={(value) => setEditingPuantaj({...editingPuantaj, tesis_id: value === "none" ? "" : value})}
+                  >
+                    <SelectTrigger className="bg-slate-950 border-slate-700 mt-1">
+                      <SelectValue placeholder="Tesis seçin" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-slate-900 border-slate-700">
+                      <SelectItem value="none">Seçiniz</SelectItem>
+                      {tesisler.map(tesis => (
+                        <SelectItem key={tesis.id} value={tesis.id}>{tesis.tesis_adi}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div>
+                <Label className="text-slate-300">Not</Label>
+                <Input
+                  value={editingPuantaj.notlar || ''}
+                  onChange={(e) => setEditingPuantaj({...editingPuantaj, notlar: e.target.value})}
+                  placeholder="Not ekleyin..."
+                  className="bg-slate-950 border-slate-700 mt-1"
+                />
+              </div>
+              <div className="flex gap-2 justify-end mt-4">
+                <Button variant="outline" onClick={() => setEditDialogOpen(false)} className="border-slate-700">
+                  İptal
+                </Button>
+                <Button onClick={handleUpdatePuantaj} className="bg-green-600 hover:bg-green-700">
+                  Kaydet
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

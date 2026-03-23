@@ -31,7 +31,7 @@ import {
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Plus, ArrowLeft, FileText, Check, DollarSign } from 'lucide-react';
+import { Plus, ArrowLeft, FileText, Check, DollarSign, Pencil, Trash2 } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL + '/api';
 
@@ -44,6 +44,8 @@ const MaasBordrosu = () => {
   const [personeller, setPersoneller] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editingBordro, setEditingBordro] = useState(null);
   const [selectedYil, setSelectedYil] = useState(new Date().getFullYear());
   const [selectedAy, setSelectedAy] = useState(new Date().getMonth() + 1);
   
@@ -149,6 +151,62 @@ const MaasBordrosu = () => {
     } catch (e) {
       console.error(e);
       toast.error('İşlem başarısız');
+    }
+  };
+
+  const handleEditBordro = (bordro) => {
+    setEditingBordro({...bordro});
+    setIsEditDialogOpen(true);
+  };
+
+  const handleUpdateBordro = async () => {
+    if (!editingBordro) return;
+    try {
+      const brut = parseFloat(editingBordro.brut_maas) || 0;
+      const fazla = parseFloat(editingBordro.fazla_mesai_ucreti) || 0;
+      const ikramiye = parseFloat(editingBordro.ikramiye) || 0;
+      const kesintiler = parseFloat(editingBordro.kesintiler) || 0;
+      
+      const sgkIsci = brut * 0.14;
+      const sgkIsveren = brut * 0.205;
+      const gelirVergisi = brut * 0.15;
+      const damgaVergisi = brut * 0.00759;
+      const netMaas = brut - sgkIsci - gelirVergisi - damgaVergisi - kesintiler;
+      const toplamOdeme = netMaas + fazla + ikramiye;
+      
+      await axios.put(`${API_URL}/maas-bordrolari/${editingBordro.id}`, {
+        ...editingBordro,
+        brut_maas: brut,
+        sgk_isci: sgkIsci,
+        sgk_isveren: sgkIsveren,
+        gelir_vergisi: gelirVergisi,
+        damga_vergisi: damgaVergisi,
+        net_maas: netMaas,
+        fazla_mesai_ucreti: fazla,
+        ikramiye: ikramiye,
+        kesintiler: kesintiler,
+        toplam_odeme: toplamOdeme
+      }, { headers });
+      toast.success('Bordro güncellendi');
+      setIsEditDialogOpen(false);
+      setEditingBordro(null);
+      fetchBordrolar();
+    } catch (e) {
+      console.error(e);
+      toast.error('Güncelleme başarısız');
+    }
+  };
+
+  const handleDeleteBordro = async (id) => {
+    if (window.confirm('Bu bordroyu silmek istediğinize emin misiniz?')) {
+      try {
+        await axios.delete(`${API_URL}/maas-bordrolari/${id}`, { headers });
+        toast.success('Bordro silindi');
+        fetchBordrolar();
+      } catch (e) {
+        console.error(e);
+        toast.error('Silme işlemi başarısız');
+      }
     }
   };
 
@@ -370,11 +428,19 @@ const MaasBordrosu = () => {
                         </span>
                       </TableCell>
                       <TableCell>
-                        {!b.odendi && (
-                          <Button size="sm" variant="ghost" className="text-green-500 hover:text-green-400" onClick={() => handleOdendi(b.id)}>
-                            <DollarSign className="w-4 h-4 mr-1" /> Öde
+                        <div className="flex gap-1">
+                          {!b.odendi && (
+                            <Button size="sm" variant="ghost" className="text-green-500 hover:text-green-400" onClick={() => handleOdendi(b.id)}>
+                              <DollarSign className="w-4 h-4 mr-1" /> Öde
+                            </Button>
+                          )}
+                          <Button size="icon" variant="ghost" className="h-8 w-8 text-blue-500 hover:text-blue-400" onClick={() => handleEditBordro(b)}>
+                            <Pencil className="w-4 h-4" />
                           </Button>
-                        )}
+                          <Button size="icon" variant="ghost" className="h-8 w-8 text-red-500 hover:text-red-400" onClick={() => handleDeleteBordro(b.id)}>
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -384,6 +450,67 @@ const MaasBordrosu = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* Bordro Düzenleme Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="bg-slate-900 border-slate-700 max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-white">Bordro Düzenle</DialogTitle>
+          </DialogHeader>
+          {editingBordro && (
+            <div className="space-y-4">
+              <div>
+                <Label className="text-slate-300">Personel</Label>
+                <Input value={editingBordro.personel_adi} disabled className="bg-slate-950 border-slate-700 mt-1" />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-slate-300">Brüt Maaş (TL)</Label>
+                  <Input
+                    type="number"
+                    value={editingBordro.brut_maas}
+                    onChange={(e) => setEditingBordro({...editingBordro, brut_maas: e.target.value})}
+                    className="bg-slate-950 border-slate-700 mt-1"
+                  />
+                </div>
+                <div>
+                  <Label className="text-slate-300">Fazla Mesai (TL)</Label>
+                  <Input
+                    type="number"
+                    value={editingBordro.fazla_mesai_ucreti}
+                    onChange={(e) => setEditingBordro({...editingBordro, fazla_mesai_ucreti: e.target.value})}
+                    className="bg-slate-950 border-slate-700 mt-1"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-slate-300">İkramiye (TL)</Label>
+                  <Input
+                    type="number"
+                    value={editingBordro.ikramiye || 0}
+                    onChange={(e) => setEditingBordro({...editingBordro, ikramiye: e.target.value})}
+                    className="bg-slate-950 border-slate-700 mt-1"
+                  />
+                </div>
+                <div>
+                  <Label className="text-slate-300">Kesintiler (TL)</Label>
+                  <Input
+                    type="number"
+                    value={editingBordro.kesintiler || 0}
+                    onChange={(e) => setEditingBordro({...editingBordro, kesintiler: e.target.value})}
+                    className="bg-slate-950 border-slate-700 mt-1"
+                  />
+                </div>
+              </div>
+              <div className="flex gap-2 justify-end mt-4">
+                <Button variant="outline" onClick={() => setIsEditDialogOpen(false)} className="border-slate-700">İptal</Button>
+                <Button onClick={handleUpdateBordro} className="bg-green-600 hover:bg-green-700">Güncelle</Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

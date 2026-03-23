@@ -3505,6 +3505,25 @@ async def delete_izin(id: str, current_user: dict = Depends(get_current_user)):
         raise HTTPException(status_code=404, detail="İzin kaydı bulunamadı")
     return {"message": "İzin kaydı silindi"}
 
+@api_router.put("/izinler/{id}")
+async def update_izin(id: str, input: IzinCreate, current_user: dict = Depends(get_current_user)):
+    db = await get_db()
+    data = input.model_dump()
+    
+    cursor = await db.execute(
+        """UPDATE izinler SET personel_id = ?, personel_adi = ?, izin_turu = ?, 
+           baslangic_tarihi = ?, bitis_tarihi = ?, gun_sayisi = ?, aciklama = ?, durum = ? WHERE id = ?""",
+        (data['personel_id'], data['personel_adi'], data['izin_turu'], data['baslangic_tarihi'],
+         data['bitis_tarihi'], data['gun_sayisi'], data['aciklama'], data.get('durum', 'Beklemede'), id)
+    )
+    await db.commit()
+    await db.close()
+    
+    if cursor.rowcount == 0:
+        raise HTTPException(status_code=404, detail="İzin kaydı bulunamadı")
+    
+    return {"id": id, **data}
+
 # Maaş Bordrosu
 class MaasBordrosuCreate(BaseModel):
     personel_id: str

@@ -32,7 +32,7 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Plus, Trash2, ArrowLeft, Calendar, Check, X } from 'lucide-react';
+import { Plus, Trash2, ArrowLeft, Calendar, Check, X, Pencil } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL + '/api';
 
@@ -45,6 +45,8 @@ const IzinYonetimi = () => {
   const [personeller, setPersoneller] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editingIzin, setEditingIzin] = useState(null);
   
   const [newIzin, setNewIzin] = useState({
     personel_id: '',
@@ -134,6 +136,34 @@ const IzinYonetimi = () => {
         console.error(e);
         toast.error('Silme işlemi başarısız');
       }
+    }
+  };
+
+  const handleEditIzin = (izin) => {
+    setEditingIzin({...izin});
+    setIsEditDialogOpen(true);
+  };
+
+  const handleUpdateIzin = async () => {
+    if (!editingIzin) return;
+    try {
+      await axios.put(`${API_URL}/izinler/${editingIzin.id}`, {
+        personel_id: editingIzin.personel_id,
+        personel_adi: editingIzin.personel_adi,
+        izin_turu: editingIzin.izin_turu,
+        baslangic_tarihi: editingIzin.baslangic_tarihi,
+        bitis_tarihi: editingIzin.bitis_tarihi,
+        gun_sayisi: editingIzin.gun_sayisi,
+        aciklama: editingIzin.aciklama,
+        durum: editingIzin.durum
+      }, { headers });
+      toast.success('İzin kaydı güncellendi');
+      setIsEditDialogOpen(false);
+      setEditingIzin(null);
+      fetchIzinler();
+    } catch (e) {
+      console.error(e);
+      toast.error('Güncelleme başarısız');
     }
   };
 
@@ -341,6 +371,9 @@ const IzinYonetimi = () => {
                               </Button>
                             </>
                           )}
+                          <Button size="icon" variant="ghost" className="h-8 w-8 text-blue-500 hover:text-blue-400" onClick={() => handleEditIzin(izin)}>
+                            <Pencil className="w-4 h-4" />
+                          </Button>
                           <Button size="icon" variant="ghost" className="h-8 w-8 text-slate-500 hover:text-slate-400" onClick={() => handleDeleteIzin(izin.id)}>
                             <Trash2 className="w-4 h-4" />
                           </Button>
@@ -354,6 +387,87 @@ const IzinYonetimi = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* İzin Düzenleme Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="bg-slate-900 border-slate-700 max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-white">İzin Düzenle</DialogTitle>
+          </DialogHeader>
+          {editingIzin && (
+            <div className="space-y-4">
+              <div>
+                <Label className="text-slate-300">Personel</Label>
+                <Input value={editingIzin.personel_adi} disabled className="bg-slate-950 border-slate-700 mt-1" />
+              </div>
+              <div>
+                <Label className="text-slate-300">İzin Türü</Label>
+                <Select value={editingIzin.izin_turu} onValueChange={(value) => setEditingIzin({...editingIzin, izin_turu: value})}>
+                  <SelectTrigger className="bg-slate-950 border-slate-700 mt-1"><SelectValue /></SelectTrigger>
+                  <SelectContent className="bg-slate-900 border-slate-700">
+                    {izinTurleri.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-slate-300">Başlangıç</Label>
+                  <Input
+                    type="date"
+                    value={editingIzin.baslangic_tarihi}
+                    onChange={(e) => {
+                      const newStart = e.target.value;
+                      const days = calculateDays(newStart, editingIzin.bitis_tarihi);
+                      setEditingIzin({...editingIzin, baslangic_tarihi: newStart, gun_sayisi: days});
+                    }}
+                    className="bg-slate-950 border-slate-700 mt-1"
+                  />
+                </div>
+                <div>
+                  <Label className="text-slate-300">Bitiş</Label>
+                  <Input
+                    type="date"
+                    value={editingIzin.bitis_tarihi}
+                    onChange={(e) => {
+                      const newEnd = e.target.value;
+                      const days = calculateDays(editingIzin.baslangic_tarihi, newEnd);
+                      setEditingIzin({...editingIzin, bitis_tarihi: newEnd, gun_sayisi: days});
+                    }}
+                    className="bg-slate-950 border-slate-700 mt-1"
+                  />
+                </div>
+              </div>
+              <div>
+                <Label className="text-slate-300">Gün Sayısı: <span className="text-white">{editingIzin.gun_sayisi}</span></Label>
+              </div>
+              <div>
+                <Label className="text-slate-300">Durum</Label>
+                <Select value={editingIzin.durum} onValueChange={(value) => setEditingIzin({...editingIzin, durum: value})}>
+                  <SelectTrigger className="bg-slate-950 border-slate-700 mt-1"><SelectValue /></SelectTrigger>
+                  <SelectContent className="bg-slate-900 border-slate-700">
+                    <SelectItem value="Beklemede">Beklemede</SelectItem>
+                    <SelectItem value="Onaylandı">Onaylandı</SelectItem>
+                    <SelectItem value="Reddedildi">Reddedildi</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="text-slate-300">Açıklama</Label>
+                <Textarea
+                  value={editingIzin.aciklama || ''}
+                  onChange={(e) => setEditingIzin({...editingIzin, aciklama: e.target.value})}
+                  className="bg-slate-950 border-slate-700 mt-1"
+                  placeholder="İzin sebebi..."
+                />
+              </div>
+              <div className="flex gap-2 justify-end mt-4">
+                <Button variant="outline" onClick={() => setIsEditDialogOpen(false)} className="border-slate-700">İptal</Button>
+                <Button onClick={handleUpdateIzin} className="bg-green-600 hover:bg-green-700">Güncelle</Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

@@ -68,7 +68,9 @@ const PersonelListesi = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedPersonel, setSelectedPersonel] = useState(null);
+  const [editingPersonel, setEditingPersonel] = useState(null);
   const [newPersonel, setNewPersonel] = useState(emptyPersonel);
   const [departmanlar, setDepartmanlar] = useState([]);
   const [pozisyonlar, setPozisyonlar] = useState([]);
@@ -136,6 +138,28 @@ const PersonelListesi = () => {
         console.error(e);
         toast.error('Personel silinirken hata oluştu');
       }
+    }
+  };
+
+  const handleEditPersonel = (personel) => {
+    setEditingPersonel({...personel});
+    setIsEditDialogOpen(true);
+  };
+
+  const handleUpdatePersonel = async () => {
+    if (!editingPersonel || !editingPersonel.ad_soyad.trim()) {
+      toast.error('Ad Soyad zorunludur');
+      return;
+    }
+    try {
+      await axios.put(`${API_URL}/personeller/${editingPersonel.id}`, editingPersonel, { headers });
+      toast.success('Personel güncellendi');
+      setIsEditDialogOpen(false);
+      setEditingPersonel(null);
+      fetchPersoneller();
+    } catch (e) {
+      console.error(e);
+      toast.error('Personel güncellenirken hata oluştu');
     }
   };
 
@@ -344,6 +368,9 @@ const PersonelListesi = () => {
                           <Button size="icon" variant="ghost" className="h-8 w-8 text-blue-500 hover:text-blue-400" onClick={() => { setSelectedPersonel(p); setIsViewDialogOpen(true); }}>
                             <Eye className="w-4 h-4" />
                           </Button>
+                          <Button size="icon" variant="ghost" className="h-8 w-8 text-green-500 hover:text-green-400" onClick={() => handleEditPersonel(p)}>
+                            <Edit className="w-4 h-4" />
+                          </Button>
                           <Button size="icon" variant="ghost" className="h-8 w-8 text-red-500 hover:text-red-400" onClick={() => handleDeletePersonel(p.id)}>
                             <Trash2 className="w-4 h-4" />
                           </Button>
@@ -379,6 +406,117 @@ const PersonelListesi = () => {
               <div><span className="text-slate-400">Yıllık İzin:</span> <span className="text-white ml-2">{selectedPersonel.kalan_izin || 14} gün kaldı</span></div>
               <div><span className="text-slate-400">IBAN:</span> <span className="text-white ml-2">{selectedPersonel.iban || '-'}</span></div>
             </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Düzenleme Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-slate-900 border-slate-700 text-white">
+          <DialogHeader>
+            <DialogTitle>Personel Düzenle</DialogTitle>
+          </DialogHeader>
+          {editingPersonel && (
+            <>
+              <div className="grid grid-cols-3 gap-4 py-4">
+                <div className="col-span-3 border-b border-slate-700 pb-2 mb-2">
+                  <h3 className="text-sm font-semibold text-blue-400">Kişisel Bilgiler</h3>
+                </div>
+                <div>
+                  <Label className="text-red-400">Ad Soyad *</Label>
+                  <Input value={editingPersonel.ad_soyad} onChange={(e) => setEditingPersonel({...editingPersonel, ad_soyad: e.target.value})} className="bg-slate-950 border-slate-700" />
+                </div>
+                <div>
+                  <Label>TC Kimlik</Label>
+                  <Input value={editingPersonel.tc_kimlik || ''} onChange={(e) => setEditingPersonel({...editingPersonel, tc_kimlik: e.target.value})} className="bg-slate-950 border-slate-700" />
+                </div>
+                <div>
+                  <Label>Telefon</Label>
+                  <Input value={editingPersonel.telefon || ''} onChange={(e) => setEditingPersonel({...editingPersonel, telefon: e.target.value})} className="bg-slate-950 border-slate-700" />
+                </div>
+                <div>
+                  <Label>E-posta</Label>
+                  <Input value={editingPersonel.email || ''} onChange={(e) => setEditingPersonel({...editingPersonel, email: e.target.value})} className="bg-slate-950 border-slate-700" />
+                </div>
+                <div>
+                  <Label>Doğum Tarihi</Label>
+                  <Input type="date" value={editingPersonel.dogum_tarihi || ''} onChange={(e) => setEditingPersonel({...editingPersonel, dogum_tarihi: e.target.value})} className="bg-slate-950 border-slate-700" />
+                </div>
+                <div>
+                  <Label>Kan Grubu</Label>
+                  <Select value={editingPersonel.kan_grubu || ''} onValueChange={(value) => setEditingPersonel({...editingPersonel, kan_grubu: value})}>
+                    <SelectTrigger className="bg-slate-950 border-slate-700"><SelectValue placeholder="Seçin" /></SelectTrigger>
+                    <SelectContent className="bg-slate-900 border-slate-700">
+                      {['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', '0+', '0-'].map(k => <SelectItem key={k} value={k}>{k}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="col-span-3 border-b border-slate-700 pb-2 mb-2 mt-4">
+                  <h3 className="text-sm font-semibold text-green-400">İş Bilgileri</h3>
+                </div>
+                <div>
+                  <Label>Departman</Label>
+                  <Select value={editingPersonel.departman || ''} onValueChange={(value) => setEditingPersonel({...editingPersonel, departman: value})}>
+                    <SelectTrigger className="bg-slate-950 border-slate-700"><SelectValue placeholder="Seçin" /></SelectTrigger>
+                    <SelectContent className="bg-slate-900 border-slate-700">
+                      {departmanlar.map(d => <SelectItem key={d.id} value={d.ad}>{d.ad}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Pozisyon</Label>
+                  <Select value={editingPersonel.pozisyon || ''} onValueChange={(value) => setEditingPersonel({...editingPersonel, pozisyon: value})}>
+                    <SelectTrigger className="bg-slate-950 border-slate-700"><SelectValue placeholder="Seçin" /></SelectTrigger>
+                    <SelectContent className="bg-slate-900 border-slate-700">
+                      {pozisyonlar.map(p => <SelectItem key={p.id} value={p.ad}>{p.ad}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>İşe Giriş Tarihi</Label>
+                  <Input type="date" value={editingPersonel.ise_giris_tarihi || ''} onChange={(e) => setEditingPersonel({...editingPersonel, ise_giris_tarihi: e.target.value})} className="bg-slate-950 border-slate-700" />
+                </div>
+                <div>
+                  <Label>Maaş (TL)</Label>
+                  <Input type="number" value={editingPersonel.maas || ''} onChange={(e) => setEditingPersonel({...editingPersonel, maas: parseFloat(e.target.value) || 0})} className="bg-slate-950 border-slate-700" />
+                </div>
+                <div>
+                  <Label>SGK No</Label>
+                  <Input value={editingPersonel.sgk_no || ''} onChange={(e) => setEditingPersonel({...editingPersonel, sgk_no: e.target.value})} className="bg-slate-950 border-slate-700" />
+                </div>
+                <div>
+                  <Label>Durum</Label>
+                  <Select value={editingPersonel.aktif ? 'aktif' : 'pasif'} onValueChange={(value) => setEditingPersonel({...editingPersonel, aktif: value === 'aktif'})}>
+                    <SelectTrigger className="bg-slate-950 border-slate-700"><SelectValue /></SelectTrigger>
+                    <SelectContent className="bg-slate-900 border-slate-700">
+                      <SelectItem value="aktif">Aktif</SelectItem>
+                      <SelectItem value="pasif">Pasif</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="col-span-3 border-b border-slate-700 pb-2 mb-2 mt-4">
+                  <h3 className="text-sm font-semibold text-orange-400">Banka ve İletişim</h3>
+                </div>
+                <div>
+                  <Label>Banka</Label>
+                  <Input value={editingPersonel.banka || ''} onChange={(e) => setEditingPersonel({...editingPersonel, banka: e.target.value})} className="bg-slate-950 border-slate-700" />
+                </div>
+                <div className="col-span-2">
+                  <Label>IBAN</Label>
+                  <Input value={editingPersonel.iban || ''} onChange={(e) => setEditingPersonel({...editingPersonel, iban: e.target.value})} className="bg-slate-950 border-slate-700" />
+                </div>
+                <div className="col-span-3">
+                  <Label>Adres</Label>
+                  <Input value={editingPersonel.adres || ''} onChange={(e) => setEditingPersonel({...editingPersonel, adres: e.target.value})} className="bg-slate-950 border-slate-700" />
+                </div>
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setIsEditDialogOpen(false)} className="border-slate-700">İptal</Button>
+                <Button onClick={handleUpdatePersonel} className="bg-green-600 hover:bg-green-700">Güncelle</Button>
+              </div>
+            </>
           )}
         </DialogContent>
       </Dialog>
