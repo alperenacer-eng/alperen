@@ -379,43 +379,57 @@ const PuantajRaporlama = () => {
         <CardContent className="p-4">
           <div className="flex flex-wrap gap-4 items-end">
             <div>
-              <Label className="text-slate-300">Periyot</Label>
-              <Select value={periodType} onValueChange={setPeriodType}>
-                <SelectTrigger className="bg-slate-950 border-slate-700 w-40 mt-1">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="bg-slate-900 border-slate-700">
-                  <SelectItem value="daily">Bugün</SelectItem>
-                  <SelectItem value="weekly">Bu Hafta</SelectItem>
-                  <SelectItem value="monthly">Bu Ay</SelectItem>
-                  <SelectItem value="custom">Özel Aralık</SelectItem>
-                </SelectContent>
-              </Select>
+              <Label className="text-slate-300">Başlangıç Tarihi</Label>
+              <Input
+                type="date"
+                value={startDate}
+                onChange={(e) => {
+                  setStartDate(e.target.value);
+                  setPeriodType('custom');
+                }}
+                className="bg-slate-950 border-slate-700 mt-1 w-44"
+              />
             </div>
-            {periodType === 'custom' && (
-              <>
-                <div>
-                  <Label className="text-slate-300">Başlangıç</Label>
-                  <Input
-                    type="date"
-                    value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
-                    className="bg-slate-950 border-slate-700 mt-1"
-                  />
-                </div>
-                <div>
-                  <Label className="text-slate-300">Bitiş</Label>
-                  <Input
-                    type="date"
-                    value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
-                    className="bg-slate-950 border-slate-700 mt-1"
-                  />
-                </div>
-              </>
-            )}
-            <div className="text-slate-400 text-sm ml-auto">
-              <span className="text-white font-medium">{start}</span> - <span className="text-white font-medium">{end}</span>
+            <div>
+              <Label className="text-slate-300">Bitiş Tarihi</Label>
+              <Input
+                type="date"
+                value={endDate}
+                onChange={(e) => {
+                  setEndDate(e.target.value);
+                  setPeriodType('custom');
+                }}
+                className="bg-slate-950 border-slate-700 mt-1 w-44"
+              />
+            </div>
+            <div className="flex gap-2">
+              <Button 
+                variant={periodType === 'daily' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setPeriodType('daily')}
+                className={periodType === 'daily' ? 'bg-orange-600' : 'border-slate-700'}
+              >
+                Bugün
+              </Button>
+              <Button 
+                variant={periodType === 'weekly' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setPeriodType('weekly')}
+                className={periodType === 'weekly' ? 'bg-orange-600' : 'border-slate-700'}
+              >
+                Bu Hafta
+              </Button>
+              <Button 
+                variant={periodType === 'monthly' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setPeriodType('monthly')}
+                className={periodType === 'monthly' ? 'bg-orange-600' : 'border-slate-700'}
+              >
+                Bu Ay
+              </Button>
+            </div>
+            <div className="text-slate-400 text-sm ml-auto bg-slate-800 px-3 py-2 rounded-lg">
+              Seçili: <span className="text-white font-medium">{start}</span> - <span className="text-white font-medium">{end}</span>
             </div>
           </div>
         </CardContent>
