@@ -22,6 +22,7 @@ import CimentoList from '@/pages/CimentoList';
 import PersonelDashboard from '@/pages/PersonelDashboard';
 import PersonelListesi from '@/pages/PersonelListesi';
 import Puantaj from '@/pages/Puantaj';
+import PuantajRaporlama from '@/pages/PuantajRaporlama';
 import IzinYonetimi from '@/pages/IzinYonetimi';
 import MaasBordrosu from '@/pages/MaasBordrosu';
 import AracYonetimi from '@/pages/AracYonetimi';
@@ -103,6 +104,7 @@ function App() {
               <Route path="personel-listesi" element={<PersonelListesi />} />
               <Route path="personel-ekle" element={<PersonelListesi />} />
               <Route path="puantaj" element={<Puantaj />} />
+              <Route path="puantaj-raporlama" element={<PuantajRaporlama />} />
               <Route path="izin-yonetimi" element={<IzinYonetimi />} />
               <Route path="maas-bordrosu" element={<MaasBordrosu />} />
               <Route path="arac-yonetimi" element={<AracYonetimi />} />

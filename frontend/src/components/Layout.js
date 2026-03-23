@@ -58,6 +58,7 @@ const Layout = () => {
   const personelMenuItems = [
     { path: '/personel-listesi', icon: Users, label: 'Personel Listesi', testId: 'nav-personel-listesi' },
     { path: '/puantaj', icon: Clock, label: 'Puantaj', testId: 'nav-puantaj' },
+    { path: '/puantaj-raporlama', icon: BarChart3, label: 'Puantaj Raporlama', testId: 'nav-puantaj-raporlama' },
     { path: '/izin-yonetimi', icon: Calendar, label: 'İzin Yönetimi', testId: 'nav-izin-yonetimi' },
     { path: '/maas-bordrosu', icon: DollarSign, label: 'Maaş Bordrosu', testId: 'nav-maas-bordrosu' },
   ];
