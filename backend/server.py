@@ -3249,6 +3249,8 @@ class TopluPuantajItem(BaseModel):
     cikis_saati: str = ""
     durum: str = "geldi"  # geldi, gelmedi, izinli, raporlu
     notlar: str = ""
+    mesai_suresi: float = 0  # Manuel mesai girişi
+    fazla_mesai: float = 0   # Manuel fazla mesai girişi
 
 class TopluPuantajCreate(BaseModel):
     tarih: str
@@ -3264,10 +3266,12 @@ async def create_toplu_puantaj(input: TopluPuantajCreate, current_user: dict = D
         puantaj_id = generate_id()
         data = kayit.model_dump()
         
-        # Mesai hesapla
-        mesai_suresi = 0
-        fazla_mesai = 0
-        if data['giris_saati'] and data['cikis_saati'] and data['durum'] == 'geldi':
+        # Manuel mesai değerleri varsa onları kullan, yoksa saat farkından hesapla
+        mesai_suresi = data.get('mesai_suresi', 0)
+        fazla_mesai = data.get('fazla_mesai', 0)
+        
+        # Eğer manuel değer girilmemişse ve saat varsa hesapla
+        if mesai_suresi == 0 and data['giris_saati'] and data['cikis_saati'] and data['durum'] == 'geldi':
             try:
                 giris = datetime.strptime(data['giris_saati'], "%H:%M")
                 cikis = datetime.strptime(data['cikis_saati'], "%H:%M")

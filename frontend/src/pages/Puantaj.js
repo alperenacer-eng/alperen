@@ -25,7 +25,6 @@ import {
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Textarea } from '@/components/ui/textarea';
 import { 
   Trash2, ArrowLeft, Clock, Calendar, Users, Save, 
   CheckCircle2, XCircle, AlertCircle, FileText 
@@ -46,9 +45,9 @@ const Puantaj = () => {
   // Üst form bilgileri - tüm seçili personellere uygulanacak
   const [formData, setFormData] = useState({
     tarih: new Date().toISOString().split('T')[0],
-    giris_saati: '08:00',
-    cikis_saati: '17:00',
     durum: 'geldi',
+    mesai_suresi: '8',  // Saat olarak manuel giriş
+    fazla_mesai: '0',   // Fazla mesai manuel giriş
     notlar: ''
   });
   
@@ -89,10 +88,16 @@ const Puantaj = () => {
     fetchPersoneller();
   }, [currentModule, fetchPuantajlar, fetchPersoneller, navigate]);
 
+  // O gün için puantajı olmayan personelleri filtrele
+  const filteredPuantajlar = puantajlar.filter(p => p.tarih === formData.tarih);
+  const kayitliPersonelIds = filteredPuantajlar.map(p => p.personel_id);
+  const kayitSizPersoneller = personeller.filter(p => !kayitliPersonelIds.includes(p.id));
+
+  // Select all sadece kayıtsız personeller için
   const handleSelectAll = (checked) => {
     setSelectAll(checked);
     if (checked) {
-      setSeciliPersoneller(personeller.map(p => p.id));
+      setSeciliPersoneller(kayitSizPersoneller.map(p => p.id));
     } else {
       setSeciliPersoneller([]);
     }
@@ -107,6 +112,21 @@ const Puantaj = () => {
     }
   };
 
+  // Seçili personeller listeden kaldırıldığında selectAll'u güncelle
+  useEffect(() => {
+    if (kayitSizPersoneller.length > 0 && seciliPersoneller.length === kayitSizPersoneller.length) {
+      setSelectAll(true);
+    } else {
+      setSelectAll(false);
+    }
+  }, [seciliPersoneller, kayitSizPersoneller]);
+
+  // Tarih değiştiğinde seçimleri sıfırla
+  useEffect(() => {
+    setSeciliPersoneller([]);
+    setSelectAll(false);
+  }, [formData.tarih]);
+
   const handleTopluKaydet = async () => {
     if (seciliPersoneller.length === 0) {
       toast.error('Lütfen en az bir personel seçin');
@@ -115,15 +135,25 @@ const Puantaj = () => {
 
     setSaving(true);
     try {
+      const mesaiSuresi = parseFloat(formData.mesai_suresi) || 0;
+      const fazlaMesai = parseFloat(formData.fazla_mesai) || 0;
+      
+      // Mesai süresinden giriş/çıkış saati hesapla (08:00'dan başlayarak)
+      const toplamSaat = mesaiSuresi + fazlaMesai;
+      const cikisSaat = 8 + toplamSaat;
+      const cikisSaatStr = `${Math.floor(cikisSaat).toString().padStart(2, '0')}:${((cikisSaat % 1) * 60).toString().padStart(2, '0').slice(0, 2)}`;
+      
       const kayitlar = seciliPersoneller.map(personelId => {
         const personel = personeller.find(p => p.id === personelId);
         return {
           personel_id: personelId,
           personel_adi: personel?.ad_soyad || '',
-          giris_saati: formData.durum === 'geldi' ? formData.giris_saati : '',
-          cikis_saati: formData.durum === 'geldi' ? formData.cikis_saati : '',
+          giris_saati: formData.durum === 'geldi' ? '08:00' : '',
+          cikis_saati: formData.durum === 'geldi' ? cikisSaatStr : '',
           durum: formData.durum,
-          notlar: formData.notlar
+          notlar: formData.notlar,
+          mesai_suresi: mesaiSuresi,
+          fazla_mesai: fazlaMesai
         };
       });
 
@@ -162,35 +192,10 @@ const Puantaj = () => {
     }
   };
 
-  const filteredPuantajlar = puantajlar.filter(p => p.tarih === formData.tarih);
-
   const toplam = filteredPuantajlar.reduce((acc, p) => ({
     mesai: acc.mesai + (p.mesai_suresi || 0),
     fazla: acc.fazla + (p.fazla_mesai || 0),
   }), { mesai: 0, fazla: 0 });
-
-  // Mesai hesapla
-  const calculateMesai = () => {
-    if (formData.durum !== 'geldi' || !formData.giris_saati || !formData.cikis_saati) {
-      return { mesai: 0, fazla: 0 };
-    }
-    try {
-      const [gH, gM] = formData.giris_saati.split(':').map(Number);
-      const [cH, cM] = formData.cikis_saati.split(':').map(Number);
-      const mesai = ((cH * 60 + cM) - (gH * 60 + gM)) / 60;
-      const fazla = Math.max(0, mesai - 8);
-      return { mesai: mesai.toFixed(1), fazla: fazla.toFixed(1) };
-    } catch (e) {
-      return { mesai: 0, fazla: 0 };
-    }
-  };
-
-  const hesaplananMesai = calculateMesai();
-
-  // Seçili tarihte kaydı olan personelleri işaretle
-  const getPersonelPuantajDurumu = (personelId) => {
-    return filteredPuantajlar.find(p => p.personel_id === personelId);
-  };
 
   return (
     <div className="animate-fade-in">
@@ -209,7 +214,7 @@ const Puantaj = () => {
       </div>
 
       {/* Özet İstatistikler */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-6 gap-4 mb-6">
         <Card className="glass-effect border-slate-800">
           <CardContent className="p-4">
             <p className="text-sm text-slate-400">Seçili Tarih</p>
@@ -219,13 +224,19 @@ const Puantaj = () => {
         <Card className="glass-effect border-slate-800">
           <CardContent className="p-4">
             <p className="text-sm text-slate-400">Toplam Personel</p>
-            <p className="text-2xl font-bold text-white">{personeller.length} Kişi</p>
+            <p className="text-2xl font-bold text-white">{personeller.length}</p>
           </CardContent>
         </Card>
         <Card className="glass-effect border-slate-800">
           <CardContent className="p-4">
-            <p className="text-sm text-slate-400">Giriş Yapan</p>
-            <p className="text-2xl font-bold text-green-500">{filteredPuantajlar.length} Kişi</p>
+            <p className="text-sm text-slate-400">Kayıt Girilen</p>
+            <p className="text-2xl font-bold text-green-500">{filteredPuantajlar.length}</p>
+          </CardContent>
+        </Card>
+        <Card className="glass-effect border-slate-800">
+          <CardContent className="p-4">
+            <p className="text-sm text-slate-400">Kayıt Girilmemiş</p>
+            <p className="text-2xl font-bold text-red-500">{kayitSizPersoneller.length}</p>
           </CardContent>
         </Card>
         <Card className="glass-effect border-slate-800">
@@ -295,21 +306,29 @@ const Puantaj = () => {
               </Select>
             </div>
             <div>
-              <Label className="text-slate-300">Giriş Saati</Label>
+              <Label className="text-slate-300">Çalışma Saati</Label>
               <Input
-                type="time"
-                value={formData.giris_saati}
-                onChange={(e) => setFormData({...formData, giris_saati: e.target.value})}
+                type="number"
+                step="0.5"
+                min="0"
+                max="24"
+                placeholder="8"
+                value={formData.mesai_suresi}
+                onChange={(e) => setFormData({...formData, mesai_suresi: e.target.value})}
                 disabled={formData.durum !== 'geldi'}
                 className="bg-slate-950 border-slate-700 mt-1"
               />
             </div>
             <div>
-              <Label className="text-slate-300">Çıkış Saati</Label>
+              <Label className="text-slate-300">Fazla Mesai (Saat)</Label>
               <Input
-                type="time"
-                value={formData.cikis_saati}
-                onChange={(e) => setFormData({...formData, cikis_saati: e.target.value})}
+                type="number"
+                step="0.5"
+                min="0"
+                max="24"
+                placeholder="0"
+                value={formData.fazla_mesai}
+                onChange={(e) => setFormData({...formData, fazla_mesai: e.target.value})}
                 disabled={formData.durum !== 'geldi'}
                 className="bg-slate-950 border-slate-700 mt-1"
               />
@@ -324,13 +343,12 @@ const Puantaj = () => {
                 className="bg-slate-950 border-slate-700 mt-1"
               />
             </div>
-            <div className="flex flex-col">
+            <div className="flex flex-col justify-end">
               {formData.durum === 'geldi' && (
-                <div className="text-sm text-slate-400 mb-2">
-                  Mesai: <span className="text-blue-400 font-medium">{hesaplananMesai.mesai}s</span>
-                  {parseFloat(hesaplananMesai.fazla) > 0 && (
-                    <span className="text-orange-400 ml-2">(+{hesaplananMesai.fazla} fazla)</span>
-                  )}
+                <div className="text-sm text-slate-400 text-center">
+                  Toplam: <span className="text-blue-400 font-medium">
+                    {(parseFloat(formData.mesai_suresi || 0) + parseFloat(formData.fazla_mesai || 0)).toFixed(1)} saat
+                  </span>
                 </div>
               )}
             </div>
@@ -338,17 +356,20 @@ const Puantaj = () => {
         </CardContent>
       </Card>
 
-      {/* Alt Kısım - Personel Listesi */}
+      {/* Alt Kısım - Kayıt Girilmemiş Personel Listesi */}
       <Card className="glass-effect border-slate-800 mb-6">
         <CardHeader className="border-b border-slate-800">
           <div className="flex items-center justify-between">
             <CardTitle className="text-lg text-white flex items-center gap-2">
               <Users className="w-5 h-5" />
-              Personel Seçimi
+              Kayıt Girilmemiş Personeller
+              <span className="text-sm font-normal text-slate-400 ml-2">
+                ({kayitSizPersoneller.length} kişi kaldı)
+              </span>
             </CardTitle>
             <div className="flex items-center gap-4">
               <span className="text-slate-400 text-sm">
-                {seciliPersoneller.length} / {personeller.length} personel seçili
+                {seciliPersoneller.length} / {kayitSizPersoneller.length} seçili
               </span>
               <Button 
                 onClick={handleTopluKaydet} 
@@ -364,12 +385,14 @@ const Puantaj = () => {
         <CardContent className="p-0">
           {loading ? (
             <div className="p-8 text-center text-slate-400">Yükleniyor...</div>
-          ) : personeller.length === 0 ? (
-            <div className="p-8 text-center text-slate-400">
-              Kayıtlı personel bulunmuyor. Önce personel ekleyin.
+          ) : kayitSizPersoneller.length === 0 ? (
+            <div className="p-8 text-center text-green-400">
+              <CheckCircle2 className="w-12 h-12 mx-auto mb-3 opacity-50" />
+              <p className="text-lg font-medium">Tüm personellerin kaydı girilmiş!</p>
+              <p className="text-slate-400 text-sm mt-1">Bu tarih için tüm personeller puantaj kaydı mevcut.</p>
             </div>
           ) : (
-            <ScrollArea className="max-h-[400px]">
+            <ScrollArea className="max-h-[350px]">
               <Table>
                 <TableHeader>
                   <TableRow className="border-slate-800 bg-slate-900/50">
@@ -382,12 +405,10 @@ const Puantaj = () => {
                     <TableHead className="text-slate-300">Personel Adı</TableHead>
                     <TableHead className="text-slate-300">Departman</TableHead>
                     <TableHead className="text-slate-300">Pozisyon</TableHead>
-                    <TableHead className="text-slate-300">Bugünkü Durum</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {personeller.map((personel, idx) => {
-                    const mevcutPuantaj = getPersonelPuantajDurumu(personel.id);
+                  {kayitSizPersoneller.map((personel, idx) => {
                     const isSelected = seciliPersoneller.includes(personel.id);
                     
                     return (
@@ -411,19 +432,6 @@ const Puantaj = () => {
                         <TableCell className="font-medium text-white">{personel.ad_soyad}</TableCell>
                         <TableCell className="text-slate-400">{personel.departman || '-'}</TableCell>
                         <TableCell className="text-slate-400">{personel.pozisyon || '-'}</TableCell>
-                        <TableCell>
-                          {mevcutPuantaj ? (
-                            <div className="flex items-center gap-2">
-                              <CheckCircle2 className="w-4 h-4 text-green-500" />
-                              <span className="text-green-400 text-sm">
-                                {mevcutPuantaj.giris_saati} - {mevcutPuantaj.cikis_saati}
-                                <span className="text-slate-400 ml-2">({mevcutPuantaj.mesai_suresi?.toFixed(1)}s)</span>
-                              </span>
-                            </div>
-                          ) : (
-                            <span className="text-slate-500 text-sm">Kayıt yok</span>
-                          )}
-                        </TableCell>
                       </TableRow>
                     );
                   })}
@@ -439,39 +447,39 @@ const Puantaj = () => {
         <CardHeader className="border-b border-slate-800">
           <CardTitle className="text-lg text-white flex items-center gap-2">
             <Calendar className="w-5 h-5" />
-            {formData.tarih} Tarihli Tüm Kayıtlar
+            {formData.tarih} Tarihli Kayıtlar ({filteredPuantajlar.length} kişi)
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           {loading ? (
             <div className="p-8 text-center text-slate-400">Yükleniyor...</div>
           ) : filteredPuantajlar.length === 0 ? (
-            <div className="p-8 text-center text-slate-400">Bu tarihte kayıt bulunmuyor</div>
+            <div className="p-8 text-center text-slate-400">Bu tarihte henüz kayıt bulunmuyor</div>
           ) : (
-            <ScrollArea>
+            <ScrollArea className="max-h-[300px]">
               <Table>
                 <TableHeader>
                   <TableRow className="border-slate-800 bg-slate-900/50">
                     <TableHead className="text-slate-300">Personel</TableHead>
-                    <TableHead className="text-slate-300">Giriş Saati</TableHead>
-                    <TableHead className="text-slate-300">Çıkış Saati</TableHead>
                     <TableHead className="text-slate-300">Mesai (Saat)</TableHead>
                     <TableHead className="text-slate-300">Fazla Mesai</TableHead>
+                    <TableHead className="text-slate-300">Toplam</TableHead>
                     <TableHead className="text-slate-300">Not</TableHead>
-                    <TableHead className="text-slate-300">İşlem</TableHead>
+                    <TableHead className="text-slate-300 w-16">İşlem</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredPuantajlar.map((p, idx) => (
                     <TableRow key={p.id} className={`border-slate-800 ${idx % 2 === 0 ? 'bg-slate-900/30' : 'bg-slate-900/50'}`}>
                       <TableCell className="font-medium text-white">{p.personel_adi}</TableCell>
-                      <TableCell className="text-green-400">{p.giris_saati || '-'}</TableCell>
-                      <TableCell className="text-red-400">{p.cikis_saati || '-'}</TableCell>
-                      <TableCell className="text-blue-400">{p.mesai_suresi?.toFixed(1) || '-'}</TableCell>
+                      <TableCell className="text-blue-400">{p.mesai_suresi?.toFixed(1) || '0'}</TableCell>
                       <TableCell className="text-orange-400">{p.fazla_mesai?.toFixed(1) || '0'}</TableCell>
+                      <TableCell className="text-green-400 font-medium">
+                        {((p.mesai_suresi || 0) + (p.fazla_mesai || 0)).toFixed(1)}
+                      </TableCell>
                       <TableCell className="text-slate-400 text-sm">{p.notlar || '-'}</TableCell>
                       <TableCell>
-                        <Button size="icon" variant="ghost" className="h-8 w-8 text-red-500" onClick={() => handleDeletePuantaj(p.id)}>
+                        <Button size="icon" variant="ghost" className="h-8 w-8 text-red-500 hover:text-red-400 hover:bg-red-500/10" onClick={() => handleDeletePuantaj(p.id)}>
                           <Trash2 className="w-4 h-4" />
                         </Button>
                       </TableCell>
