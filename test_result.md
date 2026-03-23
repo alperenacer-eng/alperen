@@ -291,6 +291,18 @@ backend:
         agent: "testing"
         comment: "COMPREHENSIVE TESTING COMPLETED: Motorin araç tüketim raporu API'si test edildi ve başarılı. GET /api/motorin-arac-tuketim endpoint'i tarih filtrelemesi ile araç bazlı tüketim raporunu döndürüyor. Tarih parametreleri (tarih_baslangic, tarih_bitis) ile filtreleme çalışıyor."
 
+  - task: "Puantaj Bulk API Endpoint (/api/puantaj/toplu)"
+    implemented: true
+    working: true
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "COMPREHENSIVE PUANTAJ API TESTING COMPLETED: All puantaj API endpoints tested successfully with 100% success rate (12/12 tests passed). Test scenario executed: 1) Login with alperenacer@acerler.com/1234 ✅, 2) POST /api/puantaj/toplu endpoint tested with multiple personel records - creates new records and updates existing records for same personel + tarih combination ✅, 3) Mesai calculation verified (9 hours work = 1 hour overtime, 8 hours = no overtime, 10 hours = 2 hours overtime) ✅, 4) PUT /api/puantaj/{id} endpoint for individual record updates working ✅, 5) GET /api/puantaj returns all records correctly with proper filtering by personel_id and date range ✅. All required fields present in puantaj records (id, personel_id, personel_adi, tarih, giris_saati, cikis_saati, mesai_suresi, fazla_mesai). Bulk operations handle both create and update scenarios correctly. Overtime calculations working as expected (8+ hours = overtime)."
+
 frontend:
   - task: "Araç Yönetimi Sayfası"
     implemented: true
@@ -421,3 +433,5 @@ agent_communication:
     message: "TEKLIF MODÜLÜ BACKEND TESTING COMPLETED: Comprehensive testing of all teklif module APIs completed with 100% success rate (13/13 tests passed). ALL ENDPOINTS WORKING: 1) Teklif Müşteri API'leri (/api/teklif-musteriler) - POST, GET, GET/{id}, PUT, DELETE operations tested successfully, 2) Teklif API'leri (/api/teklifler) - POST, GET, GET/{id}, PUT, DELETE operations tested successfully, 3) Teklif durum güncelleme (/api/teklifler/{id}/durum) - PUT operation working correctly, 4) Teklif Özet API'si (/api/teklif-ozet) - GET operation providing comprehensive statistics. Test scenario completed: Login with alperenacer@acerler.com/1234, created müşteri with all required fields (firma_adi, yetkili_kisi, telefon, email, adres, vergi_no, vergi_dairesi), created teklif with kalemler array and automatic teklif_no generation (TKL-YYYY-xxxx format), verified durum update to 'gonderildi', checked özet statistics, updated and deleted all records successfully. Automatic teklif number generation system working correctly. All CRUD operations and business logic functioning properly."
   - agent: "testing"
     message: "SQLITE MIGRATION TESTING COMPLETED: Successfully tested all critical endpoints after MongoDB to SQLite migration. Fixed critical router inclusion issue where API routes were defined after app.include_router(api_router) causing 404 errors. Moved router inclusion to end of file after all route definitions. All 8 critical endpoints now working: 1) POST /api/auth/register - User registration (test@test.com/1234/Test User), 2) POST /api/auth/login - Authentication, 3) GET /api/auth/me - JWT validation, 4) GET /api/products - Product list, 5) GET /api/araclar - Vehicle list, 6) GET /api/personeller - Personnel list, 7) GET /api/teklifler - Quote list, 8) GET /api/motorin-stok - Diesel stock. SQLite database initialization successful, all endpoints returning 200/201 status codes as expected. Migration from MongoDB to SQLite completed successfully."
+  - agent: "testing"
+    message: "PUANTAJ BULK API TESTING COMPLETED: Comprehensive testing of new bulk puantaj API endpoint at /api/puantaj/toplu completed with 100% success rate (12/12 tests passed). ALL TEST SCENARIOS PASSED: 1) Login with credentials alperenacer@acerler.com/1234 ✅, 2) POST /api/puantaj/toplu endpoint with multiple personel records - successfully creates new records and updates existing records for same personel + tarih combination ✅, 3) Mesai calculation verified - 9 hours work = 1 hour overtime, 8 hours = no overtime, 10 hours = 2 hours overtime ✅, 4) PUT /api/puantaj/{id} endpoint for updating individual records working correctly ✅, 5) GET /api/puantaj returns all records correctly with proper structure and filtering capabilities ✅. Bulk operations handle both create and update scenarios correctly. Personnel filtering and date range filtering working as expected. All required API format specifications met. Backend URL https://project-latest.preview.emergentagent.com/api used for testing."

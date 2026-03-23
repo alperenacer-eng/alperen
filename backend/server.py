@@ -3241,6 +3241,103 @@ async def delete_puantaj(id: str, current_user: dict = Depends(get_current_user)
         raise HTTPException(status_code=404, detail="Puantaj kaydı bulunamadı")
     return {"message": "Puantaj kaydı silindi"}
 
+# Toplu Puantaj Girişi
+class TopluPuantajItem(BaseModel):
+    personel_id: str
+    personel_adi: str
+    giris_saati: str = ""
+    cikis_saati: str = ""
+    durum: str = "geldi"  # geldi, gelmedi, izinli, raporlu
+    notlar: str = ""
+
+class TopluPuantajCreate(BaseModel):
+    tarih: str
+    kayitlar: List[TopluPuantajItem]
+
+@api_router.post("/puantaj/toplu")
+async def create_toplu_puantaj(input: TopluPuantajCreate, current_user: dict = Depends(get_current_user)):
+    db = await get_db()
+    created_at = datetime.now(timezone.utc).isoformat()
+    
+    results = []
+    for kayit in input.kayitlar:
+        puantaj_id = generate_id()
+        data = kayit.model_dump()
+        
+        # Mesai hesapla
+        mesai_suresi = 0
+        fazla_mesai = 0
+        if data['giris_saati'] and data['cikis_saati'] and data['durum'] == 'geldi':
+            try:
+                giris = datetime.strptime(data['giris_saati'], "%H:%M")
+                cikis = datetime.strptime(data['cikis_saati'], "%H:%M")
+                fark = (cikis - giris).seconds / 3600
+                mesai_suresi = round(fark, 2)
+                fazla_mesai = max(0, round(fark - 8, 2))
+            except:
+                pass
+        
+        # Mevcut kaydı kontrol et (aynı tarih ve personel için)
+        async with db.execute(
+            "SELECT id FROM puantaj WHERE personel_id = ? AND tarih = ?",
+            (data['personel_id'], input.tarih)
+        ) as cursor:
+            existing = await cursor.fetchone()
+        
+        if existing:
+            # Güncelle
+            await db.execute(
+                """UPDATE puantaj SET giris_saati = ?, cikis_saati = ?, mesai_suresi = ?, 
+                   fazla_mesai = ?, notlar = ? WHERE id = ?""",
+                (data['giris_saati'], data['cikis_saati'], mesai_suresi, fazla_mesai, 
+                 data['notlar'], existing[0])
+            )
+            results.append({"id": existing[0], "personel_id": data['personel_id'], "updated": True})
+        else:
+            # Yeni kayıt
+            await db.execute(
+                """INSERT INTO puantaj (id, personel_id, personel_adi, tarih, giris_saati, cikis_saati,
+                   mesai_suresi, fazla_mesai, notlar, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (puantaj_id, data['personel_id'], data['personel_adi'], input.tarih, data['giris_saati'],
+                 data['cikis_saati'], mesai_suresi, fazla_mesai, data['notlar'], created_at)
+            )
+            results.append({"id": puantaj_id, "personel_id": data['personel_id'], "created": True})
+    
+    await db.commit()
+    await db.close()
+    
+    return {"message": f"{len(results)} puantaj kaydı işlendi", "results": results}
+
+@api_router.put("/puantaj/{id}")
+async def update_puantaj(id: str, input: PuantajCreate, current_user: dict = Depends(get_current_user)):
+    db = await get_db()
+    
+    data = input.model_dump()
+    if data['giris_saati'] and data['cikis_saati']:
+        try:
+            giris = datetime.strptime(data['giris_saati'], "%H:%M")
+            cikis = datetime.strptime(data['cikis_saati'], "%H:%M")
+            fark = (cikis - giris).seconds / 3600
+            data['mesai_suresi'] = round(fark, 2)
+            data['fazla_mesai'] = max(0, round(fark - 8, 2))
+        except:
+            pass
+    
+    cursor = await db.execute(
+        """UPDATE puantaj SET personel_id = ?, personel_adi = ?, tarih = ?, giris_saati = ?, 
+           cikis_saati = ?, mesai_suresi = ?, fazla_mesai = ?, notlar = ? WHERE id = ?""",
+        (data['personel_id'], data['personel_adi'], data['tarih'], data['giris_saati'],
+         data['cikis_saati'], data['mesai_suresi'], data['fazla_mesai'], data['notlar'], id)
+    )
+    await db.commit()
+    await db.close()
+    
+    if cursor.rowcount == 0:
+        raise HTTPException(status_code=404, detail="Puantaj kaydı bulunamadı")
+    
+    data['id'] = id
+    return data
+
 # İzin
 class IzinCreate(BaseModel):
     personel_id: str
