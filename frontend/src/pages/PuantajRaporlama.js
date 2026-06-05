@@ -458,8 +458,9 @@ const PuantajRaporlama = () => {
               <th>Baz Alınan Gün</th>
               <th>Departman</th>
               <th>Çal. Günü</th>
-              ${DURUM_KOLONLAR.map(d => `<th>${d.short}<br/><span style="font-size:9px;color:#64748b;font-weight:400">Birim ₺</span></th>`).join('')}
-              <th>Fazla Mesai<br/><span style="font-size:9px;color:#64748b;font-weight:400">Birim ₺/sa</span></th>
+              ${DURUM_KOLONLAR.map(d => `<th>${d.short}</th><th style="font-size:10px;color:#64748b">${d.short} ₺</th>`).join('')}
+              <th>Fazla Mesai</th>
+              <th style="font-size:10px;color:#64748b">F.Mesai ₺/sa</th>
               <th>Eksik Çal.</th>
               <th>Hak Edilen (₺)</th>
               <th>Çalıştığı Tesisler</th>
@@ -475,9 +476,10 @@ const PuantajRaporlama = () => {
                 <td>${p.calismaGunu}</td>
                 ${DURUM_KOLONLAR.map(d => {
                   const birim = (p.hakedilen?.birimFiyatlar?.[d.value]) || 0;
-                  return `<td style="text-align:center;line-height:1.2">${p.durumSayilari[d.value] || 0}<br/><span style="font-size:9px;color:#64748b">${birim > 0 ? formatCurrency(birim) : '-'}</span></td>`;
+                  return `<td style="text-align:center">${p.durumSayilari[d.value] || 0}</td><td style="text-align:center;font-size:10px;color:#64748b">${birim > 0 ? formatCurrency(birim) : '-'}</td>`;
                 }).join('')}
-                <td style="text-align:center;line-height:1.2">${p.toplamFazlaMesai.toFixed(1)} sa<br/><span style="font-size:9px;color:#64748b">${(p.hakedilen?.birimFiyatlar?.fazla_mesai || 0) > 0 ? formatCurrency(p.hakedilen.birimFiyatlar.fazla_mesai) + '/sa' : '-'}</span></td>
+                <td style="text-align:center">${p.toplamFazlaMesai.toFixed(1)} sa</td>
+                <td style="text-align:center;font-size:10px;color:#64748b">${(p.hakedilen?.birimFiyatlar?.fazla_mesai || 0) > 0 ? formatCurrency(p.hakedilen.birimFiyatlar.fazla_mesai) + '/sa' : '-'}</td>
                 <td>${dakikayiFormatla(p.toplamEksikDakika)}</td>
                 <td style="text-align:right;font-weight:600;color:#059669">${formatCurrency(p.hakedilen.toplam)}</td>
                 <td class="tesis-list">${p.tesisler.join(', ') || '-'}</td>
@@ -644,40 +646,49 @@ const PuantajRaporlama = () => {
       key: 'gun', label: 'Çal. Günü', headCls: 'text-slate-300',
       renderCell: (p) => <TableCell key="gun" className="text-blue-400 font-medium">{p.calismaGunu}</TableCell>
     },
-    ...DURUM_KOLONLAR.map(d => ({
-      key: `durum_${d.value}`,
-      label: d.short,
-      headTitle: `${d.label} — Belirleme'deki birim fiyat altta gösterilir`,
-      headCls: `${d.color} text-center whitespace-nowrap`,
-      renderCell: (p) => {
-        const val = p.durumSayilari[d.value] || 0;
-        const birim = p.hakedilen?.birimFiyatlar?.[d.value] || 0;
-        return (
-          <TableCell key={`durum_${d.value}`} className={`text-center whitespace-nowrap ${val > 0 ? d.color + ' font-semibold' : 'text-slate-600'}`}>
-            <div className="leading-tight">
-              <div>{val}</div>
-              <div className="text-[10px] text-slate-400 font-normal" data-testid={`birim-fiyat-${d.value}-${p.id}`} title="Belirleme'deki birim fiyat">
-                {birim > 0 ? formatCurrency(birim) : '-'}
-              </div>
-            </div>
-          </TableCell>
-        );
+    ...DURUM_KOLONLAR.flatMap(d => [
+      {
+        key: `durum_${d.value}`,
+        label: d.short,
+        headTitle: d.label,
+        headCls: `${d.color} text-center whitespace-nowrap`,
+        renderCell: (p) => {
+          const val = p.durumSayilari[d.value] || 0;
+          return <TableCell key={`durum_${d.value}`} className={`text-center whitespace-nowrap ${val > 0 ? d.color + ' font-semibold' : 'text-slate-600'}`}>{val}</TableCell>;
+        }
+      },
+      {
+        key: `birim_${d.value}`,
+        label: `${d.short} ₺`,
+        headTitle: `${d.label} — Belirleme'deki birim fiyat`,
+        headCls: 'text-slate-400 text-center whitespace-nowrap text-xs',
+        renderCell: (p) => {
+          const birim = p.hakedilen?.birimFiyatlar?.[d.value] || 0;
+          return (
+            <TableCell key={`birim_${d.value}`} className="text-center whitespace-nowrap text-slate-400 text-xs" data-testid={`birim-fiyat-${d.value}-${p.id}`}>
+              {birim > 0 ? formatCurrency(birim) : '-'}
+            </TableCell>
+          );
+        }
       }
-    })),
+    ]),
     {
       key: 'fm', label: 'Fazla Mesai',
-      headTitle: "Toplam fazla mesai saati ve Belirleme'deki saatlik birim fiyat",
-      headCls: 'text-slate-300 text-center',
+      headTitle: 'Toplam fazla mesai saati',
+      headCls: 'text-slate-300 text-center whitespace-nowrap',
+      renderCell: (p) => (
+        <TableCell key="fm" className="text-orange-400 font-medium whitespace-nowrap text-center">{p.toplamFazlaMesai.toFixed(1)} sa</TableCell>
+      )
+    },
+    {
+      key: 'fm_birim', label: 'F.Mesai ₺/sa',
+      headTitle: "Belirleme'deki saatlik fazla mesai birim fiyatı",
+      headCls: 'text-slate-400 text-center whitespace-nowrap text-xs',
       renderCell: (p) => {
         const birim = p.hakedilen?.birimFiyatlar?.fazla_mesai || 0;
         return (
-          <TableCell key="fm" className="text-center whitespace-nowrap">
-            <div className="leading-tight">
-              <div className="text-orange-400 font-medium">{p.toplamFazlaMesai.toFixed(1)} sa</div>
-              <div className="text-[10px] text-slate-400" data-testid={`birim-fiyat-fazla-mesai-${p.id}`} title="Belirleme'deki saatlik fazla mesai birim fiyatı">
-                {birim > 0 ? `${formatCurrency(birim)}/sa` : '-'}
-              </div>
-            </div>
+          <TableCell key="fm_birim" className="text-center whitespace-nowrap text-slate-400 text-xs" data-testid={`birim-fiyat-fazla-mesai-${p.id}`}>
+            {birim > 0 ? formatCurrency(birim) : '-'}
           </TableCell>
         );
       }
