@@ -23,7 +23,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   ArrowLeft, Calendar, Users, Clock, FileSpreadsheet, FileText,
@@ -1008,8 +1008,8 @@ const PuantajRaporlama = () => {
               ) : personelRaporu.length === 0 ? (
                 <div className="p-8 text-center text-slate-400">Bu dönemde kayıt bulunmuyor</div>
               ) : (
-                <ScrollArea className="max-h-[500px]">
-                  <div className="overflow-x-auto">
+                <ScrollArea className="max-h-[500px] w-full">
+                  <div className="w-max min-w-full">
                   <Table>
                     <TableHeader>
                       <TableRow className="border-slate-800 bg-slate-900/50">
@@ -1037,6 +1037,7 @@ const PuantajRaporlama = () => {
                     </TableBody>
                   </Table>
                   </div>
+                  <ScrollBar orientation="horizontal" />
                 </ScrollArea>
               )}
             </CardContent>
@@ -1061,7 +1062,8 @@ const PuantajRaporlama = () => {
               ) : tesisRaporu.length === 0 ? (
                 <div className="p-8 text-center text-slate-400">Bu dönemde kayıt bulunmuyor</div>
               ) : (
-                <ScrollArea className="max-h-[500px]">
+                <ScrollArea className="max-h-[500px] w-full">
+                  <div className="w-max min-w-full">
                   <Table>
                     <TableHeader>
                       <TableRow className="border-slate-800 bg-slate-900/50">
@@ -1088,6 +1090,8 @@ const PuantajRaporlama = () => {
                       ))}
                     </TableBody>
                   </Table>
+                  </div>
+                  <ScrollBar orientation="horizontal" />
                 </ScrollArea>
               )}
             </CardContent>
@@ -1112,7 +1116,8 @@ const PuantajRaporlama = () => {
               ) : gunRaporu.length === 0 ? (
                 <div className="p-8 text-center text-slate-400">Bu dönemde kayıt bulunmuyor</div>
               ) : (
-                <ScrollArea className="max-h-[500px]">
+                <ScrollArea className="max-h-[500px] w-full">
+                  <div className="w-max min-w-full">
                   <Table>
                     <TableHeader>
                       <TableRow className="border-slate-800 bg-slate-900/50">
@@ -1139,6 +1144,8 @@ const PuantajRaporlama = () => {
                       ))}
                     </TableBody>
                   </Table>
+                  </div>
+                  <ScrollBar orientation="horizontal" />
                 </ScrollArea>
               )}
             </CardContent>
@@ -1163,8 +1170,8 @@ const PuantajRaporlama = () => {
               ) : filteredPuantajlar.length === 0 ? (
                 <div className="p-8 text-center text-slate-400">Bu dönemde kayıt bulunmuyor</div>
               ) : (
-                <ScrollArea className="max-h-[500px]">
-                  <div className="overflow-x-auto">
+                <ScrollArea className="max-h-[500px] w-full">
+                  <div className="w-max min-w-full">
                   <Table>
                     <TableHeader>
                       <TableRow className="border-slate-800 bg-slate-900/50">
@@ -1192,6 +1199,7 @@ const PuantajRaporlama = () => {
                     </TableBody>
                   </Table>
                   </div>
+                  <ScrollBar orientation="horizontal" />
                 </ScrollArea>
               )}
             </CardContent>

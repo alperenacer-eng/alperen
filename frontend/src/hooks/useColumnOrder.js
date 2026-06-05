@@ -20,10 +20,19 @@ export function useColumnOrder(storageKey, defaultOrder) {
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) {
-          // defaultOrder'da olmayan anahtarları temizle, yeni eklenenleri ekle
+          // defaultOrder'da olmayan anahtarları temizle
           const valid = parsed.filter(k => defaultOrder.includes(k));
+          // Yeni eklenen anahtarları (savedde yok) defaultOrder'daki ORİJİNAL konumlarına yerleştir
           const missing = defaultOrder.filter(k => !valid.includes(k));
-          return [...valid, ...missing];
+          if (missing.length === 0) return valid;
+          const result = [...valid];
+          missing.forEach(k => {
+            const defIdx = defaultOrder.indexOf(k);
+            // result'ta defIdx'ten önceki kaç default anahtar var?
+            const beforeCount = defaultOrder.slice(0, defIdx).filter(x => result.includes(x)).length;
+            result.splice(beforeCount, 0, k);
+          });
+          return result;
         }
       }
     } catch (e) {
@@ -32,13 +41,19 @@ export function useColumnOrder(storageKey, defaultOrder) {
     return defaultOrder;
   });
 
-  // defaultOrder değişirse (örn. dinamik kolonlar) yeni anahtarları ekle
+  // defaultOrder değişirse (örn. dinamik kolonlar) yeni anahtarları doğru konuma ekle
   useEffect(() => {
     setOrderState(prev => {
       const valid = prev.filter(k => defaultOrder.includes(k));
       const missing = defaultOrder.filter(k => !valid.includes(k));
       if (missing.length === 0 && valid.length === prev.length) return prev;
-      return [...valid, ...missing];
+      const result = [...valid];
+      missing.forEach(k => {
+        const defIdx = defaultOrder.indexOf(k);
+        const beforeCount = defaultOrder.slice(0, defIdx).filter(x => result.includes(x)).length;
+        result.splice(beforeCount, 0, k);
+      });
+      return result;
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [defaultOrder.join('|')]);
