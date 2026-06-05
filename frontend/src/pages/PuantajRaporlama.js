@@ -318,6 +318,7 @@ const PuantajRaporlama = () => {
       const personelHeader = [
         '#',
         'Personel Adı',
+        'Maaş (₺)',
         'Departman',
         'Çal. Günü',
         ...DURUM_KOLONLAR.map(d => d.label),
@@ -333,6 +334,7 @@ const PuantajRaporlama = () => {
       const personelRows = personelRaporu.map((p, idx) => [
         idx + 1,
         p.ad_soyad,
+        Number((p.maas || 0).toFixed(2)),
         p.departman,
         p.calismaGunu,
         ...DURUM_KOLONLAR.map(d => p.durumSayilari[d.value] || 0),
@@ -436,6 +438,7 @@ const PuantajRaporlama = () => {
           <thead>
             <tr>
               <th>Personel Adı</th>
+              <th>Maaş (₺)</th>
               <th>Departman</th>
               <th>Çal. Günü</th>
               ${DURUM_KOLONLAR.map(d => `<th>${d.short}</th>`).join('')}
@@ -449,6 +452,7 @@ const PuantajRaporlama = () => {
             ${personelRaporu.map(p => `
               <tr>
                 <td>${p.ad_soyad}</td>
+                <td style="text-align:right;color:#059669">${formatCurrency(p.maas || 0)}</td>
                 <td>${p.departman}</td>
                 <td>${p.calismaGunu}</td>
                 ${DURUM_KOLONLAR.map(d => `<td style="text-align:center">${p.durumSayilari[d.value] || 0}</td>`).join('')}
