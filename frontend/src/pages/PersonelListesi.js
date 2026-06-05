@@ -276,6 +276,7 @@ const BelirlemeTab = ({ personeller, formatCurrency, onSavePersonel }) => {
   const [topluDurum, setTopluDurum] = useState(BELIRLEME_DURUMLARI[0].carpanKey);
   const [topluTip, setTopluTip] = useState('carpan'); // 'carpan' | 'ucret'
   const [topluDeger, setTopluDeger] = useState('');
+  const [belirlemeArama, setBelirlemeArama] = useState('');
 
   const toggleSelect = (id) => {
     setSelectedIds(prev => {
@@ -286,10 +287,28 @@ const BelirlemeTab = ({ personeller, formatCurrency, onSavePersonel }) => {
     });
   };
   const toggleSelectAll = () => {
-    if (selectedIds.size === personeller.length) {
-      setSelectedIds(new Set());
+    // Filtreli (arama ile süzülmüş) personeller üzerinde çalışır
+    const ids = aramaQ
+      ? personeller.filter(p => {
+          const fields = [p.ad_soyad, p.departman, p.telefon, p.tc_kimlik].filter(Boolean).map(s => String(s).toLowerCase());
+          return fields.some(f => f.includes(aramaQ));
+        }).map(p => p.id)
+      : personeller.map(p => p.id);
+    const hepsiSecili = ids.length > 0 && ids.every(id => selectedIds.has(id));
+    if (hepsiSecili) {
+      // Filtreli listedeki kişileri seçimden kaldır
+      setSelectedIds(prev => {
+        const next = new Set(prev);
+        ids.forEach(id => next.delete(id));
+        return next;
+      });
     } else {
-      setSelectedIds(new Set(personeller.map(p => p.id)));
+      // Filtreli listedeki kişileri seçime ekle (mevcut seçimi koruyarak)
+      setSelectedIds(prev => {
+        const next = new Set(prev);
+        ids.forEach(id => next.add(id));
+        return next;
+      });
     }
   };
 
@@ -373,7 +392,16 @@ const BelirlemeTab = ({ personeller, formatCurrency, onSavePersonel }) => {
     }
   };
 
-  const allSelected = personeller.length > 0 && selectedIds.size === personeller.length;
+  // Arama filtresi: ad, departman, telefon, T.C.
+  const aramaQ = (belirlemeArama || '').trim().toLowerCase();
+  const filtreliPersoneller = aramaQ
+    ? personeller.filter(p => {
+        const fields = [p.ad_soyad, p.departman, p.telefon, p.tc_kimlik].filter(Boolean).map(s => String(s).toLowerCase());
+        return fields.some(f => f.includes(aramaQ));
+      })
+    : personeller;
+  const filtreliIds = filtreliPersoneller.map(p => p.id);
+  const allSelected = filtreliPersoneller.length > 0 && filtreliIds.every(id => selectedIds.has(id));
 
   // Toplam dirty satır sayısı
   const dirtyCount = Object.keys(edits).filter(id => Object.keys(edits[id] || {}).length > 0).length;
@@ -552,7 +580,7 @@ const BelirlemeTab = ({ personeller, formatCurrency, onSavePersonel }) => {
               data-testid="toplu-tumunu-sec"
             >
               {allSelected ? '☑ Tümünü Kaldır' : '☐ Tümünü Seç'}
-              <span className="ml-1 px-1.5 py-0.5 rounded-full bg-blue-500/20 text-[10px]">{personeller.length}</span>
+              <span className="ml-1 px-1.5 py-0.5 rounded-full bg-blue-500/20 text-[10px]">{filtreliPersoneller.length}</span>
             </Button>
             <Button
               variant="outline"
@@ -565,8 +593,41 @@ const BelirlemeTab = ({ personeller, formatCurrency, onSavePersonel }) => {
               Seçimi Temizle
             </Button>
           </div>
+
+          {/* Arama kutusu — personel listesini filtreler */}
+          <div className="mt-4 flex items-center gap-2">
+            <div className="relative flex-1 max-w-md">
+              <Search className="w-4 h-4 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
+              <Input
+                type="text"
+                value={belirlemeArama}
+                onChange={(e) => setBelirlemeArama(e.target.value)}
+                placeholder="Personel ara: ad, departman, telefon, T.C..."
+                className="bg-slate-950 border-slate-700 pl-8 pr-8 h-9 text-sm"
+                data-testid="belirleme-arama-input"
+              />
+              {belirlemeArama && (
+                <button
+                  type="button"
+                  onClick={() => setBelirlemeArama('')}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-500 hover:text-rose-400"
+                  data-testid="belirleme-arama-temizle"
+                  title="Aramayı temizle"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+            {belirlemeArama && (
+              <span className="text-xs text-slate-400" data-testid="belirleme-arama-sonuc">
+                {filtreliPersoneller.length} / {personeller.length} kişi
+              </span>
+            )}
+          </div>
+
           <p className="text-[11px] text-slate-500 mt-3">
             ✅ "Seçilenlere Uygula" butonu artık değişiklikleri <strong>otomatik olarak DB'ye kaydeder</strong>. Manuel kayıt için yine de "Tümünü Kaydet" butonunu kullanabilirsiniz.
+            {belirlemeArama && <span className="text-amber-400"> • Arama aktif — "Tümünü Seç" sadece filtrelenmiş kişileri seçer.</span>}
           </p>
         </CardContent>
       </Card>
@@ -577,7 +638,10 @@ const BelirlemeTab = ({ personeller, formatCurrency, onSavePersonel }) => {
           <div className="flex items-center justify-between gap-3">
             <CardTitle className="text-base text-blue-300 flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-blue-400"></span>
-              Tüm Personel <span className="text-slate-500 text-sm font-normal">({personeller.length} kişi)</span>
+              Tüm Personel{' '}
+              <span className="text-slate-500 text-sm font-normal">
+                ({aramaQ ? `${filtreliPersoneller.length} / ${personeller.length}` : `${personeller.length}`} kişi)
+              </span>
             </CardTitle>
             <div className="flex items-center gap-1 border border-slate-700 rounded-md bg-slate-900/60">
               <Button
@@ -644,7 +708,13 @@ const BelirlemeTab = ({ personeller, formatCurrency, onSavePersonel }) => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {personeller.map((p, idx) => {
+                  {filtreliPersoneller.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={2 + belirlemeOrder.order.length} className="text-center text-slate-500 py-8" data-testid="belirleme-bos-sonuc">
+                        {aramaQ ? `"${belirlemeArama}" aramasına uyan personel bulunamadı` : 'Personel yok'}
+                      </TableCell>
+                    </TableRow>
+                  ) : filtreliPersoneller.map((p, idx) => {
                     const isDirty = edits[p.id] && Object.keys(edits[p.id]).length > 0;
                     const isSelected = selectedIds.has(p.id);
                     return (
