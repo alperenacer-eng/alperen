@@ -567,13 +567,26 @@ const Puantaj = () => {
     toast.success(`Şablon ${topluDates.length} güne uygulandı`);
   };
 
-  // Şablonu sadece takvimden seçilen günlere uygula
-  const applyTemplateToSelected = () => {
+  // Şablonu sadece takvimden seçilen günlere uygula + DİREKT KAYDET
+  const applyTemplateToSelected = async () => {
+    if (!topluPersonelId) {
+      toast.error('Önce personel seçin');
+      return;
+    }
     if (selectedCalendarDates.size === 0) {
       toast.error('Önce takvimden gün seçin');
       return;
     }
+    const personel = personeller.find(p => p.id === topluPersonelId);
+    if (!personel) {
+      toast.error('Personel bulunamadı');
+      return;
+    }
     const list = Array.from(selectedCalendarDates);
+    const secilenTesis = tesisler.find(t => t.id === topluTemplate.tesis_id);
+    const fazlaMesai = parseFloat(topluTemplate.fazla_mesai) || 0;
+
+    // 1) UI'daki satırları güncelle
     setTopluRows(prev => {
       const next = { ...prev };
       list.forEach(d => {
@@ -589,9 +602,37 @@ const Puantaj = () => {
       });
       return next;
     });
-    toast.success(`Şablon seçili ${list.length} güne uygulandı`);
-    // Uygulama sonrası seçimi temizle
-    setSelectedCalendarDates(new Set());
+
+    // 2) Veritabanına kaydet
+    setTopluSaving(true);
+    try {
+      for (const tarih of list) {
+        const payload = {
+          tarih,
+          kayitlar: [{
+            personel_id: topluPersonelId,
+            personel_adi: personel.ad_soyad,
+            giris_saati: topluTemplate.durum === 'geldi' ? topluTemplate.giris_saati : '',
+            cikis_saati: topluTemplate.durum === 'geldi' ? topluTemplate.cikis_saati : '',
+            durum: topluTemplate.durum,
+            notlar: topluTemplate.notlar || '',
+            mesai_suresi: 0,
+            fazla_mesai: topluTemplate.durum === 'geldi' ? fazlaMesai : 0,
+            tesis_id: topluTemplate.tesis_id || '',
+            tesis_adi: secilenTesis?.tesis_adi || ''
+          }]
+        };
+        await axios.post(`${API_URL}/puantaj/toplu`, payload, { headers });
+      }
+      toast.success(`${list.length} gün kaydedildi (raporlamaya yansıdı)`);
+      await fetchPuantajlar();
+      setSelectedCalendarDates(new Set());
+    } catch (e) {
+      console.error(e);
+      toast.error('Kayıt sırasında hata oluştu');
+    } finally {
+      setTopluSaving(false);
+    }
   };
 
   // Sadece boş günlere uygula
@@ -1569,11 +1610,12 @@ const Puantaj = () => {
                   <Button
                     data-testid="apply-template-selected"
                     onClick={applyTemplateToSelected}
-                    disabled={selectedCalendarDates.size === 0}
+                    disabled={selectedCalendarDates.size === 0 || topluSaving}
                     size="sm"
                     className="bg-orange-600 hover:bg-orange-700 h-9 disabled:opacity-40"
                   >
-                    <Wand2 className="w-3.5 h-3.5 mr-1" /> Seçilenlere Uygula ({selectedCalendarDates.size})
+                    <Save className="w-3.5 h-3.5 mr-1" />
+                    {topluSaving ? 'Kaydediliyor...' : `Uygula & Kaydet (${selectedCalendarDates.size})`}
                   </Button>
                   <div className="flex gap-2">
                     <Button
@@ -1608,7 +1650,7 @@ const Puantaj = () => {
                       <Calendar className="w-4 h-4 text-orange-400" />
                       Takvimden Gün Seç
                       <span className="text-xs font-normal text-slate-400">
-                        (Şablonu uygulayacağınız günleri seçin, sonra "Seçilenlere Uygula"ya basın)
+                        (Günleri seçin → "Uygula & Kaydet" ile direkt raporlamaya aktarılır)
                       </span>
                     </h4>
                     <div className="flex items-center gap-2">
