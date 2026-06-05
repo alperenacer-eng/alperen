@@ -27,9 +27,11 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   ArrowLeft, Calendar, Users, Clock, FileSpreadsheet, FileText,
-  TrendingUp, CalendarDays, User, Building2
+  TrendingUp, CalendarDays, User, Building2, RotateCcw
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
+import { useColumnOrder } from '@/hooks/useColumnOrder';
+import { DraggableTableHead } from '@/components/DraggableTableHead';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL + '/api';
 
@@ -580,6 +582,226 @@ const PuantajRaporlama = () => {
     toast.success('PDF raporu hazırlandı');
   };
 
+  // ===========================================================
+  // SÜTUN TANIMLARI (Sürükle-Bırak ile Yeniden Sıralanabilir)
+  // ===========================================================
+
+  // 1) Personel Bazlı tablo sütunları
+  const personelColumns = React.useMemo(() => [
+    {
+      key: 'no', label: '#', headCls: 'text-white font-semibold',
+      renderCell: (p, idx) => <TableCell key="no" className="text-slate-200">{idx + 1}</TableCell>
+    },
+    {
+      key: 'ad', label: 'Personel Adı', headCls: 'text-white font-semibold min-w-[180px]',
+      renderCell: (p) => <TableCell key="ad" className="font-semibold text-white">{p.ad_soyad}</TableCell>
+    },
+    {
+      key: 'dep', label: 'Departman', headCls: 'text-slate-300 min-w-[120px]',
+      renderCell: (p) => <TableCell key="dep" className="text-slate-300">{p.departman}</TableCell>
+    },
+    {
+      key: 'gun', label: 'Çal. Günü', headCls: 'text-slate-300',
+      renderCell: (p) => <TableCell key="gun" className="text-blue-400 font-medium">{p.calismaGunu}</TableCell>
+    },
+    ...DURUM_KOLONLAR.map(d => ({
+      key: `durum_${d.value}`,
+      label: d.short,
+      headTitle: d.label,
+      headCls: `${d.color} text-center whitespace-nowrap`,
+      renderCell: (p) => {
+        const val = p.durumSayilari[d.value] || 0;
+        return <TableCell key={`durum_${d.value}`} className={`text-center ${val > 0 ? d.color + ' font-semibold' : 'text-slate-600'}`}>{val}</TableCell>;
+      }
+    })),
+    {
+      key: 'fm', label: 'Fazla Mesai', headCls: 'text-slate-300',
+      renderCell: (p) => <TableCell key="fm" className="text-orange-400 font-medium whitespace-nowrap">{p.toplamFazlaMesai.toFixed(1)} sa</TableCell>
+    },
+    {
+      key: 'eksik', label: 'Eksik Çal.',
+      headTitle: "17:00'dan önce çıkılan toplam süre (sadece 'Geldi' günlerinde)",
+      headCls: 'text-rose-300 whitespace-nowrap',
+      renderCell: (p) => (
+        <TableCell key="eksik" className={`whitespace-nowrap font-medium ${p.toplamEksikDakika > 0 ? 'text-rose-400' : 'text-slate-600'}`} data-testid={`eksik-cal-saat-${p.id}`}>
+          {dakikayiFormatla(p.toplamEksikDakika)}
+        </TableCell>
+      )
+    },
+    {
+      key: 'hak', label: 'Hak Edilen Ücret',
+      headTitle: "Belirleme'deki çarpan/override değerlerine göre hak edilen toplam ücret",
+      headCls: 'text-emerald-300 whitespace-nowrap',
+      renderCell: (p) => (
+        <TableCell key="hak"
+          className="whitespace-nowrap text-emerald-300 font-semibold"
+          title={`F.Mesai: ${formatCurrency(p.hakedilen.fmUcret)} · Pazar: ${formatCurrency(p.hakedilen.pzUcret)} · R.Tatil Çal.: ${formatCurrency(p.hakedilen.rtUcret)} · Durum Ek: ${formatCurrency(p.hakedilen.durumEk)}`}
+          data-testid={`hakedilen-toplam-${p.id}`}>
+          {formatCurrency(p.hakedilen.toplam)}
+        </TableCell>
+      )
+    },
+    {
+      key: 'tesisler', label: 'Çalıştığı Tesisler', headCls: 'text-slate-300 min-w-[180px]',
+      renderCell: (p) => (
+        <TableCell key="tesisler">
+          {p.tesisler.length > 0 ? (
+            <div className="flex flex-wrap gap-1">
+              {p.tesisler.map((tesis, i) => (
+                <span key={i} className="px-2 py-0.5 bg-cyan-500/20 text-cyan-400 text-xs rounded-full whitespace-nowrap">
+                  {tesis}
+                </span>
+              ))}
+            </div>
+          ) : (
+            <span className="text-slate-500">-</span>
+          )}
+        </TableCell>
+      )
+    },
+  ], []);
+
+  // 2) Tesis Bazlı tablo sütunları
+  const tesisColumns = React.useMemo(() => [
+    {
+      key: 'tesis', label: 'Tesis Adı', headCls: 'text-white font-semibold',
+      renderCell: (t) => (
+        <TableCell key="tesis" className="font-medium text-white">
+          <div className="flex items-center gap-2">
+            <Building2 className="w-4 h-4 text-cyan-400" />
+            {t.tesis_adi}
+          </div>
+        </TableCell>
+      )
+    },
+    {
+      key: 'kayit', label: 'Kayıt Sayısı', headCls: 'text-slate-300',
+      renderCell: (t) => <TableCell key="kayit" className="text-blue-400 font-medium">{t.kayitSayisi}</TableCell>
+    },
+    {
+      key: 'personel', label: 'Personel Sayısı', headCls: 'text-slate-300',
+      renderCell: (t) => <TableCell key="personel" className="text-green-400 font-medium">{t.personelSayisi} kişi</TableCell>
+    },
+    {
+      key: 'fm', label: 'Toplam Fazla Mesai', headCls: 'text-slate-300',
+      renderCell: (t) => <TableCell key="fm" className="text-orange-400 font-medium">{t.toplamFazlaMesai.toFixed(1)} saat</TableCell>
+    },
+    {
+      key: 'personeller', label: 'Çalışan Personeller', headCls: 'text-slate-300',
+      renderCell: (t) => (
+        <TableCell key="personeller">
+          <div className="flex flex-wrap gap-1 max-w-md">
+            {t.personelListesi.map((personel, i) => (
+              <span key={i} className="px-2 py-0.5 bg-green-500/20 text-green-400 text-xs rounded-full">
+                {personel}
+              </span>
+            ))}
+          </div>
+        </TableCell>
+      )
+    },
+  ], []);
+
+  // 3) Gün Bazlı tablo sütunları
+  const gunColumns = React.useMemo(() => [
+    {
+      key: 'tarih', label: 'Tarih', headCls: 'text-white font-semibold',
+      renderCell: (g) => <TableCell key="tarih" className="font-medium text-white">{g.tarih}</TableCell>
+    },
+    {
+      key: 'gun_adi', label: 'Gün', headCls: 'text-slate-300',
+      renderCell: (g) => {
+        const date = new Date(g.tarih);
+        const gunAdi = ['Pazar', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi'][date.getDay()];
+        return <TableCell key="gun_adi" className="text-slate-300">{gunAdi}</TableCell>;
+      }
+    },
+    {
+      key: 'personel_sayisi', label: 'Personel Sayısı', headCls: 'text-slate-300',
+      renderCell: (g) => <TableCell key="personel_sayisi" className="text-green-400 font-medium">{g.personelSayisi} kişi</TableCell>
+    },
+    {
+      key: 'fm', label: 'Toplam Fazla Mesai', headCls: 'text-slate-300',
+      renderCell: (g) => <TableCell key="fm" className="text-orange-400 font-medium">{g.toplamFazlaMesai.toFixed(1)} saat</TableCell>
+    },
+  ], []);
+
+  // 4) Detaylı Liste tablo sütunları
+  const detayColumns = React.useMemo(() => [
+    {
+      key: 'tarih', label: 'Tarih', headCls: 'text-white font-semibold min-w-[110px]',
+      renderCell: (p) => <TableCell key="tarih" className="text-white">{p.tarih}</TableCell>
+    },
+    {
+      key: 'personel', label: 'Personel', headCls: 'text-white font-semibold min-w-[160px]',
+      renderCell: (p) => <TableCell key="personel" className="font-semibold text-white">{p.personel_adi}</TableCell>
+    },
+    {
+      key: 'tesis', label: 'Tesis', headCls: 'text-slate-300 min-w-[140px]',
+      renderCell: (p) => <TableCell key="tesis" className="text-cyan-400">{p.tesis_adi || '-'}</TableCell>
+    },
+    {
+      key: 'giris', label: 'Giriş', headCls: 'text-slate-300',
+      renderCell: (p) => <TableCell key="giris" className="text-green-400">{p.giris_saati || '-'}</TableCell>
+    },
+    {
+      key: 'cikis', label: 'Çıkış', headCls: 'text-slate-300',
+      renderCell: (p) => <TableCell key="cikis" className="text-red-400">{p.cikis_saati || '-'}</TableCell>
+    },
+    {
+      key: 'fm', label: 'F. Mesai', headCls: 'text-slate-300 whitespace-nowrap',
+      renderCell: (p) => <TableCell key="fm" className="text-orange-400 whitespace-nowrap">{p.fazla_mesai?.toFixed(1) || '0'}</TableCell>
+    },
+    {
+      key: 'sure', label: 'Çalışılan Süre',
+      headCls: 'text-emerald-300 whitespace-nowrap',
+      headTitle: "Çıkış - Giriş - Fazla Mesai (sadece 'Geldi' için)",
+      renderCell: (p) => <TableCell key="sure" className="text-emerald-300 font-medium whitespace-nowrap">{calismaSuresi(p)}</TableCell>
+    },
+    {
+      key: 'eksik', label: 'Eksik Çal.',
+      headCls: 'text-rose-300 whitespace-nowrap',
+      headTitle: "17:00 - Çıkış Saati (sadece 'Geldi' için)",
+      renderCell: (p) => <TableCell key="eksik" className={`whitespace-nowrap font-medium ${eksikDakikaKaydi(p) > 0 ? 'text-rose-400' : 'text-slate-700'}`}>{dakikayiFormatla(eksikDakikaKaydi(p))}</TableCell>
+    },
+    ...DURUM_KOLONLAR.map(d => ({
+      key: `durum_${d.value}`,
+      label: d.short,
+      headTitle: d.label,
+      headCls: `${d.color} text-center whitespace-nowrap`,
+      renderCell: (p) => {
+        const durum = p.durum || 'geldi';
+        return (
+          <TableCell key={`durum_${d.value}`} className={`text-center ${durum === d.value ? d.color + ' font-bold' : 'text-slate-700'}`}>
+            {durum === d.value ? '✓' : '-'}
+          </TableCell>
+        );
+      }
+    })),
+    {
+      key: 'not', label: 'Not', headCls: 'text-slate-300 min-w-[140px]',
+      renderCell: (p) => <TableCell key="not" className="text-slate-400 text-sm">{p.notlar || '-'}</TableCell>
+    },
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  ], []);
+
+  // Sütun sıraları (localStorage'da saklanır)
+  const personelColKeys = React.useMemo(() => personelColumns.map(c => c.key), [personelColumns]);
+  const tesisColKeys = React.useMemo(() => tesisColumns.map(c => c.key), [tesisColumns]);
+  const gunColKeys = React.useMemo(() => gunColumns.map(c => c.key), [gunColumns]);
+  const detayColKeys = React.useMemo(() => detayColumns.map(c => c.key), [detayColumns]);
+
+  const personelOrder = useColumnOrder('puantaj-rap-personel-cols', personelColKeys);
+  const tesisOrder = useColumnOrder('puantaj-rap-tesis-cols', tesisColKeys);
+  const gunOrder = useColumnOrder('puantaj-rap-gun-cols', gunColKeys);
+  const detayOrder = useColumnOrder('puantaj-rap-detay-cols', detayColKeys);
+
+  // Sıralı sütunlar
+  const orderedPersonelCols = personelOrder.order.map(k => personelColumns.find(c => c.key === k)).filter(Boolean);
+  const orderedTesisCols = tesisOrder.order.map(k => tesisColumns.find(c => c.key === k)).filter(Boolean);
+  const orderedGunCols = gunOrder.order.map(k => gunColumns.find(c => c.key === k)).filter(Boolean);
+  const orderedDetayCols = detayOrder.order.map(k => detayColumns.find(c => c.key === k)).filter(Boolean);
+
   return (
     <div className="animate-fade-in">
       {/* Header */}
@@ -767,7 +989,13 @@ const PuantajRaporlama = () => {
         <TabsContent value="personel">
           <Card className="glass-effect border-slate-800">
             <CardHeader className="border-b border-slate-800">
-              <CardTitle className="text-lg text-white">Personel Bazlı Rapor</CardTitle>
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <CardTitle className="text-lg text-white">Personel Bazlı Rapor</CardTitle>
+                <Button onClick={personelOrder.reset} size="sm" variant="outline" className="border-slate-700 text-slate-300 hover:text-white h-8 text-xs">
+                  <RotateCcw className="w-3 h-3 mr-1" /> Sütun Sırasını Sıfırla
+                </Button>
+              </div>
+              <p className="text-xs text-slate-500 mt-1">Sütun başlıklarını sürükleyerek yer değiştirebilirsiniz.</p>
             </CardHeader>
             <CardContent className="p-0">
               {loading ? (
@@ -780,56 +1008,25 @@ const PuantajRaporlama = () => {
                   <Table>
                     <TableHeader>
                       <TableRow className="border-slate-800 bg-slate-900/50">
-                        <TableHead className="text-white font-semibold sticky left-0 bg-slate-950 z-10">#</TableHead>
-                        <TableHead className="text-white font-semibold sticky left-10 bg-slate-950 z-10 min-w-[180px]">Personel Adı</TableHead>
-                        <TableHead className="text-slate-300 min-w-[120px]">Departman</TableHead>
-                        <TableHead className="text-slate-300">Çal. Günü</TableHead>
-                        {DURUM_KOLONLAR.map(d => (
-                          <TableHead key={d.value} className={`${d.color} text-center whitespace-nowrap`} title={d.label}>
-                            {d.short}
-                          </TableHead>
+                        {orderedPersonelCols.map(col => (
+                          <DraggableTableHead
+                            key={col.key}
+                            colKey={col.key}
+                            onReorder={personelOrder.reorder}
+                            className={col.headCls}
+                            title={col.headTitle}
+                          >
+                            {col.label}
+                          </DraggableTableHead>
                         ))}
-                        <TableHead className="text-slate-300">Fazla Mesai</TableHead>
-                        <TableHead className="text-rose-300 whitespace-nowrap" title="17:00'dan önce çıkılan toplam süre (sadece 'Geldi' günlerinde)">Eksik Çal.</TableHead>
-                        <TableHead className="text-emerald-300 whitespace-nowrap" title="Belirleme'deki çarpan/override değerlerine göre hak edilen toplam ücret">Hak Edilen Ücret</TableHead>
-                        <TableHead className="text-slate-300 min-w-[180px]">Çalıştığı Tesisler</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {personelRaporu.map((p, idx) => (
                         <TableRow key={p.id} className={`border-slate-800 ${idx % 2 === 0 ? 'bg-slate-900/30' : 'bg-slate-900/50'}`}>
-                          <TableCell className="text-slate-200 sticky left-0 bg-slate-950">{idx + 1}</TableCell>
-                          <TableCell className="font-semibold text-white sticky left-10 bg-slate-950">{p.ad_soyad}</TableCell>
-                          <TableCell className="text-slate-400">{p.departman}</TableCell>
-                          <TableCell className="text-blue-400 font-medium">{p.calismaGunu}</TableCell>
-                          {DURUM_KOLONLAR.map(d => {
-                            const val = p.durumSayilari[d.value] || 0;
-                            return (
-                              <TableCell key={d.value} className={`text-center ${val > 0 ? d.color + ' font-semibold' : 'text-slate-600'}`}>
-                                {val}
-                              </TableCell>
-                            );
-                          })}
-                          <TableCell className="text-orange-400 font-medium whitespace-nowrap">{p.toplamFazlaMesai.toFixed(1)} sa</TableCell>
-                          <TableCell className={`whitespace-nowrap font-medium ${p.toplamEksikDakika > 0 ? 'text-rose-400' : 'text-slate-600'}`} data-testid={`eksik-cal-saat-${p.id}`}>
-                            {dakikayiFormatla(p.toplamEksikDakika)}
-                          </TableCell>
-                          <TableCell className="whitespace-nowrap text-emerald-300 font-semibold" title={`F.Mesai: ${formatCurrency(p.hakedilen.fmUcret)} · Pazar: ${formatCurrency(p.hakedilen.pzUcret)} · R.Tatil Çal.: ${formatCurrency(p.hakedilen.rtUcret)} · Durum Ek: ${formatCurrency(p.hakedilen.durumEk)}`} data-testid={`hakedilen-toplam-${p.id}`}>
-                            {formatCurrency(p.hakedilen.toplam)}
-                          </TableCell>
-                          <TableCell>
-                            {p.tesisler.length > 0 ? (
-                              <div className="flex flex-wrap gap-1">
-                                {p.tesisler.map((tesis, i) => (
-                                  <span key={i} className="px-2 py-0.5 bg-cyan-500/20 text-cyan-400 text-xs rounded-full whitespace-nowrap">
-                                    {tesis}
-                                  </span>
-                                ))}
-                              </div>
-                            ) : (
-                              <span className="text-slate-500">-</span>
-                            )}
-                          </TableCell>
+                          {orderedPersonelCols.map(col => (
+                            <React.Fragment key={col.key}>{col.renderCell(p, idx)}</React.Fragment>
+                          ))}
                         </TableRow>
                       ))}
                     </TableBody>
@@ -845,7 +1042,13 @@ const PuantajRaporlama = () => {
         <TabsContent value="tesis">
           <Card className="glass-effect border-slate-800">
             <CardHeader className="border-b border-slate-800">
-              <CardTitle className="text-lg text-white">Tesis Bazlı Rapor</CardTitle>
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <CardTitle className="text-lg text-white">Tesis Bazlı Rapor</CardTitle>
+                <Button onClick={tesisOrder.reset} size="sm" variant="outline" className="border-slate-700 text-slate-300 hover:text-white h-8 text-xs">
+                  <RotateCcw className="w-3 h-3 mr-1" /> Sütun Sırasını Sıfırla
+                </Button>
+              </div>
+              <p className="text-xs text-slate-500 mt-1">Sütun başlıklarını sürükleyerek yer değiştirebilirsiniz.</p>
             </CardHeader>
             <CardContent className="p-0">
               {loading ? (
@@ -857,34 +1060,25 @@ const PuantajRaporlama = () => {
                   <Table>
                     <TableHeader>
                       <TableRow className="border-slate-800 bg-slate-900/50">
-                        <TableHead className="text-slate-300">Tesis Adı</TableHead>
-                        <TableHead className="text-slate-300">Kayıt Sayısı</TableHead>
-                        <TableHead className="text-slate-300">Personel Sayısı</TableHead>
-                        <TableHead className="text-slate-300">Toplam Fazla Mesai</TableHead>
-                        <TableHead className="text-slate-300">Çalışan Personeller</TableHead>
+                        {orderedTesisCols.map(col => (
+                          <DraggableTableHead
+                            key={col.key}
+                            colKey={col.key}
+                            onReorder={tesisOrder.reorder}
+                            className={col.headCls}
+                            title={col.headTitle}
+                          >
+                            {col.label}
+                          </DraggableTableHead>
+                        ))}
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {tesisRaporu.map((t, idx) => (
                         <TableRow key={t.tesis_adi} className={`border-slate-800 ${idx % 2 === 0 ? 'bg-slate-900/30' : 'bg-slate-900/50'}`}>
-                          <TableCell className="font-medium text-white">
-                            <div className="flex items-center gap-2">
-                              <Building2 className="w-4 h-4 text-cyan-400" />
-                              {t.tesis_adi}
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-blue-400 font-medium">{t.kayitSayisi}</TableCell>
-                          <TableCell className="text-green-400 font-medium">{t.personelSayisi} kişi</TableCell>
-                          <TableCell className="text-orange-400 font-medium">{t.toplamFazlaMesai.toFixed(1)} saat</TableCell>
-                          <TableCell>
-                            <div className="flex flex-wrap gap-1 max-w-md">
-                              {t.personelListesi.map((personel, i) => (
-                                <span key={i} className="px-2 py-0.5 bg-green-500/20 text-green-400 text-xs rounded-full">
-                                  {personel}
-                                </span>
-                              ))}
-                            </div>
-                          </TableCell>
+                          {orderedTesisCols.map(col => (
+                            <React.Fragment key={col.key}>{col.renderCell(t, idx)}</React.Fragment>
+                          ))}
                         </TableRow>
                       ))}
                     </TableBody>
@@ -899,7 +1093,13 @@ const PuantajRaporlama = () => {
         <TabsContent value="gun">
           <Card className="glass-effect border-slate-800">
             <CardHeader className="border-b border-slate-800">
-              <CardTitle className="text-lg text-white">Gün Bazlı Rapor</CardTitle>
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <CardTitle className="text-lg text-white">Gün Bazlı Rapor</CardTitle>
+                <Button onClick={gunOrder.reset} size="sm" variant="outline" className="border-slate-700 text-slate-300 hover:text-white h-8 text-xs">
+                  <RotateCcw className="w-3 h-3 mr-1" /> Sütun Sırasını Sıfırla
+                </Button>
+              </div>
+              <p className="text-xs text-slate-500 mt-1">Sütun başlıklarını sürükleyerek yer değiştirebilirsiniz.</p>
             </CardHeader>
             <CardContent className="p-0">
               {loading ? (
@@ -911,25 +1111,27 @@ const PuantajRaporlama = () => {
                   <Table>
                     <TableHeader>
                       <TableRow className="border-slate-800 bg-slate-900/50">
-                        <TableHead className="text-slate-300">Tarih</TableHead>
-                        <TableHead className="text-slate-300">Gün</TableHead>
-                        <TableHead className="text-slate-300">Personel Sayısı</TableHead>
-                        <TableHead className="text-slate-300">Toplam Fazla Mesai</TableHead>
+                        {orderedGunCols.map(col => (
+                          <DraggableTableHead
+                            key={col.key}
+                            colKey={col.key}
+                            onReorder={gunOrder.reorder}
+                            className={col.headCls}
+                            title={col.headTitle}
+                          >
+                            {col.label}
+                          </DraggableTableHead>
+                        ))}
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {gunRaporu.map((g, idx) => {
-                        const date = new Date(g.tarih);
-                        const gunAdi = ['Pazar', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi'][date.getDay()];
-                        return (
-                          <TableRow key={g.tarih} className={`border-slate-800 ${idx % 2 === 0 ? 'bg-slate-900/30' : 'bg-slate-900/50'}`}>
-                            <TableCell className="font-medium text-white">{g.tarih}</TableCell>
-                            <TableCell className="text-slate-400">{gunAdi}</TableCell>
-                            <TableCell className="text-green-400 font-medium">{g.personelSayisi} kişi</TableCell>
-                            <TableCell className="text-orange-400 font-medium">{g.toplamFazlaMesai.toFixed(1)} saat</TableCell>
-                          </TableRow>
-                        );
-                      })}
+                      {gunRaporu.map((g, idx) => (
+                        <TableRow key={g.tarih} className={`border-slate-800 ${idx % 2 === 0 ? 'bg-slate-900/30' : 'bg-slate-900/50'}`}>
+                          {orderedGunCols.map(col => (
+                            <React.Fragment key={col.key}>{col.renderCell(g, idx)}</React.Fragment>
+                          ))}
+                        </TableRow>
+                      ))}
                     </TableBody>
                   </Table>
                 </ScrollArea>
@@ -942,7 +1144,13 @@ const PuantajRaporlama = () => {
         <TabsContent value="detay">
           <Card className="glass-effect border-slate-800">
             <CardHeader className="border-b border-slate-800">
-              <CardTitle className="text-lg text-white">Detaylı Kayıt Listesi</CardTitle>
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <CardTitle className="text-lg text-white">Detaylı Kayıt Listesi</CardTitle>
+                <Button onClick={detayOrder.reset} size="sm" variant="outline" className="border-slate-700 text-slate-300 hover:text-white h-8 text-xs">
+                  <RotateCcw className="w-3 h-3 mr-1" /> Sütun Sırasını Sıfırla
+                </Button>
+              </div>
+              <p className="text-xs text-slate-500 mt-1">Sütun başlıklarını sürükleyerek yer değiştirebilirsiniz.</p>
             </CardHeader>
             <CardContent className="p-0">
               {loading ? (
@@ -955,44 +1163,27 @@ const PuantajRaporlama = () => {
                   <Table>
                     <TableHeader>
                       <TableRow className="border-slate-800 bg-slate-900/50">
-                        <TableHead className="text-white font-semibold sticky left-0 bg-slate-950 z-10 min-w-[110px]">Tarih</TableHead>
-                        <TableHead className="text-white font-semibold sticky left-[110px] bg-slate-950 z-10 min-w-[160px]">Personel</TableHead>
-                        <TableHead className="text-slate-300 min-w-[140px]">Tesis</TableHead>
-                        <TableHead className="text-slate-300">Giriş</TableHead>
-                        <TableHead className="text-slate-300">Çıkış</TableHead>
-                        <TableHead className="text-slate-300 whitespace-nowrap">F. Mesai</TableHead>
-                        <TableHead className="text-emerald-300 whitespace-nowrap" title="Çıkış - Giriş - Fazla Mesai (sadece 'Geldi' için)">Çalışılan Süre</TableHead>
-                        <TableHead className="text-rose-300 whitespace-nowrap" title="17:00 - Çıkış Saati (sadece 'Geldi' için)">Eksik Çal.</TableHead>
-                        {DURUM_KOLONLAR.map(d => (
-                          <TableHead key={d.value} className={`${d.color} text-center whitespace-nowrap`} title={d.label}>
-                            {d.short}
-                          </TableHead>
+                        {orderedDetayCols.map(col => (
+                          <DraggableTableHead
+                            key={col.key}
+                            colKey={col.key}
+                            onReorder={detayOrder.reorder}
+                            className={col.headCls}
+                            title={col.headTitle}
+                          >
+                            {col.label}
+                          </DraggableTableHead>
                         ))}
-                        <TableHead className="text-slate-300 min-w-[140px]">Not</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {[...filteredPuantajlar].sort((a, b) => b.tarih.localeCompare(a.tarih)).map((p, idx) => {
-                        const durum = p.durum || 'geldi';
-                        return (
-                          <TableRow key={p.id} className={`border-slate-800 ${idx % 2 === 0 ? 'bg-slate-900/30' : 'bg-slate-900/50'}`}>
-                            <TableCell className="text-white sticky left-0 bg-slate-950">{p.tarih}</TableCell>
-                            <TableCell className="font-semibold text-white sticky left-[110px] bg-slate-950">{p.personel_adi}</TableCell>
-                            <TableCell className="text-cyan-400">{p.tesis_adi || '-'}</TableCell>
-                            <TableCell className="text-green-400">{p.giris_saati || '-'}</TableCell>
-                            <TableCell className="text-red-400">{p.cikis_saati || '-'}</TableCell>
-                            <TableCell className="text-orange-400 whitespace-nowrap">{p.fazla_mesai?.toFixed(1) || '0'}</TableCell>
-                            <TableCell className="text-emerald-300 font-medium whitespace-nowrap">{calismaSuresi(p)}</TableCell>
-                            <TableCell className={`whitespace-nowrap font-medium ${eksikDakikaKaydi(p) > 0 ? 'text-rose-400' : 'text-slate-700'}`}>{dakikayiFormatla(eksikDakikaKaydi(p))}</TableCell>
-                            {DURUM_KOLONLAR.map(d => (
-                              <TableCell key={d.value} className={`text-center ${durum === d.value ? d.color + ' font-bold' : 'text-slate-700'}`}>
-                                {durum === d.value ? '✓' : '-'}
-                              </TableCell>
-                            ))}
-                            <TableCell className="text-slate-400 text-sm">{p.notlar || '-'}</TableCell>
-                          </TableRow>
-                        );
-                      })}
+                      {[...filteredPuantajlar].sort((a, b) => b.tarih.localeCompare(a.tarih)).map((p, idx) => (
+                        <TableRow key={p.id} className={`border-slate-800 ${idx % 2 === 0 ? 'bg-slate-900/30' : 'bg-slate-900/50'}`}>
+                          {orderedDetayCols.map(col => (
+                            <React.Fragment key={col.key}>{col.renderCell(p, idx)}</React.Fragment>
+                          ))}
+                        </TableRow>
+                      ))}
                     </TableBody>
                   </Table>
                   </div>
