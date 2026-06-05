@@ -59,7 +59,6 @@ const emptyBordro = (yil, ay) => ({
 
 // Backend'den dönen durum_ek_kalemleri'yi insan dostu hale çevirmek için etiket eşleme
 const DURUM_EK_LABEL = {
-  gelmedi: 'Gelmedi',
   izinli: 'İzinli',
   raporlu: 'Raporlu',
   hafta_tatili: 'Hafta Tatili',

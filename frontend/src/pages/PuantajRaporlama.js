@@ -40,7 +40,6 @@ const formatCurrency = (v) => new Intl.NumberFormat('tr-TR', { style: 'currency'
 // Puantaj durum başlıkları (Puantaj sayfasıyla aynı sıra)
 const DURUM_KOLONLAR = [
   { value: 'geldi', label: 'Geldi', short: 'Geldi', color: 'text-green-400' },
-  { value: 'gelmedi', label: 'Gelmedi', short: 'Gelmedi', color: 'text-red-400' },
   { value: 'izinli', label: 'İzinli', short: 'İzinli', color: 'text-blue-400' },
   { value: 'raporlu', label: 'Raporlu', short: 'Raporlu', color: 'text-yellow-400' },
   { value: 'hafta_tatili', label: 'Hafta Tatili', short: 'Hf. Tatili', color: 'text-purple-400' },
@@ -208,7 +207,7 @@ const PuantajRaporlama = () => {
     const pzBirim = applyOvr(personel.ucret_override_pazar,                Math.ceil(gunluk * pc));
     const rtBirim = applyOvr(personel.ucret_override_resmi_tatil_calisti,  Math.ceil(gunluk * rc));
     let toplamFm = 0, pazarGun = 0, rtGun = 0;
-    const durumGun = { gelmedi:0, izinli:0, raporlu:0, hafta_tatili:0, resmi_tatil:0, bayram_tatili:0, izinsiz_gelmedi:0 };
+    const durumGun = { izinli:0, raporlu:0, hafta_tatili:0, resmi_tatil:0, bayram_tatili:0, izinsiz_gelmedi:0 };
     puantajlari.forEach(p => {
       const durum = (p.durum || 'geldi').toLowerCase();
       const fm = parseFloat(p.fazla_mesai) || 0;
@@ -229,7 +228,6 @@ const PuantajRaporlama = () => {
     const rtUcret = rtGun > 0 ? Math.ceil(rtBirim * rtGun) : 0;
     // 7 durum bazlı ek ücret
     const durumMap = [
-      ['gelmedi',         personel.durum_carpan_gelmedi,         personel.ucret_override_gelmedi,         0.0],
       ['izinli',          personel.durum_carpan_izinli,          personel.ucret_override_izinli,          1.0],
       ['raporlu',         personel.durum_carpan_raporlu,         personel.ucret_override_raporlu,         0.0],
       ['hafta_tatili',    personel.durum_carpan_hafta_tatili,    personel.ucret_override_hafta_tatili,    1.0],

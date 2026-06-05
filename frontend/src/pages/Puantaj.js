@@ -46,7 +46,6 @@ const API_URL = process.env.REACT_APP_BACKEND_URL + '/api';
 // Puantaj durum tanımları
 const DURUM_OPTIONS = [
   { value: 'geldi', label: 'Geldi', icon: CheckCircle2, color: 'text-green-500', badgeClass: 'bg-green-500/20 text-green-400 border-green-500/40' },
-  { value: 'gelmedi', label: 'Gelmedi', icon: XCircle, color: 'text-red-500', badgeClass: 'bg-red-500/20 text-red-400 border-red-500/40' },
   { value: 'izinli', label: 'İzinli', icon: FileText, color: 'text-blue-500', badgeClass: 'bg-blue-500/20 text-blue-400 border-blue-500/40' },
   { value: 'raporlu', label: 'Raporlu', icon: AlertCircle, color: 'text-yellow-500', badgeClass: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/40' },
   { value: 'hafta_tatili', label: 'Hafta Tatili', icon: Home, color: 'text-purple-500', badgeClass: 'bg-purple-500/20 text-purple-400 border-purple-500/40' },

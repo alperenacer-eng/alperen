@@ -67,7 +67,6 @@ const yilOptions = (() => {
 // Puantaj durum tanımları için günlük çarpan alanları
 // (Geldi=1.0 sabittir, gösterilmez. Pazar/Resmi Tatil ÇALIŞMA çarpanları ayrı kart üstünde.)
 const DURUM_CARPAN_FIELDS = [
-  { key: 'durum_carpan_gelmedi',         label: 'Gelmedi',          defVal: 0.0 },
   { key: 'durum_carpan_izinli',          label: 'İzinli',           defVal: 1.0 },
   { key: 'durum_carpan_raporlu',         label: 'Raporlu',          defVal: 0.0 },
   { key: 'durum_carpan_hafta_tatili',    label: 'Hafta Tatili',     defVal: 1.0 },
@@ -85,7 +84,6 @@ const BELIRLEME_DURUMLARI = [
   { label: 'F.Mesai',         carpanKey: 'fazla_mesai_carpan',         overrideKey: 'ucret_override_fazla_mesai',         tip: 'saatlik', defCarpan: 1.5 },
   { label: 'Pazar Çal.',      carpanKey: 'pazar_carpan',               overrideKey: 'ucret_override_pazar',               tip: 'gunluk',  defCarpan: 2.0 },
   { label: 'R.Tatil Çal.',    carpanKey: 'resmi_tatil_carpan',         overrideKey: 'ucret_override_resmi_tatil_calisti', tip: 'gunluk',  defCarpan: 2.0 },
-  { label: 'Gelmedi',         carpanKey: 'durum_carpan_gelmedi',       overrideKey: 'ucret_override_gelmedi',             tip: 'gunluk',  defCarpan: 0.0 },
   { label: 'İzinli',          carpanKey: 'durum_carpan_izinli',        overrideKey: 'ucret_override_izinli',              tip: 'gunluk',  defCarpan: 1.0 },
   { label: 'Raporlu',         carpanKey: 'durum_carpan_raporlu',       overrideKey: 'ucret_override_raporlu',             tip: 'gunluk',  defCarpan: 0.0 },
   { label: 'Hafta Tatili',    carpanKey: 'durum_carpan_hafta_tatili',  overrideKey: 'ucret_override_hafta_tatili',        tip: 'gunluk',  defCarpan: 1.0 },
@@ -663,7 +661,6 @@ const emptyPersonel = {
   pazar_carpan: 2.0,
   resmi_tatil_carpan: 2.0,
   // Durum bazlı günlük çarpanlar (Geldi=1.0 sabittir, gösterilmez)
-  durum_carpan_gelmedi: 0.0,
   durum_carpan_izinli: 1.0,
   durum_carpan_raporlu: 0.0,
   durum_carpan_hafta_tatili: 1.0,
@@ -970,8 +967,7 @@ const PersonelListesi = () => {
           'Fazla Mesai Çarpan': parseFloat(p.fazla_mesai_carpan ?? 1.5) || 0,
           'Pazar Çarpan': parseFloat(p.pazar_carpan ?? 2.0) || 0,
           'Resmi Tatil Çarpan': parseFloat(p.resmi_tatil_carpan ?? 2.0) || 0,
-          // Durum bazlı günlük çarpanlar (8 puantaj durumu)
-          'Gelmedi Çarpan': parseFloat(p.durum_carpan_gelmedi ?? 0.0) || 0,
+          // Durum bazlı günlük çarpanlar (7 puantaj durumu)
           'İzinli Çarpan': parseFloat(p.durum_carpan_izinli ?? 1.0) || 0,
           'Raporlu Çarpan': parseFloat(p.durum_carpan_raporlu ?? 0.0) || 0,
           'Hafta Tatili Çarpan': parseFloat(p.durum_carpan_hafta_tatili ?? 1.0) || 0,
@@ -1312,7 +1308,6 @@ const PersonelListesi = () => {
                   'F.Mesai': p.fazla_mesai_carpan ?? 1.5,
                   'Pazar': p.pazar_carpan ?? 2.0,
                   'R.Tatil Çal.': p.resmi_tatil_carpan ?? 2.0,
-                  'Gelmedi': p.durum_carpan_gelmedi ?? 0.0,
                   'İzinli': p.durum_carpan_izinli ?? 1.0,
                   'Raporlu': p.durum_carpan_raporlu ?? 0.0,
                   'Hafta T.': p.durum_carpan_hafta_tatili ?? 1.0,
@@ -1326,7 +1321,7 @@ const PersonelListesi = () => {
                 return (
                   <TableCell key="carp" data-testid={`carpan-cell-${p.id}`}>
                     <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-amber-500/15 text-amber-300 border border-amber-700/40 cursor-help" title={tip}>
-                      {ozet} <span className="ml-1 text-amber-500">+8</span>
+                      {ozet} <span className="ml-1 text-amber-500">+7</span>
                     </span>
                   </TableCell>
                 );
