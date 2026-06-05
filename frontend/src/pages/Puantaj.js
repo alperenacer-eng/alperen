@@ -25,6 +25,7 @@ import {
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import {
   Dialog,
   DialogContent,
@@ -35,7 +36,7 @@ import {
 import { 
   Trash2, ArrowLeft, Clock, Calendar, Users, Save, 
   CheckCircle2, XCircle, AlertCircle, FileText, Building2, Plus, Pencil,
-  Home, Flag, PartyPopper, Ban, Search, X, Sun
+  Home, Flag, PartyPopper, Ban, Search, X, Sun, User, CalendarDays, Wand2
 } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL + '/api';
@@ -99,6 +100,28 @@ const Puantaj = () => {
   // İsim arama filtreleri
   const [searchKayitSiz, setSearchKayitSiz] = useState('');
   const [searchKayitli, setSearchKayitli] = useState('');
+
+  // Aktif sekme
+  const [activeTab, setActiveTab] = useState('gunluk');
+
+  // === Toplu Puantaj (Bireysel) Sekmesi State'leri ===
+  const [topluPersonelId, setTopluPersonelId] = useState('');
+  const [topluBaslangic, setTopluBaslangic] = useState(new Date().toISOString().split('T')[0]);
+  const [topluBitis, setTopluBitis] = useState(new Date().toISOString().split('T')[0]);
+  const [topluSkipSundays, setTopluSkipSundays] = useState(false);
+  const [topluPersonelSearch, setTopluPersonelSearch] = useState('');
+  // Şablon (varsayılan) değerler - "Tüm günlere uygula" için
+  const [topluTemplate, setTopluTemplate] = useState({
+    durum: 'geldi',
+    giris_saati: '08:00',
+    cikis_saati: '17:00',
+    fazla_mesai: '0',
+    tesis_id: '',
+    notlar: ''
+  });
+  // Her tarih için ayrı satır verileri
+  const [topluRows, setTopluRows] = useState({}); // { 'YYYY-MM-DD': { durum, giris_saati, cikis_saati, fazla_mesai, tesis_id, notlar } }
+  const [topluSaving, setTopluSaving] = useState(false);
 
   const headers = { Authorization: `Bearer ${token}` };
 
@@ -434,6 +457,211 @@ const Puantaj = () => {
     fazla: acc.fazla + (p.fazla_mesai || 0),
   }), { fazla: 0 });
 
+  // ======================================================
+  // TOPLU PUANTAJ (Bireysel) - Helper'lar ve Effect'ler
+  // ======================================================
+
+  // Tarih aralığındaki günleri liste olarak döner (toplu tab için)
+  const topluDates = React.useMemo(() => {
+    const dates = [];
+    if (!topluBaslangic || !topluBitis) return dates;
+    const start = new Date(topluBaslangic + 'T00:00:00');
+    const end = new Date(topluBitis + 'T00:00:00');
+    if (isNaN(start.getTime()) || isNaN(end.getTime()) || start > end) return dates;
+    const cur = new Date(start);
+    while (cur <= end) {
+      if (!topluSkipSundays || cur.getDay() !== 0) {
+        const y = cur.getFullYear();
+        const m = String(cur.getMonth() + 1).padStart(2, '0');
+        const d = String(cur.getDate()).padStart(2, '0');
+        dates.push(`${y}-${m}-${d}`);
+      }
+      cur.setDate(cur.getDate() + 1);
+    }
+    return dates;
+  }, [topluBaslangic, topluBitis, topluSkipSundays]);
+
+  // Türkçe gün adı
+  const getGunAdi = (dateStr) => {
+    const gunler = ['Pazar', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi'];
+    const d = new Date(dateStr + 'T00:00:00');
+    return gunler[d.getDay()];
+  };
+
+  // Personel arama filtresi (toplu sekme)
+  const filteredTopluPersoneller = React.useMemo(() => {
+    const q = normalizeText(topluPersonelSearch.trim());
+    if (!q) return personeller;
+    return personeller.filter(p =>
+      normalizeText(p.ad_soyad).includes(q) ||
+      normalizeText(p.departman).includes(q) ||
+      normalizeText(p.pozisyon).includes(q)
+    );
+  }, [personeller, topluPersonelSearch]);
+
+  // Personel veya tarih değiştiğinde - mevcut puantaj kayıtlarını yükle ve satırları başlat
+  useEffect(() => {
+    if (!topluPersonelId || topluDates.length === 0) {
+      setTopluRows({});
+      return;
+    }
+    const newRows = {};
+    topluDates.forEach(d => {
+      const existing = puantajlar.find(p => p.personel_id === topluPersonelId && p.tarih === d);
+      if (existing) {
+        newRows[d] = {
+          durum: existing.durum || 'geldi',
+          giris_saati: existing.giris_saati || '',
+          cikis_saati: existing.cikis_saati || '',
+          fazla_mesai: (existing.fazla_mesai ?? 0).toString(),
+          tesis_id: existing.tesis_id || '',
+          notlar: existing.notlar || '',
+          mevcut: true
+        };
+      } else {
+        newRows[d] = {
+          durum: '',
+          giris_saati: '',
+          cikis_saati: '',
+          fazla_mesai: '0',
+          tesis_id: '',
+          notlar: '',
+          mevcut: false
+        };
+      }
+    });
+    setTopluRows(newRows);
+  }, [topluPersonelId, topluDates, puantajlar]);
+
+  // Tek bir satırı güncelle
+  const updateTopluRow = (date, field, value) => {
+    setTopluRows(prev => ({
+      ...prev,
+      [date]: { ...(prev[date] || {}), [field]: value }
+    }));
+  };
+
+  // Şablonu tüm günlere uygula
+  const applyTemplateToAll = () => {
+    if (topluDates.length === 0) {
+      toast.error('Önce tarih aralığını seçin');
+      return;
+    }
+    setTopluRows(prev => {
+      const next = { ...prev };
+      topluDates.forEach(d => {
+        next[d] = {
+          ...(next[d] || {}),
+          durum: topluTemplate.durum,
+          giris_saati: topluTemplate.durum === 'geldi' ? topluTemplate.giris_saati : '',
+          cikis_saati: topluTemplate.durum === 'geldi' ? topluTemplate.cikis_saati : '',
+          fazla_mesai: topluTemplate.durum === 'geldi' ? topluTemplate.fazla_mesai : '0',
+          tesis_id: topluTemplate.tesis_id,
+          notlar: topluTemplate.notlar
+        };
+      });
+      return next;
+    });
+    toast.success(`Şablon ${topluDates.length} güne uygulandı`);
+  };
+
+  // Sadece boş günlere uygula
+  const applyTemplateToEmpty = () => {
+    if (topluDates.length === 0) {
+      toast.error('Önce tarih aralığını seçin');
+      return;
+    }
+    let count = 0;
+    setTopluRows(prev => {
+      const next = { ...prev };
+      topluDates.forEach(d => {
+        const row = next[d] || {};
+        if (!row.durum) {
+          count++;
+          next[d] = {
+            ...row,
+            durum: topluTemplate.durum,
+            giris_saati: topluTemplate.durum === 'geldi' ? topluTemplate.giris_saati : '',
+            cikis_saati: topluTemplate.durum === 'geldi' ? topluTemplate.cikis_saati : '',
+            fazla_mesai: topluTemplate.durum === 'geldi' ? topluTemplate.fazla_mesai : '0',
+            tesis_id: topluTemplate.tesis_id,
+            notlar: topluTemplate.notlar
+          };
+        }
+      });
+      return next;
+    });
+    if (count > 0) toast.success(`${count} boş güne şablon uygulandı`);
+    else toast.info('Boş gün bulunamadı');
+  };
+
+  // Satırı temizle
+  const clearTopluRow = (date) => {
+    setTopluRows(prev => ({
+      ...prev,
+      [date]: { durum: '', giris_saati: '', cikis_saati: '', fazla_mesai: '0', tesis_id: '', notlar: '', mevcut: prev[date]?.mevcut }
+    }));
+  };
+
+  // Toplu kaydet
+  const handleTopluBireyselKaydet = async () => {
+    if (!topluPersonelId) {
+      toast.error('Lütfen bir personel seçin');
+      return;
+    }
+    if (topluDates.length === 0) {
+      toast.error('Geçerli tarih aralığı seçin');
+      return;
+    }
+    const personel = personeller.find(p => p.id === topluPersonelId);
+    if (!personel) {
+      toast.error('Personel bulunamadı');
+      return;
+    }
+
+    // Sadece durum'u dolu olan günleri kaydet
+    const kaydedilecekTarihler = topluDates.filter(d => {
+      const r = topluRows[d];
+      return r && r.durum;
+    });
+
+    if (kaydedilecekTarihler.length === 0) {
+      toast.error('Kaydedilecek veri yok. Lütfen en az bir günün durumunu doldurun.');
+      return;
+    }
+
+    setTopluSaving(true);
+    try {
+      for (const tarih of kaydedilecekTarihler) {
+        const r = topluRows[tarih];
+        const secilenTesis = tesisler.find(t => t.id === r.tesis_id);
+        const payload = {
+          tarih,
+          kayitlar: [{
+            personel_id: topluPersonelId,
+            personel_adi: personel.ad_soyad,
+            giris_saati: r.durum === 'geldi' ? (r.giris_saati || '') : '',
+            cikis_saati: r.durum === 'geldi' ? (r.cikis_saati || '') : '',
+            durum: r.durum,
+            notlar: r.notlar || '',
+            mesai_suresi: 0,
+            fazla_mesai: parseFloat(r.fazla_mesai) || 0,
+            tesis_id: r.tesis_id || '',
+            tesis_adi: secilenTesis?.tesis_adi || ''
+          }]
+        };
+        await axios.post(`${API_URL}/puantaj/toplu`, payload, { headers });
+      }
+      toast.success(`${personel.ad_soyad} için ${kaydedilecekTarihler.length} gün kaydedildi`);
+      await fetchPuantajlar();
+    } catch (e) {
+      console.error(e);
+      toast.error('Toplu kayıt sırasında hata oluştu');
+    } finally {
+      setTopluSaving(false);
+    }
+  };
+
   return (
     <div className="animate-fade-in">
       {/* Header */}
@@ -534,6 +762,30 @@ const Puantaj = () => {
           </Dialog>
         </div>
       </div>
+
+      {/* SEKMELER */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-4">
+        <TabsList data-testid="puantaj-tabs" className="bg-slate-900/60 border border-slate-800 p-1 h-auto inline-flex">
+          <TabsTrigger
+            value="gunluk"
+            data-testid="tab-gunluk"
+            className="data-[state=active]:bg-orange-600 data-[state=active]:text-white text-slate-300 px-4 py-2"
+          >
+            <CalendarDays className="w-4 h-4 mr-2" />
+            Günlük Toplu Giriş
+          </TabsTrigger>
+          <TabsTrigger
+            value="toplu"
+            data-testid="tab-toplu"
+            className="data-[state=active]:bg-orange-600 data-[state=active]:text-white text-slate-300 px-4 py-2"
+          >
+            <User className="w-4 h-4 mr-2" />
+            Toplu Puantaj
+          </TabsTrigger>
+        </TabsList>
+
+        {/* === SEKME 1: Günlük Toplu Giriş (Mevcut) === */}
+        <TabsContent value="gunluk" className="mt-4">
 
       {/* Özet İstatistikler */}
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
@@ -995,6 +1247,410 @@ const Puantaj = () => {
           )}
         </CardContent>
       </Card>
+
+        </TabsContent>
+
+        {/* === SEKME 2: Toplu Puantaj (Bireysel) === */}
+        <TabsContent value="toplu" className="mt-4 space-y-6">
+
+          {/* Üst Filtre - Personel & Tarih */}
+          <Card className="glass-effect border-slate-800">
+            <CardHeader className="border-b border-slate-800">
+              <CardTitle className="text-lg text-white flex items-center gap-2">
+                <User className="w-5 h-5" />
+                Toplu Puantaj - Bireysel Hızlı Giriş
+              </CardTitle>
+              <p className="text-slate-400 text-sm">
+                Tek bir personel seçin, tarih aralığı belirleyin ve her gün için hızlıca puantaj girin.
+              </p>
+            </CardHeader>
+            <CardContent className="p-6 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="md:col-span-2">
+                  <Label className="text-slate-300">Personel</Label>
+                  <Select
+                    value={topluPersonelId || ""}
+                    onValueChange={(v) => setTopluPersonelId(v)}
+                  >
+                    <SelectTrigger data-testid="toplu-personel-select" className="bg-slate-950 border-slate-700 mt-1">
+                      <SelectValue placeholder="Personel seçin..." />
+                    </SelectTrigger>
+                    <SelectContent className="bg-slate-900 border-slate-700 max-h-80">
+                      <div className="p-2 sticky top-0 bg-slate-900 border-b border-slate-800">
+                        <Input
+                          placeholder="Personel ara..."
+                          value={topluPersonelSearch}
+                          onChange={(e) => setTopluPersonelSearch(e.target.value)}
+                          className="bg-slate-950 border-slate-700 h-8 text-sm"
+                          onKeyDown={(e) => e.stopPropagation()}
+                        />
+                      </div>
+                      {filteredTopluPersoneller.length === 0 ? (
+                        <div className="p-3 text-center text-slate-400 text-sm">Personel bulunamadı</div>
+                      ) : filteredTopluPersoneller.map(p => (
+                        <SelectItem key={p.id} value={p.id}>
+                          <span className="flex flex-col">
+                            <span className="text-white">{p.ad_soyad}</span>
+                            <span className="text-xs text-slate-400">{p.departman || '-'} · {p.pozisyon || '-'}</span>
+                          </span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="text-slate-300">Başlangıç Tarihi</Label>
+                  <Input
+                    data-testid="toplu-baslangic"
+                    type="date"
+                    value={topluBaslangic}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setTopluBaslangic(v);
+                      if (topluBitis && topluBitis < v) setTopluBitis(v);
+                    }}
+                    className="bg-slate-950 border-slate-700 mt-1"
+                  />
+                </div>
+                <div>
+                  <Label className="text-slate-300">Bitiş Tarihi</Label>
+                  <Input
+                    data-testid="toplu-bitis"
+                    type="date"
+                    value={topluBitis}
+                    min={topluBaslangic}
+                    onChange={(e) => setTopluBitis(e.target.value)}
+                    className="bg-slate-950 border-slate-700 mt-1"
+                  />
+                </div>
+              </div>
+
+              {/* Bilgi şeridi */}
+              <div className="flex items-center justify-between flex-wrap gap-3 p-3 rounded-md bg-slate-950/60 border border-slate-800">
+                <div className="flex items-center gap-3 text-sm">
+                  <Calendar className="w-4 h-4 text-blue-400" />
+                  <span className="text-slate-300">
+                    {topluPersonelId ? (
+                      <>
+                        <span className="text-orange-300 font-semibold">
+                          {personeller.find(p => p.id === topluPersonelId)?.ad_soyad || '-'}
+                        </span>
+                        <span className="text-slate-400"> için </span>
+                      </>
+                    ) : (
+                      <span className="text-slate-400">Personel seçilmedi · </span>
+                    )}
+                    <span className="text-blue-300 font-semibold">{topluBaslangic}</span>
+                    <span className="text-slate-500"> → </span>
+                    <span className="text-blue-300 font-semibold">{topluBitis}</span>
+                    <span className="text-slate-400"> · </span>
+                    <span className="text-white font-semibold">{topluDates.length}</span>
+                    <span className="text-slate-400"> gün</span>
+                    {topluSkipSundays && <span className="text-amber-400 ml-1">(Pazarlar hariç)</span>}
+                  </span>
+                </div>
+                <label className="flex items-center gap-2 cursor-pointer select-none text-sm text-slate-300">
+                  <Checkbox
+                    data-testid="toplu-skip-sundays"
+                    checked={topluSkipSundays}
+                    onCheckedChange={(c) => setTopluSkipSundays(!!c)}
+                  />
+                  Pazar günlerini atla
+                </label>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Şablon - Varsayılan Değerler */}
+          <Card className="glass-effect border-slate-800">
+            <CardHeader className="border-b border-slate-800">
+              <CardTitle className="text-base text-white flex items-center gap-2">
+                <Wand2 className="w-4 h-4 text-orange-400" />
+                Şablon (Tüm Günlere Hızlı Uygula)
+              </CardTitle>
+              <p className="text-slate-400 text-xs">
+                Aşağıdaki değerleri doldurup butonlardan birine basarak günlere uygulayabilirsiniz.
+              </p>
+            </CardHeader>
+            <CardContent className="p-4">
+              <div className="grid grid-cols-2 md:grid-cols-7 gap-3 items-end">
+                <div>
+                  <Label className="text-slate-300 text-xs">Durum</Label>
+                  <Select
+                    value={topluTemplate.durum}
+                    onValueChange={(v) => setTopluTemplate({ ...topluTemplate, durum: v })}
+                  >
+                    <SelectTrigger className="bg-slate-950 border-slate-700 mt-1 h-9">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-slate-900 border-slate-700">
+                      {DURUM_OPTIONS.map(opt => {
+                        const Icon = opt.icon;
+                        return (
+                          <SelectItem key={opt.value} value={opt.value}>
+                            <span className="flex items-center gap-2">
+                              <Icon className={`w-4 h-4 ${opt.color}`} /> {opt.label}
+                            </span>
+                          </SelectItem>
+                        );
+                      })}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="text-slate-300 text-xs">Giriş</Label>
+                  <Input
+                    type="time"
+                    value={topluTemplate.giris_saati}
+                    onChange={(e) => setTopluTemplate({ ...topluTemplate, giris_saati: e.target.value })}
+                    disabled={topluTemplate.durum !== 'geldi'}
+                    className="bg-slate-950 border-slate-700 mt-1 h-9"
+                  />
+                </div>
+                <div>
+                  <Label className="text-slate-300 text-xs">Çıkış</Label>
+                  <Input
+                    type="time"
+                    value={topluTemplate.cikis_saati}
+                    onChange={(e) => setTopluTemplate({ ...topluTemplate, cikis_saati: e.target.value })}
+                    disabled={topluTemplate.durum !== 'geldi'}
+                    className="bg-slate-950 border-slate-700 mt-1 h-9"
+                  />
+                </div>
+                <div>
+                  <Label className="text-slate-300 text-xs">Fazla Mesai</Label>
+                  <Input
+                    type="number"
+                    step="0.5"
+                    min="0"
+                    value={topluTemplate.fazla_mesai}
+                    onChange={(e) => setTopluTemplate({ ...topluTemplate, fazla_mesai: e.target.value })}
+                    disabled={topluTemplate.durum !== 'geldi'}
+                    className="bg-slate-950 border-slate-700 mt-1 h-9"
+                  />
+                </div>
+                <div>
+                  <Label className="text-slate-300 text-xs">Tesis</Label>
+                  <Select
+                    value={topluTemplate.tesis_id || "none"}
+                    onValueChange={(v) => setTopluTemplate({ ...topluTemplate, tesis_id: v === "none" ? "" : v })}
+                  >
+                    <SelectTrigger className="bg-slate-950 border-slate-700 mt-1 h-9">
+                      <SelectValue placeholder="Tesis" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-slate-900 border-slate-700">
+                      <SelectItem value="none">Seçiniz</SelectItem>
+                      {tesisler.map(t => (
+                        <SelectItem key={t.id} value={t.id}>{t.tesis_adi}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="text-slate-300 text-xs">Not</Label>
+                  <Input
+                    type="text"
+                    value={topluTemplate.notlar}
+                    onChange={(e) => setTopluTemplate({ ...topluTemplate, notlar: e.target.value })}
+                    placeholder="Opsiyonel"
+                    className="bg-slate-950 border-slate-700 mt-1 h-9"
+                  />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <Button
+                    data-testid="apply-template-all"
+                    onClick={applyTemplateToAll}
+                    disabled={topluDates.length === 0}
+                    size="sm"
+                    className="bg-orange-600 hover:bg-orange-700 h-9"
+                  >
+                    <Wand2 className="w-3.5 h-3.5 mr-1" /> Tümüne Uygula
+                  </Button>
+                  <Button
+                    data-testid="apply-template-empty"
+                    onClick={applyTemplateToEmpty}
+                    disabled={topluDates.length === 0}
+                    size="sm"
+                    variant="outline"
+                    className="border-slate-700 text-slate-300 hover:text-white h-9"
+                  >
+                    Sadece Boşlara
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Günler - Alt alta sıralı satırlar */}
+          <Card className="glass-effect border-slate-800">
+            <CardHeader className="border-b border-slate-800">
+              <div className="flex items-center justify-between flex-wrap gap-3">
+                <CardTitle className="text-lg text-white flex items-center gap-2">
+                  <CalendarDays className="w-5 h-5" />
+                  Günlük Kayıtlar
+                  <span className="text-sm font-normal text-slate-400 ml-2">
+                    ({topluDates.length} gün listeleniyor)
+                  </span>
+                </CardTitle>
+                <Button
+                  data-testid="toplu-kaydet-btn"
+                  onClick={handleTopluBireyselKaydet}
+                  disabled={topluSaving || !topluPersonelId || topluDates.length === 0}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  <Save className="w-4 h-4 mr-2" />
+                  {topluSaving ? 'Kaydediliyor...' : 'Tümünü Kaydet'}
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="p-0">
+              {!topluPersonelId ? (
+                <div className="p-12 text-center text-slate-400">
+                  <User className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                  <p className="text-lg font-medium">Lütfen önce bir personel seçin</p>
+                  <p className="text-sm mt-1">Yukarıdaki listeden personel seçtiğinizde günler burada listelenecek.</p>
+                </div>
+              ) : topluDates.length === 0 ? (
+                <div className="p-12 text-center text-slate-400">
+                  <Calendar className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                  <p className="text-lg font-medium">Geçerli tarih aralığı seçin</p>
+                </div>
+              ) : (
+                <div className="max-h-[600px] overflow-y-auto custom-scrollbar">
+                  <Table>
+                    <TableHeader className="sticky top-0 z-10 bg-slate-950">
+                      <TableRow className="border-slate-800 bg-slate-900/95 backdrop-blur">
+                        <TableHead className="text-slate-300 w-44">Tarih</TableHead>
+                        <TableHead className="text-slate-300 w-44">Durum</TableHead>
+                        <TableHead className="text-slate-300 w-28">Giriş</TableHead>
+                        <TableHead className="text-slate-300 w-28">Çıkış</TableHead>
+                        <TableHead className="text-slate-300 w-28">Fazla Mesai</TableHead>
+                        <TableHead className="text-slate-300 w-40">Tesis</TableHead>
+                        <TableHead className="text-slate-300">Not</TableHead>
+                        <TableHead className="text-slate-300 w-16">İşlem</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {topluDates.map((d, idx) => {
+                        const row = topluRows[d] || {};
+                        const isWeekend = new Date(d + 'T00:00:00').getDay() === 0;
+                        const durumDisabled = row.durum !== 'geldi';
+                        return (
+                          <TableRow
+                            key={d}
+                            data-testid={`toplu-row-${d}`}
+                            className={`border-slate-800 ${idx % 2 === 0 ? 'bg-slate-900/30' : 'bg-slate-900/50'} ${isWeekend ? 'bg-purple-900/10' : ''}`}
+                          >
+                            <TableCell className="font-medium">
+                              <div className="flex flex-col">
+                                <span className={`${isWeekend ? 'text-purple-300' : 'text-white'}`}>{d}</span>
+                                <span className="text-xs text-slate-400">
+                                  {getGunAdi(d)}
+                                  {row.mevcut && <span className="ml-2 text-amber-400">· Mevcut kayıt</span>}
+                                </span>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <Select
+                                value={row.durum || "none"}
+                                onValueChange={(v) => updateTopluRow(d, 'durum', v === "none" ? "" : v)}
+                              >
+                                <SelectTrigger className="bg-slate-950 border-slate-700 h-8 text-xs">
+                                  <SelectValue placeholder="Seçiniz" />
+                                </SelectTrigger>
+                                <SelectContent className="bg-slate-900 border-slate-700">
+                                  <SelectItem value="none">— Boş —</SelectItem>
+                                  {DURUM_OPTIONS.map(opt => {
+                                    const Icon = opt.icon;
+                                    return (
+                                      <SelectItem key={opt.value} value={opt.value}>
+                                        <span className="flex items-center gap-2">
+                                          <Icon className={`w-4 h-4 ${opt.color}`} /> {opt.label}
+                                        </span>
+                                      </SelectItem>
+                                    );
+                                  })}
+                                </SelectContent>
+                              </Select>
+                            </TableCell>
+                            <TableCell>
+                              <Input
+                                type="time"
+                                value={row.giris_saati || ''}
+                                onChange={(e) => updateTopluRow(d, 'giris_saati', e.target.value)}
+                                disabled={durumDisabled}
+                                className="bg-slate-950 border-slate-700 h-8 text-xs"
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <Input
+                                type="time"
+                                value={row.cikis_saati || ''}
+                                onChange={(e) => updateTopluRow(d, 'cikis_saati', e.target.value)}
+                                disabled={durumDisabled}
+                                className="bg-slate-950 border-slate-700 h-8 text-xs"
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <Input
+                                type="number"
+                                step="0.5"
+                                min="0"
+                                max="24"
+                                value={row.fazla_mesai ?? '0'}
+                                onChange={(e) => updateTopluRow(d, 'fazla_mesai', e.target.value)}
+                                disabled={durumDisabled}
+                                className="bg-slate-950 border-slate-700 h-8 text-xs"
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <Select
+                                value={row.tesis_id || "none"}
+                                onValueChange={(v) => updateTopluRow(d, 'tesis_id', v === "none" ? "" : v)}
+                              >
+                                <SelectTrigger className="bg-slate-950 border-slate-700 h-8 text-xs">
+                                  <SelectValue placeholder="Tesis" />
+                                </SelectTrigger>
+                                <SelectContent className="bg-slate-900 border-slate-700">
+                                  <SelectItem value="none">Seçiniz</SelectItem>
+                                  {tesisler.map(t => (
+                                    <SelectItem key={t.id} value={t.id}>{t.tesis_adi}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </TableCell>
+                            <TableCell>
+                              <Input
+                                type="text"
+                                value={row.notlar || ''}
+                                onChange={(e) => updateTopluRow(d, 'notlar', e.target.value)}
+                                placeholder="Not..."
+                                className="bg-slate-950 border-slate-700 h-8 text-xs"
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-7 w-7 text-slate-400 hover:text-red-400"
+                                onClick={() => clearTopluRow(d)}
+                                title="Satırı temizle"
+                              >
+                                <X className="w-4 h-4" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+        </TabsContent>
+      </Tabs>
 
       {/* Puantaj Düzenleme Dialog */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
