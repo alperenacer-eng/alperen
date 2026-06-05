@@ -264,8 +264,8 @@ const BelirlemeTab = ({ personeller, formatCurrency, onSavePersonel }) => {
     }
   };
 
-  // Toplu uygulama: seçili personellerin edits state'ini günceller
-  const handleTopluUygula = () => {
+  // Toplu uygulama: seçili personellerin edits state'ini günceller VE otomatik DB'ye kaydeder
+  const handleTopluUygula = async () => {
     if (selectedIds.size === 0) {
       toast.error('Önce personel seçin');
       return;
@@ -277,21 +277,68 @@ const BelirlemeTab = ({ personeller, formatCurrency, onSavePersonel }) => {
     const durumDef = BELIRLEME_DURUMLARI.find(d => d.carpanKey === topluDurum);
     if (!durumDef) return;
     const value = parseFloat(topluDeger);
+    const ids = Array.from(selectedIds);
+
+    // 1) Edits state'ini güncelle (sarı çerçeve gösterimi için)
+    const newFieldsPerId = {};
+    ids.forEach(id => {
+      if (topluTip === 'carpan') {
+        // Çarpan değişikliği → override'ı temizle (çarpana göre hesaplanır)
+        newFieldsPerId[id] = { [durumDef.carpanKey]: value, [durumDef.overrideKey]: null };
+      } else {
+        // Ücret override
+        newFieldsPerId[id] = { [durumDef.overrideKey]: value };
+      }
+    });
     setEdits(prev => {
       const next = { ...prev };
-      selectedIds.forEach(id => {
-        const cur = next[id] || {};
-        if (topluTip === 'carpan') {
-          // Çarpan değişikliği → override'ı temizle (çarpana göre hesaplanır)
-          next[id] = { ...cur, [durumDef.carpanKey]: value, [durumDef.overrideKey]: null };
-        } else {
-          // Ücret override
-          next[id] = { ...cur, [durumDef.overrideKey]: value };
-        }
+      ids.forEach(id => {
+        next[id] = { ...(next[id] || {}), ...newFieldsPerId[id] };
       });
       return next;
     });
-    toast.success(`${selectedIds.size} personele "${durumDef.label}" ${topluTip === 'carpan' ? 'çarpanı' : 'ücreti'} = ${value} uygulandı`);
+
+    // 2) Otomatik DB kaydı
+    setSavingIds(prev => {
+      const next = new Set(prev);
+      ids.forEach(id => next.add(id));
+      return next;
+    });
+    let ok = 0;
+    let fail = 0;
+    await Promise.all(ids.map(async (id) => {
+      try {
+        await onSavePersonel(id, newFieldsPerId[id]);
+        ok += 1;
+      } catch (err) {
+        console.error(`Toplu uygula kayıt hatası (${id}):`, err);
+        fail += 1;
+      }
+    }));
+    // Başarılı kayıtların ilgili alanlarını edits state'inden temizle
+    setEdits(prev => {
+      const next = { ...prev };
+      ids.forEach(id => {
+        if (!next[id]) return;
+        const cleaned = { ...next[id] };
+        Object.keys(newFieldsPerId[id]).forEach(k => { delete cleaned[k]; });
+        if (Object.keys(cleaned).length === 0) delete next[id];
+        else next[id] = cleaned;
+      });
+      return next;
+    });
+    setSavingIds(prev => {
+      const next = new Set(prev);
+      ids.forEach(id => next.delete(id));
+      return next;
+    });
+
+    const labelTip = topluTip === 'carpan' ? 'çarpanı' : 'ücreti';
+    if (fail === 0) {
+      toast.success(`${ok} personele "${durumDef.label}" ${labelTip} = ${value} uygulandı ve kaydedildi`);
+    } else {
+      toast.error(`${ok} kaydedildi, ${fail} hata oluştu`);
+    }
   };
 
   const allSelected = personeller.length > 0 && selectedIds.size === personeller.length;
@@ -401,7 +448,7 @@ const BelirlemeTab = ({ personeller, formatCurrency, onSavePersonel }) => {
             </Button>
           </div>
           <p className="text-[11px] text-slate-500 mt-3">
-            Uygulayınca değişiklik <strong>edits</strong> state'ine işlenir (sarı çerçeve ile gösterilir). DB'ye yazmak için <strong>"Tümünü Kaydet"</strong> butonuna basın.
+            ✅ "Seçilenlere Uygula" butonu artık değişiklikleri <strong>otomatik olarak DB'ye kaydeder</strong>. Manuel kayıt için yine de "Tümünü Kaydet" butonunu kullanabilirsiniz.
           </p>
         </CardContent>
       </Card>
