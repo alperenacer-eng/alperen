@@ -122,6 +122,8 @@ const Puantaj = () => {
   // Her tarih için ayrı satır verileri
   const [topluRows, setTopluRows] = useState({}); // { 'YYYY-MM-DD': { durum, giris_saati, cikis_saati, fazla_mesai, tesis_id, notlar } }
   const [topluSaving, setTopluSaving] = useState(false);
+  // Takvimden seçilen tarihler (Set)
+  const [selectedCalendarDates, setSelectedCalendarDates] = useState(new Set());
 
   const headers = { Authorization: `Bearer ${token}` };
 
@@ -565,6 +567,33 @@ const Puantaj = () => {
     toast.success(`Şablon ${topluDates.length} güne uygulandı`);
   };
 
+  // Şablonu sadece takvimden seçilen günlere uygula
+  const applyTemplateToSelected = () => {
+    if (selectedCalendarDates.size === 0) {
+      toast.error('Önce takvimden gün seçin');
+      return;
+    }
+    const list = Array.from(selectedCalendarDates);
+    setTopluRows(prev => {
+      const next = { ...prev };
+      list.forEach(d => {
+        next[d] = {
+          ...(next[d] || {}),
+          durum: topluTemplate.durum,
+          giris_saati: topluTemplate.durum === 'geldi' ? topluTemplate.giris_saati : '',
+          cikis_saati: topluTemplate.durum === 'geldi' ? topluTemplate.cikis_saati : '',
+          fazla_mesai: topluTemplate.durum === 'geldi' ? topluTemplate.fazla_mesai : '0',
+          tesis_id: topluTemplate.tesis_id,
+          notlar: topluTemplate.notlar
+        };
+      });
+      return next;
+    });
+    toast.success(`Şablon seçili ${list.length} güne uygulandı`);
+    // Uygulama sonrası seçimi temizle
+    setSelectedCalendarDates(new Set());
+  };
+
   // Sadece boş günlere uygula
   const applyTemplateToEmpty = () => {
     if (topluDates.length === 0) {
@@ -595,7 +624,31 @@ const Puantaj = () => {
     else toast.info('Boş gün bulunamadı');
   };
 
-  // Tek bir güne şablonu uygula (takvimden tıklama)
+  // Takvimden gün seçimini toggle et (artık şablon UYGULAMIYOR, sadece seçim yapıyor)
+  const toggleCalendarDate = (date) => {
+    setSelectedCalendarDates(prev => {
+      const next = new Set(prev);
+      if (next.has(date)) next.delete(date);
+      else next.add(date);
+      return next;
+    });
+  };
+
+  // Tüm günleri seç / seçimi temizle
+  const selectAllCalendarDates = () => {
+    setSelectedCalendarDates(new Set(topluDates));
+  };
+  const clearCalendarSelection = () => {
+    setSelectedCalendarDates(new Set());
+  };
+
+  // Tarih aralığı / personel değişince seçimi temizle
+  useEffect(() => {
+    setSelectedCalendarDates(new Set());
+  }, [topluPersonelId, topluBaslangic, topluBitis, topluSkipSundays]);
+
+  // Tek bir güne şablonu uygula (artık takvim direkt uygulamıyor; manuel kullanım için tutuluyor)
+  // eslint-disable-next-line no-unused-vars
   const applyTemplateToDate = (date) => {
     setTopluRows(prev => {
       const existing = prev[date] || {};
@@ -1514,24 +1567,36 @@ const Puantaj = () => {
                 </div>
                 <div className="flex flex-col gap-2">
                   <Button
-                    data-testid="apply-template-all"
-                    onClick={applyTemplateToAll}
-                    disabled={topluDates.length === 0}
+                    data-testid="apply-template-selected"
+                    onClick={applyTemplateToSelected}
+                    disabled={selectedCalendarDates.size === 0}
                     size="sm"
-                    className="bg-orange-600 hover:bg-orange-700 h-9"
+                    className="bg-orange-600 hover:bg-orange-700 h-9 disabled:opacity-40"
                   >
-                    <Wand2 className="w-3.5 h-3.5 mr-1" /> Tümüne Uygula
+                    <Wand2 className="w-3.5 h-3.5 mr-1" /> Seçilenlere Uygula ({selectedCalendarDates.size})
                   </Button>
-                  <Button
-                    data-testid="apply-template-empty"
-                    onClick={applyTemplateToEmpty}
-                    disabled={topluDates.length === 0}
-                    size="sm"
-                    variant="outline"
-                    className="border-slate-700 text-slate-300 hover:text-white h-9"
-                  >
-                    Sadece Boşlara
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button
+                      data-testid="apply-template-all"
+                      onClick={applyTemplateToAll}
+                      disabled={topluDates.length === 0}
+                      size="sm"
+                      variant="outline"
+                      className="border-slate-700 text-slate-300 hover:text-white h-9 flex-1"
+                    >
+                      Tümüne
+                    </Button>
+                    <Button
+                      data-testid="apply-template-empty"
+                      onClick={applyTemplateToEmpty}
+                      disabled={topluDates.length === 0}
+                      size="sm"
+                      variant="outline"
+                      className="border-slate-700 text-slate-300 hover:text-white h-9 flex-1"
+                    >
+                      Boşlara
+                    </Button>
+                  </div>
                 </div>
               </div>
 
@@ -1543,20 +1608,46 @@ const Puantaj = () => {
                       <Calendar className="w-4 h-4 text-orange-400" />
                       Takvimden Gün Seç
                       <span className="text-xs font-normal text-slate-400">
-                        (Şablonu uygulamak istediğiniz günlere tıklayın)
+                        (Şablonu uygulayacağınız günleri seçin, sonra "Seçilenlere Uygula"ya basın)
                       </span>
                     </h4>
-                    <div className="flex items-center gap-3 text-xs text-slate-400">
-                      <span className="flex items-center gap-1">
-                        <span className="w-3 h-3 rounded bg-slate-800 border border-slate-700"></span>Boş
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-orange-300 font-semibold">
+                        {selectedCalendarDates.size} seçili
                       </span>
-                      <span className="flex items-center gap-1">
-                        <span className="w-3 h-3 rounded bg-green-500/30 border border-green-500/60"></span>Doldurulmuş
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <span className="w-3 h-3 rounded bg-amber-500/30 border border-amber-500/60"></span>Mevcut Kayıt
-                      </span>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={selectAllCalendarDates}
+                        className="h-7 px-2 text-xs border-slate-700 text-slate-300 hover:text-white"
+                      >
+                        Tümünü Seç
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={clearCalendarSelection}
+                        disabled={selectedCalendarDates.size === 0}
+                        className="h-7 px-2 text-xs border-slate-700 text-slate-300 hover:text-white"
+                      >
+                        Seçimi Temizle
+                      </Button>
                     </div>
+                  </div>
+                  {/* Legend */}
+                  <div className="flex items-center gap-3 text-xs text-slate-400 mb-3 flex-wrap">
+                    <span className="flex items-center gap-1">
+                      <span className="w-3 h-3 rounded bg-slate-800 border border-slate-700"></span>Boş
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <span className="w-3 h-3 rounded bg-orange-500/40 border-2 border-orange-400"></span>Seçili
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <span className="w-3 h-3 rounded bg-green-500/30 border border-green-500/60"></span>Doldurulmuş
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <span className="w-3 h-3 rounded bg-amber-500/30 border border-amber-500/60"></span>Mevcut Kayıt
+                    </span>
                   </div>
                   <div className="bg-slate-950/60 border border-slate-800 rounded-lg p-3">
                     {/* Gün başlıkları */}
@@ -1585,30 +1676,43 @@ const Puantaj = () => {
                             }
                             const row = topluRows[cell.dateStr] || {};
                             const hasData = !!row.durum;
+                            const isSelected = selectedCalendarDates.has(cell.dateStr);
                             const durumInfo = hasData ? getDurumInfo(row.durum) : null;
                             const DurumIcon = durumInfo?.icon;
                             const isMevcut = row.mevcut;
+
+                            // Sınıf seçimi: Seçili durumu öncelik
+                            let cellClass = '';
+                            if (isSelected) {
+                              cellClass = 'bg-orange-500/30 border-2 border-orange-400 hover:bg-orange-500/40 shadow-md shadow-orange-500/20';
+                            } else if (hasData) {
+                              cellClass = isMevcut
+                                ? 'bg-amber-500/20 border-amber-500/60 hover:bg-amber-500/30'
+                                : 'bg-green-500/20 border-green-500/60 hover:bg-green-500/30';
+                            } else if (cell.isSunday) {
+                              cellClass = 'bg-purple-900/20 border-purple-800/40 hover:bg-purple-800/30';
+                            } else {
+                              cellClass = 'bg-slate-800/50 border-slate-700 hover:bg-slate-700/60';
+                            }
+
                             return (
                               <button
                                 type="button"
                                 key={ci}
                                 data-testid={`calendar-cell-${cell.dateStr}`}
-                                onClick={() => applyTemplateToDate(cell.dateStr)}
-                                className={`relative h-16 rounded-md border text-left p-1.5 transition-all hover:scale-[1.03] hover:shadow-lg active:scale-95 ${
-                                  hasData
-                                    ? isMevcut
-                                      ? 'bg-amber-500/20 border-amber-500/60 hover:bg-amber-500/30'
-                                      : 'bg-green-500/20 border-green-500/60 hover:bg-green-500/30'
-                                    : cell.isSunday
-                                      ? 'bg-purple-900/20 border-purple-800/40 hover:bg-purple-800/30'
-                                      : 'bg-slate-800/50 border-slate-700 hover:bg-slate-700/60'
-                                }`}
-                                title={`${cell.dateStr} — ${hasData ? durumInfo.label : 'Boş'} (tıklayarak şablonu uygula)`}
+                                onClick={() => toggleCalendarDate(cell.dateStr)}
+                                className={`relative h-16 rounded-md border text-left p-1.5 transition-all hover:scale-[1.03] hover:shadow-lg active:scale-95 ${cellClass}`}
+                                title={`${cell.dateStr} — ${hasData ? durumInfo.label : 'Boş'} · ${isSelected ? 'Seçili (tıklayarak kaldır)' : 'Tıklayarak seç'}`}
                               >
-                                <div className={`text-xs font-bold ${cell.isSunday && !hasData ? 'text-purple-300' : 'text-white'}`}>
+                                <div className={`text-xs font-bold ${cell.isSunday && !hasData && !isSelected ? 'text-purple-300' : 'text-white'}`}>
                                   {cell.dayNum}
                                 </div>
-                                {hasData && DurumIcon && (
+                                {isSelected && (
+                                  <div className="absolute top-1 right-1.5">
+                                    <CheckCircle2 className="w-3.5 h-3.5 text-orange-300" />
+                                  </div>
+                                )}
+                                {hasData && DurumIcon && !isSelected && (
                                   <div className="absolute bottom-1 right-1.5 flex items-center gap-0.5">
                                     <DurumIcon className={`w-3.5 h-3.5 ${durumInfo.color}`} />
                                   </div>
