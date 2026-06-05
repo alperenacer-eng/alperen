@@ -37,6 +37,7 @@ import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Plus, Trash2, Edit, Search, ArrowLeft, Eye, UserPlus, Wallet, X, FileSpreadsheet, Save, RotateCcw, ChevronLeft, ChevronRight, AlertCircle } from 'lucide-react';
+import { useCustomDurumlar } from '@/context/CustomDurumlarContext';
 import * as XLSX from 'xlsx';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL + '/api';
@@ -103,6 +104,20 @@ const BELIRLEME_DURUMLARI = [
 //        Ücret elle değişirse "override" sayılır, sarı kenarlık ile işaretlenir.
 //        Override'ı kaldırmak için çarpan kalemini değiştirmek yeterli (recompute olur).
 const BelirlemeTab = ({ personeller, formatCurrency, onSavePersonel }) => {
+  const { activeCustomDurumlar } = useCustomDurumlar();
+  // Yerleşik + custom durumları birleştir
+  const MERGED_BELIRLEME = React.useMemo(() => [
+    ...BELIRLEME_DURUMLARI,
+    ...activeCustomDurumlar.map(c => ({
+      label: c.label,
+      carpanKey: `custom__${c.value}`,
+      overrideKey: `custom_override__${c.value}`,
+      tip: c.tip === 'saatlik' ? 'saatlik' : 'gunluk',
+      defCarpan: parseFloat(c.def_carpan ?? 1.0),
+      isCustom: true,
+      customValue: c.value,
+    })),
+  ], [activeCustomDurumlar]);
   // local edits: { [personelId]: { maas?, fazla_mesai_carpan?, ..., ucret_override_*? } }
   const [edits, setEdits] = useState({});
   const [savingIds, setSavingIds] = useState(new Set());
@@ -110,8 +125,8 @@ const BelirlemeTab = ({ personeller, formatCurrency, onSavePersonel }) => {
   const scrollRefs = React.useRef({});
   // Sürüklenebilir sütun sırası — Belirleme tablosunun orta kolonları
   const belirlemeDefaultOrder = React.useMemo(
-    () => ['dep', 'maas', 'gunluk', ...BELIRLEME_DURUMLARI.map(d => `durum_${d.carpanKey}`)],
-    []
+    () => ['dep', 'maas', 'gunluk', ...MERGED_BELIRLEME.map(d => `durum_${d.carpanKey}`)],
+    [MERGED_BELIRLEME]
   );
   const belirlemeOrder = useColumnOrder('personel-belirleme-cols', belirlemeDefaultOrder);
   const scrollBy = (dep, delta) => {
@@ -119,10 +134,34 @@ const BelirlemeTab = ({ personeller, formatCurrency, onSavePersonel }) => {
     if (el) el.scrollBy({ left: delta, behavior: 'smooth' });
   };
 
-  // Gerçek değer (edit + personel)
+  // JSON helper'ları — custom durum çarpan/override için
+  const parseJsonOrEmpty = (raw) => {
+    try { return raw ? (typeof raw === 'string' ? JSON.parse(raw) : raw) : {}; } catch (_) { return {}; }
+  };
+  // Custom durum çarpan değeri al (edits → JSON → default)
+  const getCustomValue = (p, d, isOverride) => {
+    const e = edits[p.id] || {};
+    const editKey = isOverride ? d.overrideKey : d.carpanKey;
+    if (e[editKey] !== undefined) return e[editKey];
+    const jsonField = isOverride ? 'custom_durum_overrides' : 'custom_durum_carpanlar';
+    const json = parseJsonOrEmpty(p[jsonField]);
+    return json[d.customValue];
+  };
+
+  // Gerçek değer (edit + personel) — custom durumlar için JSON içinden de okur
   const valOf = (p, key) => {
     const e = edits[p.id] || {};
-    return e[key] !== undefined ? e[key] : p[key];
+    if (e[key] !== undefined) return e[key];
+    // Custom durum key mi?
+    if (key.startsWith('custom__')) {
+      const cval = key.replace('custom__', '');
+      return parseJsonOrEmpty(p.custom_durum_carpanlar)[cval];
+    }
+    if (key.startsWith('custom_override__')) {
+      const cval = key.replace('custom_override__', '');
+      return parseJsonOrEmpty(p.custom_durum_overrides)[cval];
+    }
+    return p[key];
   };
   const numOr = (v, def = 0) => {
     const n = parseFloat(v);
@@ -195,6 +234,39 @@ const BelirlemeTab = ({ personeller, formatCurrency, onSavePersonel }) => {
     setEditField(p.id, d.overrideKey, null);
   };
 
+  // Custom durum key'lerini (custom__X, custom_override__X) JSON kolonlarına çevirir
+  // ve payload'dan custom anahtarları çıkartır. Mevcut JSON ile birleştirir.
+  const transformCustomDurumPayload = (p, payload) => {
+    const next = { ...payload };
+    const customCarpanKeys = Object.keys(next).filter(k => k.startsWith('custom__'));
+    const customOverrideKeys = Object.keys(next).filter(k => k.startsWith('custom_override__'));
+    if (customCarpanKeys.length === 0 && customOverrideKeys.length === 0) return next;
+    // Mevcut JSON oku
+    let curCarpanlar = {};
+    let curOverrides = {};
+    try { curCarpanlar = p.custom_durum_carpanlar ? JSON.parse(p.custom_durum_carpanlar) : {}; } catch (_) {}
+    try { curOverrides = p.custom_durum_overrides ? JSON.parse(p.custom_durum_overrides) : {}; } catch (_) {}
+    if (!curCarpanlar || typeof curCarpanlar !== 'object') curCarpanlar = {};
+    if (!curOverrides || typeof curOverrides !== 'object') curOverrides = {};
+    customCarpanKeys.forEach(k => {
+      const v = next[k];
+      const cval = k.replace('custom__', '');
+      if (v === null || v === undefined) delete curCarpanlar[cval];
+      else curCarpanlar[cval] = v;
+      delete next[k];
+    });
+    customOverrideKeys.forEach(k => {
+      const v = next[k];
+      const cval = k.replace('custom_override__', '');
+      if (v === null || v === undefined) delete curOverrides[cval];
+      else curOverrides[cval] = v;
+      delete next[k];
+    });
+    if (customCarpanKeys.length > 0) next.custom_durum_carpanlar = JSON.stringify(curCarpanlar);
+    if (customOverrideKeys.length > 0) next.custom_durum_overrides = JSON.stringify(curOverrides);
+    return next;
+  };
+
   const handleSave = async (p) => {
     const e = edits[p.id];
     if (!e || Object.keys(e).length === 0) {
@@ -204,10 +276,12 @@ const BelirlemeTab = ({ personeller, formatCurrency, onSavePersonel }) => {
     setSavingIds(prev => new Set(prev).add(p.id));
     try {
       // Boş override değerlerini null'a çevir (override'ı temizle)
-      const payload = { ...e };
+      let payload = { ...e };
       Object.keys(payload).forEach(k => {
         if (payload[k] === '') payload[k] = null;
       });
+      // Custom durum key'lerini JSON kolonlarına dönüştür
+      payload = transformCustomDurumPayload(p, payload);
       // belirlenmis_kalemler listesini güncelle
       payload.belirlenmis_kalemler = mergeBelirlenmisKalemler(p, payload);
       await onSavePersonel(p.id, payload);
@@ -246,8 +320,9 @@ const BelirlemeTab = ({ personeller, formatCurrency, onSavePersonel }) => {
     let fail = 0;
     await Promise.all(targets.map(async (p) => {
       try {
-        const payload = { ...edits[p.id] };
+        let payload = { ...edits[p.id] };
         Object.keys(payload).forEach(k => { if (payload[k] === '') payload[k] = null; });
+        payload = transformCustomDurumPayload(p, payload);
         payload.belirlenmis_kalemler = mergeBelirlenmisKalemler(p, payload);
         await onSavePersonel(p.id, payload);
         ok += 1;
@@ -322,7 +397,7 @@ const BelirlemeTab = ({ personeller, formatCurrency, onSavePersonel }) => {
       toast.error('Geçerli bir değer girin');
       return;
     }
-    const durumDef = BELIRLEME_DURUMLARI.find(d => d.carpanKey === topluDurum);
+    const durumDef = MERGED_BELIRLEME.find(d => d.carpanKey === topluDurum);
     if (!durumDef) return;
     const value = parseFloat(topluDeger);
     const ids = Array.from(selectedIds);
@@ -357,7 +432,8 @@ const BelirlemeTab = ({ personeller, formatCurrency, onSavePersonel }) => {
     await Promise.all(ids.map(async (id) => {
       try {
         const p = personeller.find(x => x.id === id);
-        const payload = { ...newFieldsPerId[id] };
+        let payload = { ...newFieldsPerId[id] };
+        payload = transformCustomDurumPayload(p, payload);
         payload.belirlenmis_kalemler = mergeBelirlenmisKalemler(p, payload);
         await onSavePersonel(id, payload);
         ok += 1;
@@ -438,7 +514,7 @@ const BelirlemeTab = ({ personeller, formatCurrency, onSavePersonel }) => {
   };
   const isPersonelTamBelirlendi = (p) => {
     if (!isMaasBelirlendi(p)) return false;
-    return BELIRLEME_DURUMLARI.every(d => isCellBelirlendi(p, d));
+    return MERGED_BELIRLEME.every(d => isCellBelirlendi(p, d));
   };
   const eksikBelirlenenler = personeller.filter(p => !isPersonelTamBelirlendi(p));
   const eksikSayisi = eksikBelirlenenler.length;
@@ -447,7 +523,7 @@ const BelirlemeTab = ({ personeller, formatCurrency, onSavePersonel }) => {
   const eksikKalemleriOf = (p) => {
     const eksikler = [];
     if (!isMaasBelirlendi(p)) eksikler.push('Maaş');
-    BELIRLEME_DURUMLARI.forEach(d => {
+    MERGED_BELIRLEME.forEach(d => {
       if (!isCellBelirlendi(p, d)) eksikler.push(d.label);
     });
     return eksikler;
@@ -534,7 +610,7 @@ const BelirlemeTab = ({ personeller, formatCurrency, onSavePersonel }) => {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="bg-slate-900 border-slate-700 max-h-72">
-                  {BELIRLEME_DURUMLARI.map(d => (
+                  {MERGED_BELIRLEME.map(d => (
                     <SelectItem key={d.carpanKey} value={d.carpanKey}>{d.label} {d.tip === 'saatlik' ? '(saatlik)' : '(günlük)'}</SelectItem>
                   ))}
                 </SelectContent>
@@ -693,7 +769,7 @@ const BelirlemeTab = ({ personeller, formatCurrency, onSavePersonel }) => {
                       if (k === 'dep') return <DraggableTableHead key="dep" colKey="dep" onReorder={belirlemeOrder.reorder} className="text-slate-300 min-w-[130px]">Departman</DraggableTableHead>;
                       if (k === 'maas') return <DraggableTableHead key="maas" colKey="maas" onReorder={belirlemeOrder.reorder} className="text-slate-300 min-w-[110px]">Maaş</DraggableTableHead>;
                       if (k === 'gunluk') return <DraggableTableHead key="gunluk" colKey="gunluk" onReorder={belirlemeOrder.reorder} className="text-slate-300 min-w-[110px]">Günlük</DraggableTableHead>;
-                      const d = BELIRLEME_DURUMLARI.find(x => `durum_${x.carpanKey}` === k);
+                      const d = MERGED_BELIRLEME.find(x => `durum_${x.carpanKey}` === k);
                       if (!d) return null;
                       return (
                         <DraggableTableHead key={k} colKey={k} onReorder={belirlemeOrder.reorder} className="text-slate-300 min-w-[170px] text-center border-l border-slate-800">
@@ -747,7 +823,7 @@ const BelirlemeTab = ({ personeller, formatCurrency, onSavePersonel }) => {
                             );
                           }
                           if (k === 'gunluk') return <TableCell key="gunluk" className="text-cyan-300 text-sm">{formatCurrency(gunlukOf(p))}</TableCell>;
-                          const d = BELIRLEME_DURUMLARI.find(x => `durum_${x.carpanKey}` === k);
+                          const d = MERGED_BELIRLEME.find(x => `durum_${x.carpanKey}` === k);
                           if (!d) return null;
                           const ovrAktif = overrideAktif(p, d);
                           const gost = gosterTutar(p, d);

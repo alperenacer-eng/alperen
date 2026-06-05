@@ -58,6 +58,8 @@ const emptyBordro = (yil, ay) => ({
 });
 
 // Backend'den dönen durum_ek_kalemleri'yi insan dostu hale çevirmek için etiket eşleme
+import { useCustomDurumlar } from '@/context/CustomDurumlarContext';
+
 const DURUM_EK_LABEL = {
   izinli: 'İzinli',
   raporlu: 'Raporlu',
@@ -78,7 +80,7 @@ const BordroUyariBaneri = ({ kalemler }) => {
   const uyarilar = [];
   Object.entries(kalemler).forEach(([k, v]) => {
     if ((v.gun || 0) > 0 && (v.carpan || 0) === 0 && BEKLENEN_CARPAN_1.has(k)) {
-      uyarilar.push(`"${DURUM_EK_LABEL[k]}" için ${v.gun} gün var ama çarpan 0; ücret yansıtılmadı. Personel kartından çarpanı kontrol edin.`);
+      uyarilar.push(`"${DURUM_EK_LABEL[k] || k}" için ${v.gun} gün var ama çarpan 0; ücret yansıtılmadı. Personel kartından çarpanı kontrol edin.`);
     }
   });
   return (
@@ -103,6 +105,14 @@ const MaasBordrosu = () => {
   const { token } = useAuth();
   const { currentModule } = useModule();
   const navigate = useNavigate();
+  const { activeCustomDurumlar } = useCustomDurumlar();
+
+  // Custom durumların label'larını DURUM_EK_LABEL'e merge et
+  const DURUM_EK_LABEL_FULL = React.useMemo(() => {
+    const merged = { ...DURUM_EK_LABEL };
+    activeCustomDurumlar.forEach(c => { merged[c.value] = c.label; });
+    return merged;
+  }, [activeCustomDurumlar]);
 
   const [bordrolar, setBordrolar] = useState([]);
   const [yillikBordrolar, setYillikBordrolar] = useState([]);  // yıl boyu trend için
@@ -457,10 +467,10 @@ const MaasBordrosu = () => {
       // Sheet 2: Durum Ek Detayı — her bordro için 7 durum × (gün, çarpan, ücret)
       const detayHeader = [
         'Personel',
-        ...Object.keys(DURUM_EK_LABEL).flatMap(k => [
-          `${DURUM_EK_LABEL[k]} Gün`,
-          `${DURUM_EK_LABEL[k]} Çarpan`,
-          `${DURUM_EK_LABEL[k]} Ücret`,
+        ...Object.keys(DURUM_EK_LABEL_FULL).flatMap(k => [
+          `${DURUM_EK_LABEL_FULL[k]} Gün`,
+          `${DURUM_EK_LABEL_FULL[k]} Çarpan`,
+          `${DURUM_EK_LABEL_FULL[k]} Ücret`,
         ]),
         'Toplam Durum Ek Ücret',
       ];
@@ -468,7 +478,7 @@ const MaasBordrosu = () => {
         let detay = {};
         try { if (b.durum_detay_json) detay = JSON.parse(b.durum_detay_json); } catch (_) {}
         const row = [b.personel_adi || ''];
-        Object.keys(DURUM_EK_LABEL).forEach(k => {
+        Object.keys(DURUM_EK_LABEL_FULL).forEach(k => {
           const v = detay[k] || { gun: 0, carpan: 0, ucret: 0 };
           row.push(v.gun || 0);
           row.push(v.carpan || 0);
@@ -481,7 +491,7 @@ const MaasBordrosu = () => {
 
       // Sheet 3: Aylık Özet (tüm personel toplamı per durum)
       const ozetRows = Object.entries(aylikDurumOzeti).map(([k, v]) => ({
-        'Durum': DURUM_EK_LABEL[k] || k,
+        'Durum': DURUM_EK_LABEL_FULL[k] || k,
         'Toplam Gün': v.gun,
         'Toplam Ücret (₺)': Number((v.ucret || 0).toFixed(2)),
       }));
@@ -505,14 +515,14 @@ const MaasBordrosu = () => {
     const fmt = (n) => new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(n || 0);
     const ozetSatirlari = Object.entries(aylikDurumOzeti)
       .filter(([_, v]) => (v.gun || 0) > 0)
-      .map(([k, v]) => `<tr><td>${DURUM_EK_LABEL[k] || k}</td><td style="text-align:center">${v.gun}</td><td style="text-align:right">${fmt(v.ucret)}</td></tr>`).join('');
+      .map(([k, v]) => `<tr><td>${DURUM_EK_LABEL_FULL[k] || k}</td><td style="text-align:center">${v.gun}</td><td style="text-align:right">${fmt(v.ucret)}</td></tr>`).join('');
 
     const bordroSatirlari = bordrolar.map(b => {
       let detay = {};
       try { if (b.durum_detay_json) detay = JSON.parse(b.durum_detay_json); } catch (_) {}
       const detayParcalari = Object.entries(detay)
         .filter(([_, v]) => (v.ucret || 0) > 0)
-        .map(([k, v]) => `${DURUM_EK_LABEL[k] || k}: ${v.gun}g×${v.carpan}=${fmt(v.ucret)}`)
+        .map(([k, v]) => `${DURUM_EK_LABEL_FULL[k] || k}: ${v.gun}g×${v.carpan}=${fmt(v.ucret)}`)
         .join(' • ') || '-';
       return `
         <tr>
@@ -869,7 +879,7 @@ const MaasBordrosu = () => {
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
               {Object.entries(aylikDurumOzeti).map(([k, v]) => (
                 <div key={k} className={`p-3 rounded border ${v.gun > 0 ? 'border-amber-700/40 bg-slate-900/50' : 'border-slate-800 bg-slate-900/20 opacity-50'}`}>
-                  <div className="text-xs text-slate-400">{DURUM_EK_LABEL[k] || k}</div>
+                  <div className="text-xs text-slate-400">{DURUM_EK_LABEL_FULL[k] || k}</div>
                   <div className="text-sm text-white font-medium">{v.gun} gün</div>
                   <div className={`text-sm font-semibold ${v.gun > 0 ? 'text-green-400' : 'text-slate-600'}`}>
                     {formatCurrency(v.ucret)}
@@ -960,7 +970,7 @@ const MaasBordrosu = () => {
                         if (d) {
                           tip = Object.entries(d)
                             .filter(([_, v]) => (v.ucret || 0) > 0)
-                            .map(([k, v]) => `${DURUM_EK_LABEL[k] || k}: ${v.gun}g × ${v.carpan} = ₺${v.ucret}`)
+                            .map(([k, v]) => `${DURUM_EK_LABEL_FULL[k] || k}: ${v.gun}g × ${v.carpan} = ₺${v.ucret}`)
                             .join('\n') || 'Ek ücret yok';
                         }
                       } catch (_) { /* yoksay */ }

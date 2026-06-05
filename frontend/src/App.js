@@ -45,6 +45,7 @@ import ParkeKaynaklar from '@/pages/ParkeKaynaklar';
 import ParkeUretim from '@/pages/ParkeUretim';
 import Layout from '@/components/Layout';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
+import { CustomDurumlarProvider } from '@/context/CustomDurumlarContext';
 import { ModuleProvider } from '@/context/ModuleContext';
 import '@/App.css';
 
@@ -66,6 +67,7 @@ function App() {
   return (
     <AuthProvider>
       <ModuleProvider>
+        <CustomDurumlarProvider>
         <BrowserRouter>
           <Routes>
             <Route path="/login" element={<Login />} />
@@ -140,6 +142,7 @@ function App() {
           </Routes>
           <Toaster position="top-right" />
         </BrowserRouter>
+        </CustomDurumlarProvider>
       </ModuleProvider>
     </AuthProvider>
   );

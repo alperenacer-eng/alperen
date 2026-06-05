@@ -555,6 +555,34 @@ async def init_db():
             await db.execute("ALTER TABLE personeller ADD COLUMN belirlenmis_kalemler TEXT DEFAULT '[]'")
         except Exception:
             pass
+        # Özel durumlar için JSON kolon: personele özgü çarpan/override değerleri
+        # Format: {"durum_value": carpan} ve {"durum_value": ucret}
+        try:
+            await db.execute("ALTER TABLE personeller ADD COLUMN custom_durum_carpanlar TEXT DEFAULT '{}'")
+        except Exception:
+            pass
+        try:
+            await db.execute("ALTER TABLE personeller ADD COLUMN custom_durum_overrides TEXT DEFAULT '{}'")
+        except Exception:
+            pass
+        # Özel durumlar tablosu (kullanıcı tanımlı puantaj durumları)
+        try:
+            await db.execute("""
+                CREATE TABLE IF NOT EXISTS custom_durumlar (
+                    id TEXT PRIMARY KEY,
+                    value TEXT NOT NULL UNIQUE,
+                    label TEXT NOT NULL,
+                    tip TEXT NOT NULL DEFAULT 'gunluk',
+                    def_carpan REAL NOT NULL DEFAULT 1.0,
+                    color_class TEXT NOT NULL DEFAULT 'text-amber-400',
+                    badge_class TEXT NOT NULL DEFAULT 'bg-amber-500/20 text-amber-400 border-amber-500/40',
+                    is_active INTEGER NOT NULL DEFAULT 1,
+                    sira INTEGER NOT NULL DEFAULT 0,
+                    created_at TEXT NOT NULL
+                )
+            """)
+        except Exception:
+            pass
         # Maas bordrolari yeni sütunlar (Pazar, Resmi Tatil ücretleri + detaylar)
         for _col in [
             ("pazar_ucreti", "REAL DEFAULT 0"),
@@ -3402,6 +3430,9 @@ class PersonelUpdate(BaseModel):
     ucret_override_dogum_izni: Optional[float] = None
     # Belirlenmiş kalemler izleme listesi (JSON string)
     belirlenmis_kalemler: Optional[str] = None
+    # Özel durumlar için JSON alanları
+    custom_durum_carpanlar: Optional[str] = None
+    custom_durum_overrides: Optional[str] = None
 
 @api_router.post("/personeller")
 async def create_personel(input: PersonelCreate, current_user: dict = Depends(get_current_user)):
@@ -3472,6 +3503,129 @@ async def get_personeller(current_user: dict = Depends(get_current_user)):
         rows = await cursor.fetchall()
     await db.close()
     return rows_to_list(rows)
+
+
+# ============================================================
+# Özel Durumlar (Custom Durumlar) — Kullanıcı tanımlı puantaj durumları
+# ============================================================
+
+CUSTOM_DURUM_RENK_PALETI = [
+    {"color": "text-orange-400", "badge": "bg-orange-500/20 text-orange-400 border-orange-500/40"},
+    {"color": "text-pink-400",   "badge": "bg-pink-500/20 text-pink-400 border-pink-500/40"},
+    {"color": "text-fuchsia-400","badge": "bg-fuchsia-500/20 text-fuchsia-400 border-fuchsia-500/40"},
+    {"color": "text-indigo-400", "badge": "bg-indigo-500/20 text-indigo-400 border-indigo-500/40"},
+    {"color": "text-lime-400",   "badge": "bg-lime-500/20 text-lime-400 border-lime-500/40"},
+    {"color": "text-amber-400",  "badge": "bg-amber-500/20 text-amber-400 border-amber-500/40"},
+    {"color": "text-violet-400", "badge": "bg-violet-500/20 text-violet-400 border-violet-500/40"},
+    {"color": "text-sky-400",    "badge": "bg-sky-500/20 text-sky-400 border-sky-500/40"},
+    {"color": "text-emerald-400","badge": "bg-emerald-500/20 text-emerald-400 border-emerald-500/40"},
+    {"color": "text-yellow-400", "badge": "bg-yellow-500/20 text-yellow-400 border-yellow-500/40"},
+]
+
+
+def _slugify_tr(text: str) -> str:
+    tr_map = str.maketrans("çÇğĞıİöÖşŞüÜ", "cCgGiIoOsSuU")
+    s = (text or "").translate(tr_map).lower().strip()
+    out = []
+    for ch in s:
+        if ch.isalnum():
+            out.append(ch)
+        elif ch in " -_":
+            out.append("_")
+    slug = "".join(out).strip("_")
+    while "__" in slug:
+        slug = slug.replace("__", "_")
+    return slug or "ozel"
+
+
+class CustomDurumCreate(BaseModel):
+    label: str
+    tip: str = "gunluk"  # 'gunluk' | 'saatlik'
+    def_carpan: float = 1.0
+
+
+class CustomDurumUpdate(BaseModel):
+    label: Optional[str] = None
+    tip: Optional[str] = None
+    def_carpan: Optional[float] = None
+    is_active: Optional[int] = None
+    sira: Optional[int] = None
+
+
+@api_router.get("/custom-durumlar")
+async def get_custom_durumlar(current_user: dict = Depends(get_current_user)):
+    db = await get_db()
+    async with db.execute("SELECT * FROM custom_durumlar ORDER BY sira ASC, created_at ASC") as cursor:
+        rows = await cursor.fetchall()
+    await db.close()
+    return rows_to_list(rows)
+
+
+@api_router.post("/custom-durumlar")
+async def create_custom_durum(data: CustomDurumCreate, current_user: dict = Depends(get_current_user)):
+    if not data.label or not data.label.strip():
+        raise HTTPException(status_code=400, detail="Durum adı boş olamaz")
+    if data.tip not in ("gunluk", "saatlik"):
+        raise HTTPException(status_code=400, detail="Tip 'gunluk' veya 'saatlik' olmalı")
+
+    db = await get_db()
+    # Slug üret, çakışma varsa _2, _3 ekle
+    base_slug = _slugify_tr(data.label)
+    slug = base_slug
+    i = 2
+    while True:
+        async with db.execute("SELECT 1 FROM custom_durumlar WHERE value = ?", (slug,)) as cur:
+            ex = await cur.fetchone()
+        if not ex:
+            break
+        slug = f"{base_slug}_{i}"
+        i += 1
+
+    # Renk otomatik ata (mevcut sayıya göre döngüsel)
+    async with db.execute("SELECT COUNT(*) as cnt FROM custom_durumlar") as cur:
+        cnt_row = await cur.fetchone()
+    cnt = cnt_row["cnt"] if cnt_row else 0
+    palet = CUSTOM_DURUM_RENK_PALETI[cnt % len(CUSTOM_DURUM_RENK_PALETI)]
+
+    new_id = str(uuid.uuid4())
+    now = datetime.now(timezone.utc).isoformat()
+    await db.execute(
+        """INSERT INTO custom_durumlar (id, value, label, tip, def_carpan, color_class, badge_class, is_active, sira, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?)""",
+        (new_id, slug, data.label.strip(), data.tip, float(data.def_carpan), palet["color"], palet["badge"], cnt, now),
+    )
+    await db.commit()
+    async with db.execute("SELECT * FROM custom_durumlar WHERE id = ?", (new_id,)) as cur:
+        row = await cur.fetchone()
+    await db.close()
+    return dict(row) if row else {"id": new_id}
+
+
+@api_router.put("/custom-durumlar/{durum_id}")
+async def update_custom_durum(durum_id: str, data: CustomDurumUpdate, current_user: dict = Depends(get_current_user)):
+    db = await get_db()
+    fields = []
+    values = []
+    payload = data.dict(exclude_unset=True)
+    for k, v in payload.items():
+        if v is None:
+            continue
+        if k == "tip" and v not in ("gunluk", "saatlik"):
+            continue
+        fields.append(f"{k} = ?")
+        values.append(v)
+    if not fields:
+        await db.close()
+        return {"ok": True, "msg": "Değişiklik yok"}
+    values.append(durum_id)
+    await db.execute(f"UPDATE custom_durumlar SET {', '.join(fields)} WHERE id = ?", values)
+    await db.commit()
+    async with db.execute("SELECT * FROM custom_durumlar WHERE id = ?", (durum_id,)) as cur:
+        row = await cur.fetchone()
+    await db.close()
+    if not row:
+        raise HTTPException(status_code=404, detail="Özel durum bulunamadı")
+    return dict(row)
 
 @api_router.get("/personeller/{id}")
 async def get_personel(id: str, current_user: dict = Depends(get_current_user)):

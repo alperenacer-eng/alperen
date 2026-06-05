@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { useAuth } from '@/context/AuthContext';
+import { useCustomDurumlar } from '@/context/CustomDurumlarContext';
 import { useModule } from '@/context/ModuleContext';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -43,8 +44,8 @@ import {
 
 const API_URL = process.env.REACT_APP_BACKEND_URL + '/api';
 
-// Puantaj durum tanımları
-const DURUM_OPTIONS = [
+// Puantaj durum tanımları (yerleşik durumlar — custom durumlar bunlara eklenir)
+const BASE_DURUM_OPTIONS = [
   { value: 'geldi', label: 'Geldi', icon: CheckCircle2, color: 'text-green-500', badgeClass: 'bg-green-500/20 text-green-400 border-green-500/40' },
   { value: 'izinli', label: 'İzinli', icon: FileText, color: 'text-blue-500', badgeClass: 'bg-blue-500/20 text-blue-400 border-blue-500/40' },
   { value: 'raporlu', label: 'Raporlu', icon: AlertCircle, color: 'text-yellow-500', badgeClass: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/40' },
@@ -59,10 +60,165 @@ const DURUM_OPTIONS = [
   { value: 'bayram_calisti', label: 'Bayram Çalıştı', icon: PartyPopper, color: 'text-fuchsia-500', badgeClass: 'bg-fuchsia-500/20 text-fuchsia-400 border-fuchsia-500/40' },
 ];
 
-const getDurumInfo = (val) => DURUM_OPTIONS.find(d => d.value === val) || DURUM_OPTIONS[0];
+// Custom durumu DURUM_OPTIONS biçimine çevirir
+const mapCustomToOption = (c) => ({
+  value: c.value,
+  label: c.label,
+  icon: Wand2,  // custom durumlar için generic icon
+  color: c.color_class || 'text-amber-400',
+  badgeClass: c.badge_class || 'bg-amber-500/20 text-amber-400 border-amber-500/40',
+  isCustom: true,
+  tip: c.tip,
+  def_carpan: c.def_carpan,
+});
+
+// Özel Durum Yönetimi Diyaloğu
+const CustomDurumYonetimDialog = ({ durumlar = [], onAdd, onUpdate }) => {
+  const [open, setOpen] = useState(false);
+  const [label, setLabel] = useState('');
+  const [tip, setTip] = useState('gunluk');
+  const [carpan, setCarpan] = useState('1.0');
+  const [saving, setSaving] = useState(false);
+
+  const handleEkle = async () => {
+    if (!label.trim()) { toast.error('Durum adı boş olamaz'); return; }
+    const c = parseFloat(carpan);
+    if (isNaN(c) || c < 0) { toast.error('Geçerli bir çarpan girin'); return; }
+    setSaving(true);
+    try {
+      await onAdd({ label: label.trim(), tip, def_carpan: c });
+      toast.success(`"${label}" durumu eklendi`);
+      setLabel(''); setTip('gunluk'); setCarpan('1.0');
+    } catch (err) {
+      console.error(err);
+      toast.error('Eklenemedi: ' + (err?.response?.data?.detail || err.message));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleToggleActive = async (d) => {
+    try {
+      await onUpdate(d.id, { is_active: d.is_active ? 0 : 1 });
+      toast.success(d.is_active ? `"${d.label}" pasifleştirildi` : `"${d.label}" aktifleştirildi`);
+    } catch (err) {
+      toast.error('Güncellenemedi');
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="outline" className="border-amber-700/60 text-amber-300 hover:bg-amber-600/10" data-testid="custom-durum-yonet-btn">
+          <Wand2 className="w-4 h-4 mr-2" />
+          Durum Yönet
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="bg-slate-900 border-slate-700 max-w-xl">
+        <DialogHeader>
+          <DialogTitle className="text-white flex items-center gap-2">
+            <Wand2 className="w-5 h-5 text-amber-400" />
+            Özel Puantaj Durumu Yönetimi
+          </DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
+          {/* Yeni Durum Ekle */}
+          <div className="p-4 bg-slate-800/60 rounded-lg space-y-3 border border-slate-700">
+            <h4 className="text-sm font-semibold text-amber-300">Yeni Özel Durum Ekle</h4>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+              <Input
+                placeholder="Durum Adı (örn. Eğitim İzni)"
+                value={label}
+                onChange={(e) => setLabel(e.target.value)}
+                className="bg-slate-950 border-slate-700 md:col-span-1"
+                data-testid="custom-durum-label-input"
+              />
+              <select
+                value={tip}
+                onChange={(e) => setTip(e.target.value)}
+                className="bg-slate-950 border border-slate-700 rounded-md px-3 py-2 text-sm text-slate-200"
+                data-testid="custom-durum-tip-select"
+              >
+                <option value="gunluk">Günlük (gün başına çarpan)</option>
+                <option value="saatlik">Saatlik (saat başına çarpan)</option>
+              </select>
+              <Input
+                type="number"
+                step="0.1"
+                placeholder="Çarpan (örn. 1.0)"
+                value={carpan}
+                onChange={(e) => setCarpan(e.target.value)}
+                className="bg-slate-950 border-slate-700"
+                data-testid="custom-durum-carpan-input"
+              />
+            </div>
+            <Button
+              onClick={handleEkle}
+              disabled={saving}
+              size="sm"
+              className="bg-amber-600 hover:bg-amber-700 text-white"
+              data-testid="custom-durum-ekle-btn"
+            >
+              <Plus className="w-4 h-4 mr-1" />
+              {saving ? 'Kaydediliyor...' : 'Ekle'}
+            </Button>
+            <p className="text-[11px] text-slate-500">
+              Renk otomatik atanır. Yeni durum hemen Puantaj, Belirleme, Raporlama ve Bordro modüllerinde kullanılabilir olur.
+            </p>
+          </div>
+
+          {/* Mevcut Özel Durumlar */}
+          <div>
+            <h4 className="text-sm font-semibold text-slate-300 mb-2">
+              Mevcut Özel Durumlar ({durumlar.length})
+            </h4>
+            <div className="space-y-2 max-h-72 overflow-y-auto" data-testid="custom-durum-liste">
+              {durumlar.length === 0 ? (
+                <p className="text-slate-500 text-sm text-center py-6">Henüz özel durum eklenmemiş</p>
+              ) : durumlar.map(d => (
+                <div
+                  key={d.id}
+                  className={`flex items-center justify-between p-3 rounded-lg border ${d.is_active ? 'bg-slate-800/40 border-slate-700' : 'bg-slate-900/40 border-slate-800 opacity-60'}`}
+                  data-testid={`custom-durum-row-${d.id}`}
+                >
+                  <div className="flex items-center gap-3 flex-1">
+                    <span className={`inline-block w-2.5 h-2.5 rounded-full ${d.color_class?.replace('text-', 'bg-') || 'bg-amber-400'}`} />
+                    <div className="flex-1">
+                      <div className={`font-semibold ${d.color_class || 'text-amber-400'}`}>{d.label}</div>
+                      <div className="text-xs text-slate-500">
+                        {d.tip === 'saatlik' ? 'Saatlik' : 'Günlük'} · Çarpan: {d.def_carpan}
+                        {!d.is_active && <span className="ml-2 text-rose-400">(Pasif)</span>}
+                      </div>
+                    </div>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleToggleActive(d)}
+                    className={d.is_active ? 'border-rose-700 text-rose-300 hover:bg-rose-600/10' : 'border-emerald-700 text-emerald-300 hover:bg-emerald-600/10'}
+                    data-testid={`custom-durum-toggle-${d.id}`}
+                  >
+                    {d.is_active ? 'Pasifleştir' : 'Aktifleştir'}
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+};
 
 const Puantaj = () => {
   const { token } = useAuth();
+  const { activeCustomDurumlar, addDurum: addCustomDurum, updateDurum: updateCustomDurum, customDurumlar } = useCustomDurumlar();
+  // Merged DURUM_OPTIONS: yerleşik + aktif custom durumlar
+  const DURUM_OPTIONS = React.useMemo(() => [
+    ...BASE_DURUM_OPTIONS,
+    ...activeCustomDurumlar.map(mapCustomToOption),
+  ], [activeCustomDurumlar]);
+  const getDurumInfo = (val) => DURUM_OPTIONS.find(d => d.value === val) || DURUM_OPTIONS[0];
   const { currentModule } = useModule();
   const navigate = useNavigate();
   
@@ -834,6 +990,12 @@ const Puantaj = () => {
             <p className="text-slate-400">Günlük personel giriş çıkış ve mesai takibi</p>
           </div>
           {/* Tesis Yönetimi Dialog */}
+          <div className="flex gap-2">
+          <CustomDurumYonetimDialog
+            durumlar={customDurumlar}
+            onAdd={addCustomDurum}
+            onUpdate={updateCustomDurum}
+          />
           <Dialog open={tesisDialogOpen} onOpenChange={setTesisDialogOpen}>
             <DialogTrigger asChild>
               <Button variant="outline" className="border-slate-700">
@@ -918,6 +1080,7 @@ const Puantaj = () => {
               </div>
             </DialogContent>
           </Dialog>
+          </div>
         </div>
       </div>
 

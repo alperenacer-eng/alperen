@@ -32,13 +32,14 @@ import {
 import * as XLSX from 'xlsx';
 import { useColumnOrder } from '@/hooks/useColumnOrder';
 import { DraggableTableHead } from '@/components/DraggableTableHead';
+import { useCustomDurumlar } from '@/context/CustomDurumlarContext';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL + '/api';
 
 const formatCurrency = (v) => new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY', maximumFractionDigits: 0 }).format(v || 0);
 
-// Puantaj durum başlıkları (Puantaj sayfasıyla aynı sıra)
-const DURUM_KOLONLAR = [
+// Puantaj durum başlıkları (Puantaj sayfasıyla aynı sıra) - yerleşik
+const BASE_DURUM_KOLONLAR = [
   { value: 'geldi', label: 'Geldi', short: 'Geldi', color: 'text-green-400' },
   { value: 'izinli', label: 'İzinli', short: 'İzinli', color: 'text-blue-400' },
   { value: 'raporlu', label: 'Raporlu', short: 'Raporlu', color: 'text-yellow-400' },
@@ -57,6 +58,21 @@ const PuantajRaporlama = () => {
   const { token } = useAuth();
   const { currentModule } = useModule();
   const navigate = useNavigate();
+  const { activeCustomDurumlar } = useCustomDurumlar();
+
+  // Yerleşik + aktif custom durumları birleştir
+  const DURUM_KOLONLAR = React.useMemo(() => [
+    ...BASE_DURUM_KOLONLAR,
+    ...activeCustomDurumlar.map(c => ({
+      value: c.value,
+      label: c.label,
+      short: c.label.length > 10 ? c.label.slice(0, 9) + '…' : c.label,
+      color: c.color_class || 'text-amber-400',
+      isCustom: true,
+      tip: c.tip,
+      def_carpan: c.def_carpan,
+    })),
+  ], [activeCustomDurumlar]);
 
   // Giriş-çıkış-fazla mesai'den çalışılan süreyi "Xsa Ydk" olarak hesaplar
   const calismaSuresi = (p) => {
@@ -210,8 +226,17 @@ const PuantajRaporlama = () => {
     const rtBirim = applyOvr(personel.ucret_override_resmi_tatil_calisti,  Math.ceil(gunluk * rc));
     const eksikCarpan = parseFloat(personel.durum_carpan_eksik_calisma ?? 1.0);
     const eksikBirim = applyOvr(personel.ucret_override_eksik_calisma,      Math.ceil(saatlik * eksikCarpan));
+    // Custom durumlar için JSON çarpan/override parse
+    const customCarpanlar = (() => {
+      try { return JSON.parse(personel.custom_durum_carpanlar || '{}') || {}; } catch (_) { return {}; }
+    })();
+    const customOverrides = (() => {
+      try { return JSON.parse(personel.custom_durum_overrides || '{}') || {}; } catch (_) { return {}; }
+    })();
     let toplamFm = 0, pazarGun = 0, rtGun = 0;
     const durumGun = { izinli:0, raporlu:0, hafta_tatili:0, resmi_tatil:0, bayram_tatili:0, izinsiz_gelmedi:0, olum_izni:0, dogum_izni:0 };
+    // Aktif custom durumlar için sayım slotları aç
+    activeCustomDurumlar.forEach(c => { durumGun[c.value] = 0; });
     puantajlari.forEach(p => {
       const durum = (p.durum || 'geldi').toLowerCase();
       const fm = parseFloat(p.fazla_mesai) || 0;
@@ -230,7 +255,7 @@ const PuantajRaporlama = () => {
     const fmUcret = toplamFm > 0 ? Math.ceil(fmBirim * toplamFm) : 0;
     const pzUcret = pazarGun > 0 ? Math.ceil(pzBirim * pazarGun) : 0;
     const rtUcret = rtGun > 0 ? Math.ceil(rtBirim * rtGun) : 0;
-    // 7 durum bazlı ek ücret
+    // Durum bazlı ek ücret (yerleşik + custom)
     const durumMap = [
       ['izinli',          personel.durum_carpan_izinli,          personel.ucret_override_izinli,          1.0],
       ['raporlu',         personel.durum_carpan_raporlu,         personel.ucret_override_raporlu,         0.0],
@@ -258,6 +283,16 @@ const PuantajRaporlama = () => {
       const gun = durumGun[k] || 0;
       if (gun <= 0) return;
       if (birim > 0) durumEk += Math.ceil(birim * gun);
+    });
+    // Custom durumlar için birim hesabı + ek ücret toplamı
+    activeCustomDurumlar.forEach(cd => {
+      const carp = customCarpanlar[cd.value] !== undefined ? parseFloat(customCarpanlar[cd.value]) : parseFloat(cd.def_carpan ?? 1.0);
+      const ovr = customOverrides[cd.value];
+      const baz = (cd.tip === 'saatlik') ? saatlik : gunluk;
+      const birim = applyOvr(ovr, Math.ceil(baz * carp));
+      birimFiyatlar[cd.value] = birim;
+      const gun = durumGun[cd.value] || 0;
+      if (gun > 0 && birim > 0) durumEk += Math.ceil(birim * gun);
     });
     return { fmUcret, pzUcret, rtUcret, durumEk, toplam: fmUcret + pzUcret + rtUcret + durumEk, birimFiyatlar };
   };
@@ -725,7 +760,7 @@ const PuantajRaporlama = () => {
         </TableCell>
       )
     },
-  ], []);
+  ], [DURUM_KOLONLAR]);
 
   // PERSONEL EXPORT MAP: her sütun key'i için Excel/PDF için { label, value(p, idx) }
   const personelExportMap = React.useMemo(() => {
@@ -755,7 +790,7 @@ const PuantajRaporlama = () => {
       }};
     });
     return map;
-  }, []);
+  }, [DURUM_KOLONLAR]);
 
   // 2) Tesis Bazlı tablo sütunları
   const tesisColumns = React.useMemo(() => [
@@ -878,8 +913,7 @@ const PuantajRaporlama = () => {
       key: 'not', label: 'Not', headCls: 'text-slate-300 min-w-[140px]',
       renderCell: (p) => <TableCell key="not" className="text-slate-400 text-sm">{p.notlar || '-'}</TableCell>
     },
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  ], []);
+  ], [DURUM_KOLONLAR]);
 
   // Sütun sıraları (localStorage'da saklanır)
   const personelColKeys = React.useMemo(() => personelColumns.map(c => c.key), [personelColumns]);
@@ -930,7 +964,7 @@ const PuantajRaporlama = () => {
       m[`durum_${d.value}`] = { label: d.label, value: (p) => ((p.durum || 'geldi') === d.value ? 1 : 0) };
     });
     return m;
-  }, []);
+  }, [DURUM_KOLONLAR]);
 
   return (
     <div className="animate-fade-in">
