@@ -15,6 +15,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { SortableTable } from '@/components/SortableTable';
 import {
   Dialog,
   DialogContent,
@@ -334,32 +335,33 @@ const IzinYonetimi = () => {
             <div className="p-8 text-center text-slate-400">Henüz izin talebi bulunmuyor</div>
           ) : (
             <ScrollArea>
-              <Table>
-                <TableHeader>
-                  <TableRow className="border-slate-800 bg-slate-900/50">
-                    <TableHead className="text-slate-300">Personel</TableHead>
-                    <TableHead className="text-slate-300">İzin Türü</TableHead>
-                    <TableHead className="text-slate-300">Başlangıç</TableHead>
-                    <TableHead className="text-slate-300">Bitiş</TableHead>
-                    <TableHead className="text-slate-300">Gün</TableHead>
-                    <TableHead className="text-slate-300">Durum</TableHead>
-                    <TableHead className="text-slate-300">İşlemler</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {izinler.map((izin, idx) => (
-                    <TableRow key={izin.id} className={`border-slate-800 ${idx % 2 === 0 ? 'bg-slate-900/30' : 'bg-slate-900/50'}`}>
-                      <TableCell className="font-medium text-white">{izin.personel_adi}</TableCell>
-                      <TableCell className="text-slate-300">{izin.izin_turu}</TableCell>
-                      <TableCell className="text-slate-300">{izin.baslangic_tarihi}</TableCell>
-                      <TableCell className="text-slate-300">{izin.bitis_tarihi}</TableCell>
-                      <TableCell className="text-slate-300">{izin.gun_sayisi}</TableCell>
-                      <TableCell>
+              <SortableTable
+                storageKey="izin-yonetimi-cols"
+                data={izinler}
+                rowKey={(izin) => izin.id}
+                emptyText="Henüz izin kaydı yok"
+                columns={[
+                  { key: 'personel', label: 'Personel', headCls: 'text-slate-300',
+                    renderCell: (izin) => <TableCell key="personel" className="font-medium text-white">{izin.personel_adi}</TableCell> },
+                  { key: 'tur', label: 'İzin Türü', headCls: 'text-slate-300',
+                    renderCell: (izin) => <TableCell key="tur" className="text-slate-300">{izin.izin_turu}</TableCell> },
+                  { key: 'bas', label: 'Başlangıç', headCls: 'text-slate-300',
+                    renderCell: (izin) => <TableCell key="bas" className="text-slate-300">{izin.baslangic_tarihi}</TableCell> },
+                  { key: 'bit', label: 'Bitiş', headCls: 'text-slate-300',
+                    renderCell: (izin) => <TableCell key="bit" className="text-slate-300">{izin.bitis_tarihi}</TableCell> },
+                  { key: 'gun', label: 'Gün', headCls: 'text-slate-300',
+                    renderCell: (izin) => <TableCell key="gun" className="text-slate-300">{izin.gun_sayisi}</TableCell> },
+                  { key: 'durum', label: 'Durum', headCls: 'text-slate-300',
+                    renderCell: (izin) => (
+                      <TableCell key="durum">
                         <span className={`px-2 py-1 rounded text-xs ${getDurumBadge(izin.durum)}`}>
                           {izin.durum}
                         </span>
                       </TableCell>
-                      <TableCell>
+                    ) },
+                  { key: 'islem', label: 'İşlemler', headCls: 'text-slate-300',
+                    renderCell: (izin) => (
+                      <TableCell key="islem">
                         <div className="flex gap-1">
                           {izin.durum === 'Beklemede' && (
                             <>
@@ -379,10 +381,9 @@ const IzinYonetimi = () => {
                           </Button>
                         </div>
                       </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                    ) },
+                ]}
+              />
             </ScrollArea>
           )}
         </CardContent>

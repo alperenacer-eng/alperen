@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { SortableTable } from '@/components/SortableTable';
 import { toast } from 'sonner';
 import {
   Plus,
@@ -248,43 +249,28 @@ const AracKaynaklar = () => {
               </Button>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow className="border-slate-800">
-                    <TableHead className="text-slate-400">Araç Cinsi</TableHead>
-                    <TableHead className="text-slate-400">Eklenme Tarihi</TableHead>
-                    <TableHead className="text-slate-400 text-right">İşlem</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filterData(aracCinsleri).length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={3} className="text-center text-slate-400 py-8">
-                        Henüz araç cinsi eklenmemiş
+              <SortableTable
+                storageKey="arac-kaynaklar-cins-cols"
+                data={filterData(aracCinsleri)}
+                rowKey={(item) => item.id}
+                rowClassName={() => 'border-slate-800'}
+                headerRowClassName="border-slate-800"
+                emptyText="Henüz araç cinsi eklenmemiş"
+                columns={[
+                  { key: 'ad', label: 'Araç Cinsi', headCls: 'text-slate-400',
+                    renderCell: (item) => <TableCell key="ad" className="font-medium text-white">{item.name}</TableCell> },
+                  { key: 'tarih', label: 'Eklenme Tarihi', headCls: 'text-slate-400',
+                    renderCell: (item) => <TableCell key="tarih" className="text-slate-400">{item.created_at ? new Date(item.created_at).toLocaleDateString('tr-TR') : '-'}</TableCell> },
+                  { key: 'islem', label: 'İşlem', headCls: 'text-slate-400 text-right',
+                    renderCell: (item) => (
+                      <TableCell key="islem" className="text-right">
+                        <Button size="sm" variant="ghost" onClick={() => handleDelete('arac-cinsleri', item.id)} className="text-red-400 hover:text-red-300 hover:bg-red-500/20">
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
                       </TableCell>
-                    </TableRow>
-                  ) : (
-                    filterData(aracCinsleri).map((item) => (
-                      <TableRow key={item.id} className="border-slate-800">
-                        <TableCell className="font-medium text-white">{item.name}</TableCell>
-                        <TableCell className="text-slate-400">
-                          {item.created_at ? new Date(item.created_at).toLocaleDateString('tr-TR') : '-'}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => handleDelete('arac-cinsleri', item.id)}
-                            className="text-red-400 hover:text-red-300 hover:bg-red-500/20"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
+                    ) },
+                ]}
+              />
             </CardContent>
           </Card>
         </TabsContent>
@@ -300,43 +286,28 @@ const AracKaynaklar = () => {
               </Button>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow className="border-slate-800">
-                    <TableHead className="text-slate-400">Marka</TableHead>
-                    <TableHead className="text-slate-400">Eklenme Tarihi</TableHead>
-                    <TableHead className="text-slate-400 text-right">İşlem</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filterData(markalar).length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={3} className="text-center text-slate-400 py-8">
-                        Henüz marka eklenmemiş
+              <SortableTable
+                storageKey="arac-kaynaklar-marka-cols"
+                data={filterData(markalar)}
+                rowKey={(item) => item.id}
+                rowClassName={() => 'border-slate-800'}
+                headerRowClassName="border-slate-800"
+                emptyText="Henüz marka eklenmemiş"
+                columns={[
+                  { key: 'ad', label: 'Marka', headCls: 'text-slate-400',
+                    renderCell: (item) => <TableCell key="ad" className="font-medium text-white">{item.name}</TableCell> },
+                  { key: 'tarih', label: 'Eklenme Tarihi', headCls: 'text-slate-400',
+                    renderCell: (item) => <TableCell key="tarih" className="text-slate-400">{item.created_at ? new Date(item.created_at).toLocaleDateString('tr-TR') : '-'}</TableCell> },
+                  { key: 'islem', label: 'İşlem', headCls: 'text-slate-400 text-right',
+                    renderCell: (item) => (
+                      <TableCell key="islem" className="text-right">
+                        <Button size="sm" variant="ghost" onClick={() => handleDelete('markalar', item.id)} className="text-red-400 hover:text-red-300 hover:bg-red-500/20">
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
                       </TableCell>
-                    </TableRow>
-                  ) : (
-                    filterData(markalar).map((item) => (
-                      <TableRow key={item.id} className="border-slate-800">
-                        <TableCell className="font-medium text-white">{item.name}</TableCell>
-                        <TableCell className="text-slate-400">
-                          {item.created_at ? new Date(item.created_at).toLocaleDateString('tr-TR') : '-'}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => handleDelete('markalar', item.id)}
-                            className="text-red-400 hover:text-red-300 hover:bg-red-500/20"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
+                    ) },
+                ]}
+              />
             </CardContent>
           </Card>
         </TabsContent>
@@ -352,45 +323,30 @@ const AracKaynaklar = () => {
               </Button>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow className="border-slate-800">
-                    <TableHead className="text-slate-400">Model</TableHead>
-                    <TableHead className="text-slate-400">Marka</TableHead>
-                    <TableHead className="text-slate-400">Eklenme Tarihi</TableHead>
-                    <TableHead className="text-slate-400 text-right">İşlem</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filterData(modeller).length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={4} className="text-center text-slate-400 py-8">
-                        Henüz model eklenmemiş
+              <SortableTable
+                storageKey="arac-kaynaklar-model-cols"
+                data={filterData(modeller)}
+                rowKey={(item) => item.id}
+                rowClassName={() => 'border-slate-800'}
+                headerRowClassName="border-slate-800"
+                emptyText="Henüz model eklenmemiş"
+                columns={[
+                  { key: 'ad', label: 'Model', headCls: 'text-slate-400',
+                    renderCell: (item) => <TableCell key="ad" className="font-medium text-white">{item.name}</TableCell> },
+                  { key: 'marka', label: 'Marka', headCls: 'text-slate-400',
+                    renderCell: (item) => <TableCell key="marka" className="text-slate-300">{item.marka || '-'}</TableCell> },
+                  { key: 'tarih', label: 'Eklenme Tarihi', headCls: 'text-slate-400',
+                    renderCell: (item) => <TableCell key="tarih" className="text-slate-400">{item.created_at ? new Date(item.created_at).toLocaleDateString('tr-TR') : '-'}</TableCell> },
+                  { key: 'islem', label: 'İşlem', headCls: 'text-slate-400 text-right',
+                    renderCell: (item) => (
+                      <TableCell key="islem" className="text-right">
+                        <Button size="sm" variant="ghost" onClick={() => handleDelete('modeller', item.id)} className="text-red-400 hover:text-red-300 hover:bg-red-500/20">
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
                       </TableCell>
-                    </TableRow>
-                  ) : (
-                    filterData(modeller).map((item) => (
-                      <TableRow key={item.id} className="border-slate-800">
-                        <TableCell className="font-medium text-white">{item.name}</TableCell>
-                        <TableCell className="text-slate-300">{item.marka || '-'}</TableCell>
-                        <TableCell className="text-slate-400">
-                          {item.created_at ? new Date(item.created_at).toLocaleDateString('tr-TR') : '-'}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => handleDelete('modeller', item.id)}
-                            className="text-red-400 hover:text-red-300 hover:bg-red-500/20"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
+                    ) },
+                ]}
+              />
             </CardContent>
           </Card>
         </TabsContent>
@@ -406,47 +362,32 @@ const AracKaynaklar = () => {
               </Button>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow className="border-slate-800">
-                    <TableHead className="text-slate-400">Şirket Adı</TableHead>
-                    <TableHead className="text-slate-400">Vergi No</TableHead>
-                    <TableHead className="text-slate-400">Adres</TableHead>
-                    <TableHead className="text-slate-400">Eklenme Tarihi</TableHead>
-                    <TableHead className="text-slate-400 text-right">İşlem</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filterData(sirketler).length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={5} className="text-center text-slate-400 py-8">
-                        Henüz şirket eklenmemiş
+              <SortableTable
+                storageKey="arac-kaynaklar-sirket-cols"
+                data={filterData(sirketler)}
+                rowKey={(item) => item.id}
+                rowClassName={() => 'border-slate-800'}
+                headerRowClassName="border-slate-800"
+                emptyText="Henüz şirket eklenmemiş"
+                columns={[
+                  { key: 'ad', label: 'Şirket Adı', headCls: 'text-slate-400',
+                    renderCell: (item) => <TableCell key="ad" className="font-medium text-white">{item.name}</TableCell> },
+                  { key: 'vergi', label: 'Vergi No', headCls: 'text-slate-400',
+                    renderCell: (item) => <TableCell key="vergi" className="text-slate-300">{item.vergi_no || '-'}</TableCell> },
+                  { key: 'adres', label: 'Adres', headCls: 'text-slate-400',
+                    renderCell: (item) => <TableCell key="adres" className="text-slate-300">{item.adres || '-'}</TableCell> },
+                  { key: 'tarih', label: 'Eklenme Tarihi', headCls: 'text-slate-400',
+                    renderCell: (item) => <TableCell key="tarih" className="text-slate-400">{item.created_at ? new Date(item.created_at).toLocaleDateString('tr-TR') : '-'}</TableCell> },
+                  { key: 'islem', label: 'İşlem', headCls: 'text-slate-400 text-right',
+                    renderCell: (item) => (
+                      <TableCell key="islem" className="text-right">
+                        <Button size="sm" variant="ghost" onClick={() => handleDelete('sirketler', item.id)} className="text-red-400 hover:text-red-300 hover:bg-red-500/20">
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
                       </TableCell>
-                    </TableRow>
-                  ) : (
-                    filterData(sirketler).map((item) => (
-                      <TableRow key={item.id} className="border-slate-800">
-                        <TableCell className="font-medium text-white">{item.name}</TableCell>
-                        <TableCell className="text-slate-300">{item.vergi_no || '-'}</TableCell>
-                        <TableCell className="text-slate-300">{item.adres || '-'}</TableCell>
-                        <TableCell className="text-slate-400">
-                          {item.created_at ? new Date(item.created_at).toLocaleDateString('tr-TR') : '-'}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => handleDelete('sirketler', item.id)}
-                            className="text-red-400 hover:text-red-300 hover:bg-red-500/20"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
+                    ) },
+                ]}
+              />
             </CardContent>
           </Card>
         </TabsContent>
@@ -462,45 +403,32 @@ const AracKaynaklar = () => {
               </Button>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow className="border-slate-800">
-                    <TableHead className="text-slate-400">Firma Adı</TableHead>
-                    <TableHead className="text-slate-400">Telefon</TableHead>
-                    <TableHead className="text-slate-400">E-posta</TableHead>
-                    <TableHead className="text-slate-400">Adres</TableHead>
-                    <TableHead className="text-slate-400 text-right">İşlem</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filterData(anaSigortaFirmalari).length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={5} className="text-center text-slate-400 py-8">
-                        Henüz ana sigorta firması eklenmemiş
+              <SortableTable
+                storageKey="arac-kaynaklar-anasig-cols"
+                data={filterData(anaSigortaFirmalari)}
+                rowKey={(item) => item.id}
+                rowClassName={() => 'border-slate-800'}
+                headerRowClassName="border-slate-800"
+                emptyText="Henüz ana sigorta firması eklenmemiş"
+                columns={[
+                  { key: 'ad', label: 'Firma Adı', headCls: 'text-slate-400',
+                    renderCell: (item) => <TableCell key="ad" className="font-medium text-white">{item.name}</TableCell> },
+                  { key: 'tel', label: 'Telefon', headCls: 'text-slate-400',
+                    renderCell: (item) => <TableCell key="tel" className="text-slate-300">{item.telefon || '-'}</TableCell> },
+                  { key: 'email', label: 'E-posta', headCls: 'text-slate-400',
+                    renderCell: (item) => <TableCell key="email" className="text-slate-300">{item.email || '-'}</TableCell> },
+                  { key: 'adres', label: 'Adres', headCls: 'text-slate-400',
+                    renderCell: (item) => <TableCell key="adres" className="text-slate-300">{item.adres || '-'}</TableCell> },
+                  { key: 'islem', label: 'İşlem', headCls: 'text-slate-400 text-right',
+                    renderCell: (item) => (
+                      <TableCell key="islem" className="text-right">
+                        <Button size="sm" variant="ghost" onClick={() => handleDelete('ana-sigorta-firmalari', item.id)} className="text-red-400 hover:text-red-300 hover:bg-red-500/20">
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
                       </TableCell>
-                    </TableRow>
-                  ) : (
-                    filterData(anaSigortaFirmalari).map((item) => (
-                      <TableRow key={item.id} className="border-slate-800">
-                        <TableCell className="font-medium text-white">{item.name}</TableCell>
-                        <TableCell className="text-slate-300">{item.telefon || '-'}</TableCell>
-                        <TableCell className="text-slate-300">{item.email || '-'}</TableCell>
-                        <TableCell className="text-slate-300">{item.adres || '-'}</TableCell>
-                        <TableCell className="text-right">
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => handleDelete('ana-sigorta-firmalari', item.id)}
-                            className="text-red-400 hover:text-red-300 hover:bg-red-500/20"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
+                    ) },
+                ]}
+              />
             </CardContent>
           </Card>
         </TabsContent>
@@ -516,47 +444,34 @@ const AracKaynaklar = () => {
               </Button>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow className="border-slate-800">
-                    <TableHead className="text-slate-400">Acenta Adı</TableHead>
-                    <TableHead className="text-slate-400">Ana Firma</TableHead>
-                    <TableHead className="text-slate-400">Yetkili Kişi</TableHead>
-                    <TableHead className="text-slate-400">Telefon</TableHead>
-                    <TableHead className="text-slate-400">E-posta</TableHead>
-                    <TableHead className="text-slate-400 text-right">İşlem</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filterData(sigortaAcentalari).length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={6} className="text-center text-slate-400 py-8">
-                        Henüz sigorta acentası eklenmemiş
+              <SortableTable
+                storageKey="arac-kaynaklar-acenta-cols"
+                data={filterData(sigortaAcentalari)}
+                rowKey={(item) => item.id}
+                rowClassName={() => 'border-slate-800'}
+                headerRowClassName="border-slate-800"
+                emptyText="Henüz sigorta acentası eklenmemiş"
+                columns={[
+                  { key: 'ad', label: 'Acenta Adı', headCls: 'text-slate-400',
+                    renderCell: (item) => <TableCell key="ad" className="font-medium text-white">{item.name}</TableCell> },
+                  { key: 'ana', label: 'Ana Firma', headCls: 'text-slate-400',
+                    renderCell: (item) => <TableCell key="ana" className="text-slate-300">{item.ana_firma || '-'}</TableCell> },
+                  { key: 'yetkili', label: 'Yetkili Kişi', headCls: 'text-slate-400',
+                    renderCell: (item) => <TableCell key="yetkili" className="text-slate-300">{item.yetkili_kisi || '-'}</TableCell> },
+                  { key: 'tel', label: 'Telefon', headCls: 'text-slate-400',
+                    renderCell: (item) => <TableCell key="tel" className="text-slate-300">{item.telefon || '-'}</TableCell> },
+                  { key: 'email', label: 'E-posta', headCls: 'text-slate-400',
+                    renderCell: (item) => <TableCell key="email" className="text-slate-300">{item.email || '-'}</TableCell> },
+                  { key: 'islem', label: 'İşlem', headCls: 'text-slate-400 text-right',
+                    renderCell: (item) => (
+                      <TableCell key="islem" className="text-right">
+                        <Button size="sm" variant="ghost" onClick={() => handleDelete('sigorta-acentalari', item.id)} className="text-red-400 hover:text-red-300 hover:bg-red-500/20">
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
                       </TableCell>
-                    </TableRow>
-                  ) : (
-                    filterData(sigortaAcentalari).map((item) => (
-                      <TableRow key={item.id} className="border-slate-800">
-                        <TableCell className="font-medium text-white">{item.name}</TableCell>
-                        <TableCell className="text-slate-300">{item.ana_firma || '-'}</TableCell>
-                        <TableCell className="text-slate-300">{item.yetkili_kisi || '-'}</TableCell>
-                        <TableCell className="text-slate-300">{item.telefon || '-'}</TableCell>
-                        <TableCell className="text-slate-300">{item.email || '-'}</TableCell>
-                        <TableCell className="text-right">
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => handleDelete('sigorta-acentalari', item.id)}
-                            className="text-red-400 hover:text-red-300 hover:bg-red-500/20"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
+                    ) },
+                ]}
+              />
             </CardContent>
           </Card>
         </TabsContent>

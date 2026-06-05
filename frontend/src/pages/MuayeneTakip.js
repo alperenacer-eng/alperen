@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { SortableTable } from '@/components/SortableTable';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -484,154 +485,94 @@ const MuayeneTakip = () => {
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow className="border-slate-800">
-                  <TableHead className="text-slate-400">Plaka</TableHead>
-                  <TableHead className="text-slate-400">Evrak</TableHead>
-                  <TableHead className="text-slate-400">Araç Bilgisi</TableHead>
-                  <TableHead className="text-slate-400">İlk Muayene Tarihi</TableHead>
-                  <TableHead className="text-slate-400">Son Muayene Tarihi</TableHead>
-                  <TableHead className="text-slate-400">Durum</TableHead>
-                  <TableHead className="text-slate-400 text-right">İşlem</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredAraclar.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={7} className="text-center text-slate-400 py-8">
-                      {searchTerm ? 'Araç bulunamadı' : 'Henüz araç eklenmemiş'}
+            <SortableTable
+              storageKey="muayene-takip-aktif-cols"
+              data={filteredAraclar}
+              rowKey={(arac) => arac.id}
+              rowClassName={() => 'border-slate-800'}
+              headerRowClassName="border-slate-800"
+              emptyText={searchTerm ? 'Araç bulunamadı' : 'Henüz araç eklenmemiş'}
+              columns={[
+                { key: 'plaka', label: 'Plaka', headCls: 'text-slate-400',
+                  renderCell: (arac) => <TableCell key="plaka" className="font-medium text-white">{arac.plaka}</TableCell> },
+                { key: 'evrak', label: 'Evrak', headCls: 'text-slate-400',
+                  renderCell: (arac) => (
+                    <TableCell key="evrak">
+                      <input
+                        type="file"
+                        ref={el => fileInputRefs.current[arac.id] = el}
+                        className="hidden"
+                        onChange={(e) => { if (e.target.files[0]) { handleFileUpload(arac.id, e.target.files[0]); } }}
+                      />
+                      {arac.muayene_evrak ? (
+                        <div className="flex items-center gap-1">
+                          <Button size="sm" variant="outline" className="h-7 text-xs bg-green-500/10 border-green-500/30 text-green-400 hover:bg-green-500/20" onClick={() => window.open(`${BACKEND_URL}${arac.muayene_evrak}`, '_blank')}>
+                            <Eye className="w-3 h-3 mr-1" /> {getFileExtension(arac.muayene_evrak)}
+                          </Button>
+                          <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-red-400 hover:bg-red-500/20" onClick={() => handleDeleteFile(arac.id)}>
+                            <Trash2 className="w-3 h-3" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <Button size="sm" variant="outline" className="h-7 text-xs" disabled={uploading[arac.id]} onClick={() => fileInputRefs.current[arac.id]?.click()}>
+                          {uploading[arac.id] ? <span className="animate-pulse">Yükleniyor...</span> : <><Upload className="w-3 h-3 mr-1" /> Yükle</>}
+                        </Button>
+                      )}
                     </TableCell>
-                  </TableRow>
-                ) : (
-                  filteredAraclar.map((arac) => {
+                  ) },
+                { key: 'arac', label: 'Araç Bilgisi', headCls: 'text-slate-400',
+                  renderCell: (arac) => (
+                    <TableCell key="arac" className="text-slate-300">
+                      <div>
+                        <span className="font-medium">{arac.marka} {arac.model}</span>
+                        {arac.model_yili && <span className="text-slate-500 ml-1">({arac.model_yili})</span>}
+                      </div>
+                      {arac.arac_cinsi && <div className="text-xs text-slate-500">{arac.arac_cinsi}</div>}
+                    </TableCell>
+                  ) },
+                { key: 'ilk', label: 'İlk Muayene Tarihi', headCls: 'text-slate-400',
+                  renderCell: (arac) => (
+                    <TableCell key="ilk">
+                      <Input type="date" value={editedData[arac.id]?.ilk_muayene_tarihi || ''} onChange={(e) => handleDateChange(arac.id, 'ilk_muayene_tarihi', e.target.value)} className="bg-slate-800/50 border-slate-700 w-40" />
+                    </TableCell>
+                  ) },
+                { key: 'son', label: 'Son Muayene Tarihi', headCls: 'text-slate-400',
+                  renderCell: (arac) => (
+                    <TableCell key="son">
+                      <Input type="date" value={editedData[arac.id]?.son_muayene_tarihi || ''} onChange={(e) => handleDateChange(arac.id, 'son_muayene_tarihi', e.target.value)} className="bg-slate-800/50 border-slate-700 w-40" />
+                    </TableCell>
+                  ) },
+                { key: 'durum', label: 'Durum', headCls: 'text-slate-400',
+                  renderCell: (arac) => {
                     const muayeneStatus = getMuayeneStatus(editedData[arac.id]?.son_muayene_tarihi || arac.son_muayene_tarihi);
                     const StatusIcon = muayeneStatus.icon;
-                    
                     return (
-                      <TableRow key={arac.id} className="border-slate-800">
-                        <TableCell className="font-medium text-white">{arac.plaka}</TableCell>
-                        <TableCell>
-                          <input
-                            type="file"
-                            ref={el => fileInputRefs.current[arac.id] = el}
-                            className="hidden"
-                            onChange={(e) => {
-                              if (e.target.files[0]) {
-                                handleFileUpload(arac.id, e.target.files[0]);
-                              }
-                            }}
-                          />
-                          {arac.muayene_evrak ? (
-                            <div className="flex items-center gap-1">
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="h-7 text-xs bg-green-500/10 border-green-500/30 text-green-400 hover:bg-green-500/20"
-                                onClick={() => window.open(`${BACKEND_URL}${arac.muayene_evrak}`, '_blank')}
-                              >
-                                <Eye className="w-3 h-3 mr-1" />
-                                {getFileExtension(arac.muayene_evrak)}
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="h-7 w-7 p-0 text-red-400 hover:bg-red-500/20"
-                                onClick={() => handleDeleteFile(arac.id)}
-                              >
-                                <Trash2 className="w-3 h-3" />
-                              </Button>
-                            </div>
-                          ) : (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="h-7 text-xs"
-                              disabled={uploading[arac.id]}
-                              onClick={() => fileInputRefs.current[arac.id]?.click()}
-                            >
-                              {uploading[arac.id] ? (
-                                <span className="animate-pulse">Yükleniyor...</span>
-                              ) : (
-                                <>
-                                  <Upload className="w-3 h-3 mr-1" />
-                                  Yükle
-                                </>
-                              )}
-                            </Button>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-slate-300">
-                          <div>
-                            <span className="font-medium">{arac.marka} {arac.model}</span>
-                            {arac.model_yili && <span className="text-slate-500 ml-1">({arac.model_yili})</span>}
-                          </div>
-                          {arac.arac_cinsi && <div className="text-xs text-slate-500">{arac.arac_cinsi}</div>}
-                        </TableCell>
-                        <TableCell>
-                          <Input
-                            type="date"
-                            value={editedData[arac.id]?.ilk_muayene_tarihi || ''}
-                            onChange={(e) => handleDateChange(arac.id, 'ilk_muayene_tarihi', e.target.value)}
-                            className="bg-slate-800/50 border-slate-700 w-40"
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <Input
-                            type="date"
-                            value={editedData[arac.id]?.son_muayene_tarihi || ''}
-                            onChange={(e) => handleDateChange(arac.id, 'son_muayene_tarihi', e.target.value)}
-                            className="bg-slate-800/50 border-slate-700 w-40"
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <Badge className={`${muayeneStatus.color} flex items-center gap-1 w-fit`}>
-                            {StatusIcon && <StatusIcon className="w-3 h-3" />}
-                            {muayeneStatus.label}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => openDuzeltModal(arac)}
-                              className="text-blue-400 border-blue-400/30 hover:bg-blue-500/20"
-                            >
-                              <Edit className="w-4 h-4 mr-1" />
-                              Düzelt
-                            </Button>
-                            <Button
-                              size="sm"
-                              onClick={() => handleSave(arac.id)}
-                              disabled={saving[arac.id]}
-                              className="bg-orange-500 hover:bg-orange-600"
-                            >
-                              {saving[arac.id] ? (
-                                <span className="animate-pulse">...</span>
-                              ) : (
-                                <>
-                                  <Save className="w-4 h-4 mr-1" />
-                                  Kaydet
-                                </>
-                              )}
-                            </Button>
-                            <Button
-                              size="sm"
-                              onClick={() => openYenileModal(arac)}
-                              className="bg-green-600 hover:bg-green-700"
-                            >
-                              <RefreshCw className="w-4 h-4 mr-1" />
-                              Muayene Yapıldı
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
+                      <TableCell key="durum">
+                        <Badge className={`${muayeneStatus.color} flex items-center gap-1 w-fit`}>
+                          {StatusIcon && <StatusIcon className="w-3 h-3" />}
+                          {muayeneStatus.label}
+                        </Badge>
+                      </TableCell>
                     );
-                  })
-                )}
-              </TableBody>
-            </Table>
+                  } },
+                { key: 'islem', label: 'İşlem', headCls: 'text-slate-400 text-right',
+                  renderCell: (arac) => (
+                    <TableCell key="islem" className="text-right">
+                      <div className="flex justify-end gap-2">
+                        <Button size="sm" variant="outline" onClick={() => openDuzeltModal(arac)} className="text-blue-400 border-blue-400/30 hover:bg-blue-500/20">
+                          <Edit className="w-4 h-4 mr-1" /> Düzelt
+                        </Button>
+                        <Button size="sm" onClick={() => handleSave(arac.id)} disabled={saving[arac.id]} className="bg-orange-500 hover:bg-orange-600">
+                          {saving[arac.id] ? <span className="animate-pulse">...</span> : <><Save className="w-4 h-4 mr-1" /> Kaydet</>}
+                        </Button>
+                        <Button size="sm" onClick={() => openYenileModal(arac)} className="bg-green-600 hover:bg-green-700">
+                          <RefreshCw className="w-4 h-4 mr-1" /> Muayene Yapıldı
+                        </Button>
+                      </div>
+                    </TableCell>
+                  ) },
+              ]}
+            />
           </div>
         </CardContent>
       </Card>
@@ -646,59 +587,39 @@ const MuayeneTakip = () => {
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow className="border-slate-800">
-                  <TableHead className="text-slate-400">Plaka</TableHead>
-                  <TableHead className="text-slate-400">İlk Muayene Tarihi</TableHead>
-                  <TableHead className="text-slate-400">Son Muayene Tarihi</TableHead>
-                  <TableHead className="text-slate-400">Notlar</TableHead>
-                  <TableHead className="text-slate-400">Kayıt Tarihi</TableHead>
-                  <TableHead className="text-slate-400 text-right">İşlem</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {muayeneGecmisi.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={6} className="text-center text-slate-400 py-8">
-                      Henüz geçmiş muayene kaydı yok
+            <SortableTable
+              storageKey="muayene-takip-gecmis-cols"
+              data={muayeneGecmisi}
+              rowKey={(gecmis) => gecmis.id}
+              rowClassName={() => 'border-slate-800'}
+              headerRowClassName="border-slate-800"
+              emptyText="Henüz geçmiş muayene kaydı yok"
+              columns={[
+                { key: 'plaka', label: 'Plaka', headCls: 'text-slate-400',
+                  renderCell: (g) => <TableCell key="plaka" className="font-medium text-white">{g.plaka}</TableCell> },
+                { key: 'ilk', label: 'İlk Muayene Tarihi', headCls: 'text-slate-400',
+                  renderCell: (g) => <TableCell key="ilk" className="text-slate-300">{g.ilk_muayene_tarihi || '-'}</TableCell> },
+                { key: 'son', label: 'Son Muayene Tarihi', headCls: 'text-slate-400',
+                  renderCell: (g) => <TableCell key="son" className="text-slate-300">{g.son_muayene_tarihi || '-'}</TableCell> },
+                { key: 'notlar', label: 'Notlar', headCls: 'text-slate-400',
+                  renderCell: (g) => <TableCell key="notlar" className="text-slate-400 max-w-xs truncate">{g.notlar || '-'}</TableCell> },
+                { key: 'kayit', label: 'Kayıt Tarihi', headCls: 'text-slate-400',
+                  renderCell: (g) => <TableCell key="kayit" className="text-slate-400">{g.created_at ? new Date(g.created_at).toLocaleDateString('tr-TR') : '-'}</TableCell> },
+                { key: 'islem', label: 'İşlem', headCls: 'text-slate-400 text-right',
+                  renderCell: (g) => (
+                    <TableCell key="islem" className="text-right">
+                      <div className="flex justify-end gap-2">
+                        <Button size="sm" variant="outline" onClick={() => openGecmisDuzeltModal(g)} className="text-blue-400 border-blue-400/30 hover:bg-blue-500/20">
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={() => handleDeleteGecmis(g.id)} className="text-red-400 hover:text-red-300 hover:bg-red-500/20">
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
                     </TableCell>
-                  </TableRow>
-                ) : (
-                  muayeneGecmisi.map((gecmis) => (
-                    <TableRow key={gecmis.id} className="border-slate-800">
-                      <TableCell className="font-medium text-white">{gecmis.plaka}</TableCell>
-                      <TableCell className="text-slate-300">{gecmis.ilk_muayene_tarihi || '-'}</TableCell>
-                      <TableCell className="text-slate-300">{gecmis.son_muayene_tarihi || '-'}</TableCell>
-                      <TableCell className="text-slate-400 max-w-xs truncate">{gecmis.notlar || '-'}</TableCell>
-                      <TableCell className="text-slate-400">
-                        {gecmis.created_at ? new Date(gecmis.created_at).toLocaleDateString('tr-TR') : '-'}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => openGecmisDuzeltModal(gecmis)}
-                            className="text-blue-400 border-blue-400/30 hover:bg-blue-500/20"
-                          >
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => handleDeleteGecmis(gecmis.id)}
-                            className="text-red-400 hover:text-red-300 hover:bg-red-500/20"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
+                  ) },
+              ]}
+            />
           </div>
         </CardContent>
       </Card>

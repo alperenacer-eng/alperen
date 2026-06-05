@@ -32,7 +32,9 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
-import { Plus, Trash2, Edit, Save, X, FileSpreadsheet, ArrowLeft, PlusCircle, Download } from 'lucide-react';
+import { Plus, Trash2, Edit, Save, X, FileSpreadsheet, ArrowLeft, PlusCircle, Download, RotateCcw } from 'lucide-react';
+import { useColumnOrder } from '@/hooks/useColumnOrder';
+import { DraggableTableHead } from '@/components/DraggableTableHead';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL + '/api';
 
@@ -366,6 +368,13 @@ const CimentoEntry = () => {
     { key: "urun_nakliye_tevkifat_toplam", label: "Ü-N Tevkifat", type: "currency", editable: false },
     { key: "urun_nakliye_genel_toplam", label: "Ü-N Genel Toplam", type: "currency", editable: false },
   ];
+
+  // Sürüklenebilir sütun sırası
+  const cimentoColKeys = columnHeaders.map(c => c.key);
+  const cimentoColOrder = useColumnOrder('cimento-entry-cols', cimentoColKeys);
+  const orderedColumnHeaders = cimentoColOrder.order
+    .map(k => columnHeaders.find(c => c.key === k))
+    .filter(Boolean);
 
   // Excel'e aktar fonksiyonu
   const exportToExcel = () => {
@@ -752,21 +761,30 @@ const CimentoEntry = () => {
               Henüz kayıt bulunmuyor. "Yeni Kayıt Ekle" butonuna tıklayarak başlayın.
             </div>
           ) : (
+            <>
+            <div className="flex items-center justify-between flex-wrap gap-2 mb-2">
+              <span className="text-xs text-slate-500">Sütun başlıklarını sürükleyerek yer değiştirebilirsiniz.</span>
+              <Button onClick={cimentoColOrder.reset} size="sm" variant="outline" className="border-slate-700 text-slate-300 hover:text-white h-7 text-xs">
+                <RotateCcw className="w-3 h-3 mr-1" /> Sütun Sırasını Sıfırla
+              </Button>
+            </div>
             <ScrollArea className="w-full">
               <div className="min-w-max">
                 <Table>
                   <TableHeader>
                     <TableRow className="border-slate-800 bg-slate-900/50">
                       <TableHead className="sticky left-0 bg-slate-900 z-10 w-20 text-slate-300">İşlem</TableHead>
-                      {columnHeaders.map((col) => (
-                        <TableHead
+                      {orderedColumnHeaders.map((col) => (
+                        <DraggableTableHead
                           key={col.key}
+                          colKey={col.key}
+                          onReorder={cimentoColOrder.reorder}
                           className={`text-xs font-semibold whitespace-nowrap px-2 text-slate-300 ${
                             col.type === "select" ? "bg-orange-900/20" : col.editable ? "bg-blue-900/20" : "bg-slate-900/30"
                           }`}
                         >
                           {col.label}
-                        </TableHead>
+                        </DraggableTableHead>
                       ))}
                     </TableRow>
                   </TableHeader>
@@ -801,7 +819,7 @@ const CimentoEntry = () => {
                             )}
                           </div>
                         </TableCell>
-                        {columnHeaders.map((col) => (
+                        {orderedColumnHeaders.map((col) => (
                           <TableCell
                             key={col.key}
                             className={`text-xs px-3 py-2 whitespace-nowrap border-r border-slate-700/50 ${
@@ -818,6 +836,7 @@ const CimentoEntry = () => {
               </div>
               <ScrollBar orientation="horizontal" />
             </ScrollArea>
+            </>
           )}
         </CardContent>
       </Card>

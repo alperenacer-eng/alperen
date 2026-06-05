@@ -15,6 +15,9 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { SortableTable } from '@/components/SortableTable';
+import { useColumnOrder } from '@/hooks/useColumnOrder';
+import { DraggableTableHead } from '@/components/DraggableTableHead';
 import {
   Dialog,
   DialogContent,
@@ -667,6 +670,9 @@ const PersonelListesi = () => {
   const [personeller, setPersoneller] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  // Sürüklenebilir sütun sırası — Personel Listesi ana tablo
+  const personelListOrder = useColumnOrder('personel-listesi-cols', ['ad','dep','poz','tel','ise','maas','fm','pazar','rtatil','carp','durum','islem']);
+  // Sürüklenebilir sütun sırası — Belirleme tablosu (dinamik)
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -1258,30 +1264,108 @@ const PersonelListesi = () => {
             <div className="p-8 text-center text-slate-400">Yükleniyor...</div>
           ) : filteredPersoneller.length === 0 ? (
             <div className="p-8 text-center text-slate-400">Personel bulunamadı</div>
-          ) : (
+          ) : (() => {
+            // Sürüklenebilir sütun tanımları
+            const cols = [
+              { key: 'ad', label: 'Ad Soyad', cellRender: (p, u) => <TableCell key="ad" className="font-medium text-white">{p.ad_soyad}</TableCell> },
+              { key: 'dep', label: 'Departman', cellRender: (p) => <TableCell key="dep" className="text-slate-300">{p.departman || '-'}</TableCell> },
+              { key: 'poz', label: 'Pozisyon', cellRender: (p) => <TableCell key="poz" className="text-slate-300">{p.pozisyon || '-'}</TableCell> },
+              { key: 'tel', label: 'Telefon', cellRender: (p) => <TableCell key="tel" className="text-slate-300">{p.telefon || '-'}</TableCell> },
+              { key: 'ise', label: 'İşe Giriş', cellRender: (p) => <TableCell key="ise" className="text-slate-300">{p.ise_giris_tarihi || '-'}</TableCell> },
+              { key: 'maas', label: 'Güncel Maaş', cellRender: (p) => <TableCell key="maas" className="text-white font-semibold">{formatCurrency(p.maas)}</TableCell> },
+              { key: 'fm', label: 'F. Mesai (₺/saat)', cellRender: (p, u) => (
+                <TableCell key="fm" className={`text-blue-300 ${u.fmOverride ? 'border-l-2 border-amber-500' : ''}`} title={u.fmOverride ? 'Manuel ücret (Belirleme)' : `Çarpan: ${p.fazla_mesai_carpan ?? 1.5}`}>
+                  {formatCurrency(u.fazlaMesaiSaatlik)}
+                  {u.fmOverride && <span className="ml-1 text-[9px] px-1 rounded bg-amber-500/20 text-amber-300">M</span>}
+                </TableCell>
+              )},
+              { key: 'pazar', label: 'Pazar (₺/gün)', cellRender: (p, u) => (
+                <TableCell key="pazar" className={`text-cyan-300 ${u.pazarOverride ? 'border-l-2 border-amber-500' : ''}`} title={u.pazarOverride ? 'Manuel ücret (Belirleme)' : `Çarpan: ${p.pazar_carpan ?? 2}`}>
+                  {formatCurrency(u.pazarGunluk)}
+                  {u.pazarOverride && <span className="ml-1 text-[9px] px-1 rounded bg-amber-500/20 text-amber-300">M</span>}
+                </TableCell>
+              )},
+              { key: 'rtatil', label: 'R. Tatil (₺/gün)', cellRender: (p, u) => (
+                <TableCell key="rtatil" className={`text-orange-300 ${u.tatilOverride ? 'border-l-2 border-amber-500' : ''}`} title={u.tatilOverride ? 'Manuel ücret (Belirleme)' : `Çarpan: ${p.resmi_tatil_carpan ?? 2}`}>
+                  {formatCurrency(u.tatilGunluk)}
+                  {u.tatilOverride && <span className="ml-1 text-[9px] px-1 rounded bg-amber-500/20 text-amber-300">M</span>}
+                </TableCell>
+              )},
+              { key: 'carp', label: 'Çarpanlar', cellRender: (p) => {
+                const carpanlar = {
+                  'F.Mesai': p.fazla_mesai_carpan ?? 1.5,
+                  'Pazar': p.pazar_carpan ?? 2.0,
+                  'R.Tatil Çal.': p.resmi_tatil_carpan ?? 2.0,
+                  'Gelmedi': p.durum_carpan_gelmedi ?? 0.0,
+                  'İzinli': p.durum_carpan_izinli ?? 1.0,
+                  'Raporlu': p.durum_carpan_raporlu ?? 0.0,
+                  'Hafta T.': p.durum_carpan_hafta_tatili ?? 1.0,
+                  'Resmi T.': p.durum_carpan_resmi_tatil ?? 1.0,
+                  'Bayram T.': p.durum_carpan_bayram_tatili ?? 1.0,
+                  'İzinsiz G.': p.durum_carpan_izinsiz_gelmedi ?? 0.0,
+                  'Bayram Çal.': p.durum_carpan_bayram_calisti ?? 2.0,
+                };
+                const tip = Object.entries(carpanlar).map(([k, v]) => `${k}: ${v}`).join('\n');
+                const ozet = `${carpanlar['F.Mesai']} / ${carpanlar['Pazar']} / ${carpanlar['R.Tatil Çal.']}`;
+                return (
+                  <TableCell key="carp" data-testid={`carpan-cell-${p.id}`}>
+                    <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-amber-500/15 text-amber-300 border border-amber-700/40 cursor-help" title={tip}>
+                      {ozet} <span className="ml-1 text-amber-500">+8</span>
+                    </span>
+                  </TableCell>
+                );
+              }},
+              { key: 'durum', label: 'Durum', cellRender: (p) => (
+                <TableCell key="durum">
+                  <span className={`px-2 py-1 rounded text-xs ${p.aktif ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
+                    {p.aktif ? 'Aktif' : 'Pasif'}
+                  </span>
+                </TableCell>
+              )},
+              { key: 'islem', label: 'İşlemler', cellRender: (p) => (
+                <TableCell key="islem">
+                  <div className="flex gap-1">
+                    <Button size="icon" variant="ghost" className="h-8 w-8 text-blue-500 hover:text-blue-400" onClick={() => { setSelectedPersonel(p); setIsViewDialogOpen(true); }} title="Detay">
+                      <Eye className="w-4 h-4" />
+                    </Button>
+                    <Button size="icon" variant="ghost" className="h-8 w-8 text-purple-500 hover:text-purple-400" onClick={() => openMaasDialog(p)} title="Maaş Geçmişi">
+                      <Wallet className="w-4 h-4" />
+                    </Button>
+                    <Button size="icon" variant="ghost" className="h-8 w-8 text-green-500 hover:text-green-400" onClick={() => handleEditPersonel(p)} title="Düzenle">
+                      <Edit className="w-4 h-4" />
+                    </Button>
+                    <Button size="icon" variant="ghost" className="h-8 w-8 text-red-500 hover:text-red-400" onClick={() => handleDeletePersonel(p.id)} title="Sil">
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </TableCell>
+              )},
+            ];
+            const orderedCols = personelListOrder.order.map(k => cols.find(c => c.key === k)).filter(Boolean);
+
+            return (
             <div className="max-h-[600px] overflow-y-auto custom-scrollbar">
+              <div className="flex items-center justify-between flex-wrap gap-2 px-3 py-2 border-b border-slate-800">
+                <span className="text-xs text-slate-500">Sütun başlıklarını sürükleyerek yer değiştirebilirsiniz.</span>
+                <Button onClick={personelListOrder.reset} size="sm" variant="outline" className="border-slate-700 text-slate-300 hover:text-white h-7 text-xs">
+                  <RotateCcw className="w-3 h-3 mr-1" /> Sütun Sırasını Sıfırla
+                </Button>
+              </div>
               <Table>
                 <TableHeader className="sticky top-0 z-10 bg-slate-950">
                   <TableRow className="border-slate-800 bg-slate-900/95 backdrop-blur">
-                    <TableHead className="text-slate-300">Ad Soyad</TableHead>
-                    <TableHead className="text-slate-300">Departman</TableHead>
-                    <TableHead className="text-slate-300">Pozisyon</TableHead>
-                    <TableHead className="text-slate-300">Telefon</TableHead>
-                    <TableHead className="text-slate-300">İşe Giriş</TableHead>
-                    <TableHead className="text-slate-300">Güncel Maaş</TableHead>
-                    <TableHead className="text-slate-300">F. Mesai (₺/saat)</TableHead>
-                    <TableHead className="text-slate-300">Pazar (₺/gün)</TableHead>
-                    <TableHead className="text-slate-300">R. Tatil (₺/gün)</TableHead>
-                    <TableHead className="text-slate-300">Çarpanlar</TableHead>
-                    <TableHead className="text-slate-300">Durum</TableHead>
-                    <TableHead className="text-slate-300">İşlemler</TableHead>
+                    {orderedCols.map(col => (
+                      <DraggableTableHead key={col.key} colKey={col.key} onReorder={personelListOrder.reorder} className="text-slate-300">
+                        {col.label}
+                      </DraggableTableHead>
+                    ))}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {groupedPersoneller.map((grup) => (
                     <React.Fragment key={grup.departman}>
                       <TableRow className="border-slate-800 bg-blue-900/20 hover:bg-blue-900/30">
-                        <TableCell colSpan={12} className="py-2">
+                        <TableCell colSpan={orderedCols.length} className="py-2">
                           <div className="flex items-center gap-2 text-sm font-semibold text-blue-300">
                             <span className="inline-block w-2 h-2 rounded-full bg-blue-400"></span>
                             <span className="uppercase tracking-wide">{grup.departman}</span>
@@ -1292,74 +1376,11 @@ const PersonelListesi = () => {
                       {grup.personeller.map((p, idx) => {
                         const u = hesaplaMesaiUcretleri(p);
                         return (
-                        <TableRow key={p.id} className={`border-slate-800 ${idx % 2 === 0 ? 'bg-slate-900/30' : 'bg-slate-900/50'} hover:bg-slate-800/50`}>
-                          <TableCell className="font-medium text-white">{p.ad_soyad}</TableCell>
-                          <TableCell className="text-slate-300">{p.departman || '-'}</TableCell>
-                          <TableCell className="text-slate-300">{p.pozisyon || '-'}</TableCell>
-                          <TableCell className="text-slate-300">{p.telefon || '-'}</TableCell>
-                          <TableCell className="text-slate-300">{p.ise_giris_tarihi || '-'}</TableCell>
-                          <TableCell className="text-white font-semibold">{formatCurrency(p.maas)}</TableCell>
-                          <TableCell className={`text-blue-300 ${u.fmOverride ? 'border-l-2 border-amber-500' : ''}`} title={u.fmOverride ? 'Manuel ücret (Belirleme)' : `Çarpan: ${p.fazla_mesai_carpan ?? 1.5}`}>
-                            {formatCurrency(u.fazlaMesaiSaatlik)}
-                            {u.fmOverride && <span className="ml-1 text-[9px] px-1 rounded bg-amber-500/20 text-amber-300">M</span>}
-                          </TableCell>
-                          <TableCell className={`text-cyan-300 ${u.pazarOverride ? 'border-l-2 border-amber-500' : ''}`} title={u.pazarOverride ? 'Manuel ücret (Belirleme)' : `Çarpan: ${p.pazar_carpan ?? 2}`}>
-                            {formatCurrency(u.pazarGunluk)}
-                            {u.pazarOverride && <span className="ml-1 text-[9px] px-1 rounded bg-amber-500/20 text-amber-300">M</span>}
-                          </TableCell>
-                          <TableCell className={`text-orange-300 ${u.tatilOverride ? 'border-l-2 border-amber-500' : ''}`} title={u.tatilOverride ? 'Manuel ücret (Belirleme)' : `Çarpan: ${p.resmi_tatil_carpan ?? 2}`}>
-                            {formatCurrency(u.tatilGunluk)}
-                            {u.tatilOverride && <span className="ml-1 text-[9px] px-1 rounded bg-amber-500/20 text-amber-300">M</span>}
-                          </TableCell>
-                          <TableCell data-testid={`carpan-cell-${p.id}`}>
-                            {(() => {
-                              const carpanlar = {
-                                'F.Mesai': p.fazla_mesai_carpan ?? 1.5,
-                                'Pazar': p.pazar_carpan ?? 2.0,
-                                'R.Tatil Çal.': p.resmi_tatil_carpan ?? 2.0,
-                                'Gelmedi': p.durum_carpan_gelmedi ?? 0.0,
-                                'İzinli': p.durum_carpan_izinli ?? 1.0,
-                                'Raporlu': p.durum_carpan_raporlu ?? 0.0,
-                                'Hafta T.': p.durum_carpan_hafta_tatili ?? 1.0,
-                                'Resmi T.': p.durum_carpan_resmi_tatil ?? 1.0,
-                                'Bayram T.': p.durum_carpan_bayram_tatili ?? 1.0,
-                                'İzinsiz G.': p.durum_carpan_izinsiz_gelmedi ?? 0.0,
-                                'Bayram Çal.': p.durum_carpan_bayram_calisti ?? 2.0,
-                              };
-                              const tip = Object.entries(carpanlar).map(([k, v]) => `${k}: ${v}`).join('\n');
-                              const ozet = `${carpanlar['F.Mesai']} / ${carpanlar['Pazar']} / ${carpanlar['R.Tatil Çal.']}`;
-                              return (
-                                <span
-                                  className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-amber-500/15 text-amber-300 border border-amber-700/40 cursor-help"
-                                  title={tip}
-                                >
-                                  {ozet} <span className="ml-1 text-amber-500">+8</span>
-                                </span>
-                              );
-                            })()}
-                          </TableCell>
-                          <TableCell>
-                            <span className={`px-2 py-1 rounded text-xs ${p.aktif ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
-                              {p.aktif ? 'Aktif' : 'Pasif'}
-                            </span>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex gap-1">
-                              <Button size="icon" variant="ghost" className="h-8 w-8 text-blue-500 hover:text-blue-400" onClick={() => { setSelectedPersonel(p); setIsViewDialogOpen(true); }} title="Detay">
-                                <Eye className="w-4 h-4" />
-                              </Button>
-                              <Button size="icon" variant="ghost" className="h-8 w-8 text-purple-500 hover:text-purple-400" onClick={() => openMaasDialog(p)} title="Maaş Geçmişi">
-                                <Wallet className="w-4 h-4" />
-                              </Button>
-                              <Button size="icon" variant="ghost" className="h-8 w-8 text-green-500 hover:text-green-400" onClick={() => handleEditPersonel(p)} title="Düzenle">
-                                <Edit className="w-4 h-4" />
-                              </Button>
-                              <Button size="icon" variant="ghost" className="h-8 w-8 text-red-500 hover:text-red-400" onClick={() => handleDeletePersonel(p.id)} title="Sil">
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
+                          <TableRow key={p.id} className={`border-slate-800 ${idx % 2 === 0 ? 'bg-slate-900/30' : 'bg-slate-900/50'} hover:bg-slate-800/50`}>
+                            {orderedCols.map(col => (
+                              <React.Fragment key={col.key}>{col.cellRender(p, u)}</React.Fragment>
+                            ))}
+                          </TableRow>
                         );
                       })}
                     </React.Fragment>
@@ -1367,7 +1388,8 @@ const PersonelListesi = () => {
                 </TableBody>
               </Table>
             </div>
-          )}
+            );
+          })()}
         </CardContent>
       </Card>
         </TabsContent>
@@ -1728,26 +1750,21 @@ const PersonelListesi = () => {
                 Henüz maaş dönemi kaydı yok. Yukarıdaki formdan ekleyebilirsiniz.
               </div>
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow className="border-slate-800 bg-slate-900/50">
-                    <TableHead className="text-slate-300">Başlangıç</TableHead>
-                    <TableHead className="text-slate-300">Bitiş</TableHead>
-                    <TableHead className="text-slate-300 text-right">Maaş</TableHead>
-                    <TableHead className="text-slate-300">İşlemler</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {maasDonemleri.map((d, idx) => (
-                    <TableRow key={d.id} className={`border-slate-800 ${idx % 2 === 0 ? 'bg-slate-900/30' : 'bg-slate-900/50'}`}>
-                      <TableCell className="text-white">
-                        {ayLabel(d.baslangic_ay)} {d.baslangic_yil}
-                      </TableCell>
-                      <TableCell className="text-white">
-                        {d.bitis_yil && d.bitis_ay ? `${ayLabel(d.bitis_ay)} ${d.bitis_yil}` : <span className="text-green-400">Devam ediyor</span>}
-                      </TableCell>
-                      <TableCell className="text-white text-right font-semibold">{formatCurrency(d.maas)}</TableCell>
-                      <TableCell>
+              <SortableTable
+                storageKey="personel-maas-donemleri-cols"
+                data={maasDonemleri}
+                rowKey={(d) => d.id}
+                emptyText="Maaş dönemi bulunmuyor"
+                columns={[
+                  { key: 'bas', label: 'Başlangıç', headCls: 'text-slate-300',
+                    renderCell: (d) => <TableCell key="bas" className="text-white">{ayLabel(d.baslangic_ay)} {d.baslangic_yil}</TableCell> },
+                  { key: 'bit', label: 'Bitiş', headCls: 'text-slate-300',
+                    renderCell: (d) => <TableCell key="bit" className="text-white">{d.bitis_yil && d.bitis_ay ? `${ayLabel(d.bitis_ay)} ${d.bitis_yil}` : <span className="text-green-400">Devam ediyor</span>}</TableCell> },
+                  { key: 'maas', label: 'Maaş', headCls: 'text-slate-300 text-right',
+                    renderCell: (d) => <TableCell key="maas" className="text-white text-right font-semibold">{formatCurrency(d.maas)}</TableCell> },
+                  { key: 'islem', label: 'İşlemler', headCls: 'text-slate-300',
+                    renderCell: (d) => (
+                      <TableCell key="islem">
                         <div className="flex gap-1">
                           <Button size="icon" variant="ghost" className="h-8 w-8 text-blue-500 hover:text-blue-400" onClick={() => handleEditDonem(d)} title="Düzenle">
                             <Edit className="w-4 h-4" />
@@ -1757,10 +1774,9 @@ const PersonelListesi = () => {
                           </Button>
                         </div>
                       </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                    ) },
+                ]}
+              />
             )}
           </div>
 

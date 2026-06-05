@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { SortableTable } from '@/components/SortableTable';
 import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
@@ -479,50 +480,52 @@ const CimentoReports = () => {
                 <div className="text-center py-10 text-slate-400">Yükleniyor...</div>
               ) : stokRaporu ? (
                 <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="border-slate-700">
-                        <TableHead className="text-slate-400">İşletme</TableHead>
-                        <TableHead className="text-slate-400 text-right">Açılış (KG)</TableHead>
-                        <TableHead className="text-slate-400 text-right">Açılış (TON)</TableHead>
-                        <TableHead className="text-slate-400 text-right">Gelen (KG)</TableHead>
-                        <TableHead className="text-slate-400 text-right">Gelen (TON)</TableHead>
-                        <TableHead className="text-slate-400 text-right">Harcanan (KG)</TableHead>
-                        <TableHead className="text-slate-400 text-right">Harcanan (TON)</TableHead>
-                        <TableHead className="text-slate-400 text-right">Mevcut (KG)</TableHead>
-                        <TableHead className="text-slate-400 text-right">Mevcut (TON)</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {stokRaporu.isletme_ozet.map((item, i) => (
-                        <TableRow key={item.id} className={`border-slate-800 ${i % 2 === 0 ? 'bg-slate-800/30' : 'bg-slate-800/50'}`}>
-                          <TableCell className="text-orange-300 font-medium">{item.isletme_adi}</TableCell>
-                          <TableCell className="text-right text-blue-300">{formatNumber(item.acilis_stok_kg, 0)}</TableCell>
-                          <TableCell className="text-right text-blue-400">{formatNumber(item.acilis_stok_ton)}</TableCell>
-                          <TableCell className="text-right text-green-300">{formatNumber(item.gelen_kg, 0)}</TableCell>
-                          <TableCell className="text-right text-green-400">{formatNumber(item.gelen_ton)}</TableCell>
-                          <TableCell className="text-right text-red-300">{formatNumber(item.harcanan_kg, 0)}</TableCell>
-                          <TableCell className="text-right text-red-400">{formatNumber(item.harcanan_ton)}</TableCell>
-                          <TableCell className="text-right text-yellow-300">{formatNumber(item.mevcut_stok_kg, 0)}</TableCell>
-                          <TableCell className={`text-right font-bold ${getStokColor(item.mevcut_stok_ton)}`}>
-                            {formatNumber(item.mevcut_stok_ton)}
-                          </TableCell>
+                  <SortableTable
+                    storageKey="cimento-reports-stok-cols"
+                    data={stokRaporu.isletme_ozet}
+                    rowKey={(item) => item.id}
+                    rowClassName={(_, i) => `border-slate-800 ${i % 2 === 0 ? 'bg-slate-800/30' : 'bg-slate-800/50'}`}
+                    headerRowClassName="border-slate-700"
+                    emptyText="Veri yok"
+                    columns={[
+                      { key: 'isletme', label: 'İşletme', headCls: 'text-slate-400',
+                        renderCell: (item) => <TableCell key="isletme" className="text-orange-300 font-medium">{item.isletme_adi}</TableCell> },
+                      { key: 'acilis_kg', label: 'Açılış (KG)', headCls: 'text-slate-400 text-right',
+                        renderCell: (item) => <TableCell key="acilis_kg" className="text-right text-blue-300">{formatNumber(item.acilis_stok_kg, 0)}</TableCell> },
+                      { key: 'acilis_ton', label: 'Açılış (TON)', headCls: 'text-slate-400 text-right',
+                        renderCell: (item) => <TableCell key="acilis_ton" className="text-right text-blue-400">{formatNumber(item.acilis_stok_ton)}</TableCell> },
+                      { key: 'gelen_kg', label: 'Gelen (KG)', headCls: 'text-slate-400 text-right',
+                        renderCell: (item) => <TableCell key="gelen_kg" className="text-right text-green-300">{formatNumber(item.gelen_kg, 0)}</TableCell> },
+                      { key: 'gelen_ton', label: 'Gelen (TON)', headCls: 'text-slate-400 text-right',
+                        renderCell: (item) => <TableCell key="gelen_ton" className="text-right text-green-400">{formatNumber(item.gelen_ton)}</TableCell> },
+                      { key: 'harcanan_kg', label: 'Harcanan (KG)', headCls: 'text-slate-400 text-right',
+                        renderCell: (item) => <TableCell key="harcanan_kg" className="text-right text-red-300">{formatNumber(item.harcanan_kg, 0)}</TableCell> },
+                      { key: 'harcanan_ton', label: 'Harcanan (TON)', headCls: 'text-slate-400 text-right',
+                        renderCell: (item) => <TableCell key="harcanan_ton" className="text-right text-red-400">{formatNumber(item.harcanan_ton)}</TableCell> },
+                      { key: 'mevcut_kg', label: 'Mevcut (KG)', headCls: 'text-slate-400 text-right',
+                        renderCell: (item) => <TableCell key="mevcut_kg" className="text-right text-yellow-300">{formatNumber(item.mevcut_stok_kg, 0)}</TableCell> },
+                      { key: 'mevcut_ton', label: 'Mevcut (TON)', headCls: 'text-slate-400 text-right',
+                        renderCell: (item) => <TableCell key="mevcut_ton" className={`text-right font-bold ${getStokColor(item.mevcut_stok_ton)}`}>{formatNumber(item.mevcut_stok_ton)}</TableCell> },
+                    ]}
+                    footerRender={(orderedCols) => {
+                      const totals = {
+                        isletme: <TableCell key="isletme" className="text-white">TOPLAM</TableCell>,
+                        acilis_kg: <TableCell key="acilis_kg" className="text-right text-blue-300">{formatNumber(stokRaporu.toplam_ozet.toplam_acilis_kg, 0)}</TableCell>,
+                        acilis_ton: <TableCell key="acilis_ton" className="text-right text-blue-400">{formatNumber(stokRaporu.toplam_ozet.toplam_acilis_ton)}</TableCell>,
+                        gelen_kg: <TableCell key="gelen_kg" className="text-right text-green-300">{formatNumber(stokRaporu.toplam_ozet.toplam_gelen_kg, 0)}</TableCell>,
+                        gelen_ton: <TableCell key="gelen_ton" className="text-right text-green-400">{formatNumber(stokRaporu.toplam_ozet.toplam_gelen_ton)}</TableCell>,
+                        harcanan_kg: <TableCell key="harcanan_kg" className="text-right text-red-300">{formatNumber(stokRaporu.toplam_ozet.toplam_harcanan_kg, 0)}</TableCell>,
+                        harcanan_ton: <TableCell key="harcanan_ton" className="text-right text-red-400">{formatNumber(stokRaporu.toplam_ozet.toplam_harcanan_ton)}</TableCell>,
+                        mevcut_kg: <TableCell key="mevcut_kg" className="text-right text-yellow-300">{formatNumber(stokRaporu.toplam_ozet.toplam_mevcut_kg, 0)}</TableCell>,
+                        mevcut_ton: <TableCell key="mevcut_ton" className="text-right text-orange-400">{formatNumber(stokRaporu.toplam_ozet.toplam_mevcut_ton)}</TableCell>,
+                      };
+                      return (
+                        <TableRow className="border-slate-700 bg-slate-900/80 font-bold">
+                          {orderedCols.map(c => <React.Fragment key={c.key}>{totals[c.key]}</React.Fragment>)}
                         </TableRow>
-                      ))}
-                      {/* Toplam Satırı */}
-                      <TableRow className="border-slate-700 bg-slate-900/80 font-bold">
-                        <TableCell className="text-white">TOPLAM</TableCell>
-                        <TableCell className="text-right text-blue-300">{formatNumber(stokRaporu.toplam_ozet.toplam_acilis_kg, 0)}</TableCell>
-                        <TableCell className="text-right text-blue-400">{formatNumber(stokRaporu.toplam_ozet.toplam_acilis_ton)}</TableCell>
-                        <TableCell className="text-right text-green-300">{formatNumber(stokRaporu.toplam_ozet.toplam_gelen_kg, 0)}</TableCell>
-                        <TableCell className="text-right text-green-400">{formatNumber(stokRaporu.toplam_ozet.toplam_gelen_ton)}</TableCell>
-                        <TableCell className="text-right text-red-300">{formatNumber(stokRaporu.toplam_ozet.toplam_harcanan_kg, 0)}</TableCell>
-                        <TableCell className="text-right text-red-400">{formatNumber(stokRaporu.toplam_ozet.toplam_harcanan_ton)}</TableCell>
-                        <TableCell className="text-right text-yellow-300">{formatNumber(stokRaporu.toplam_ozet.toplam_mevcut_kg, 0)}</TableCell>
-                        <TableCell className="text-right text-orange-400">{formatNumber(stokRaporu.toplam_ozet.toplam_mevcut_ton)}</TableCell>
-                      </TableRow>
-                    </TableBody>
-                  </Table>
+                      );
+                    }}
+                  />
                 </div>
               ) : (
                 <div className="text-center py-10 text-slate-400">Veri bulunamadı</div>
@@ -544,24 +547,21 @@ const CimentoReports = () => {
                   </CardHeader>
                   <CardContent>
                     <div className="overflow-x-auto max-h-64">
-                      <Table>
-                        <TableHeader>
-                          <TableRow className="border-slate-700">
-                            <TableHead className="text-slate-400">Tarih</TableHead>
-                            <TableHead className="text-slate-400">İşletme</TableHead>
-                            <TableHead className="text-slate-400 text-right">Miktar (TON)</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {stokRaporu.gunluk_giris.map((item, i) => (
-                            <TableRow key={i} className="border-slate-800">
-                              <TableCell className="text-cyan-300">{formatDate(item.tarih)}</TableCell>
-                              <TableCell className="text-white">{item.isletme}</TableCell>
-                              <TableCell className="text-right text-green-400">+{formatNumber(item.miktar_ton)}</TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
+                      <SortableTable
+                        storageKey="cimento-reports-gunluk-giris-cols"
+                        data={stokRaporu.gunluk_giris}
+                        rowKey={(_, i) => i}
+                        rowClassName={() => 'border-slate-800'}
+                        headerRowClassName="border-slate-700"
+                        columns={[
+                          { key: 'tarih', label: 'Tarih', headCls: 'text-slate-400',
+                            renderCell: (item) => <TableCell key="tarih" className="text-cyan-300">{formatDate(item.tarih)}</TableCell> },
+                          { key: 'isletme', label: 'İşletme', headCls: 'text-slate-400',
+                            renderCell: (item) => <TableCell key="isletme" className="text-white">{item.isletme}</TableCell> },
+                          { key: 'miktar', label: 'Miktar (TON)', headCls: 'text-slate-400 text-right',
+                            renderCell: (item) => <TableCell key="miktar" className="text-right text-green-400">+{formatNumber(item.miktar_ton)}</TableCell> },
+                        ]}
+                      />
                     </div>
                   </CardContent>
                 </Card>
@@ -578,24 +578,21 @@ const CimentoReports = () => {
                   </CardHeader>
                   <CardContent>
                     <div className="overflow-x-auto max-h-64">
-                      <Table>
-                        <TableHeader>
-                          <TableRow className="border-slate-700">
-                            <TableHead className="text-slate-400">Tarih</TableHead>
-                            <TableHead className="text-slate-400">İşletme</TableHead>
-                            <TableHead className="text-slate-400 text-right">Miktar (KG)</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {stokRaporu.gunluk_harcanan.map((item, i) => (
-                            <TableRow key={i} className="border-slate-800">
-                              <TableCell className="text-cyan-300">{formatDate(item.tarih)}</TableCell>
-                              <TableCell className="text-white">{item.isletme}</TableCell>
-                              <TableCell className="text-right text-red-400">-{formatNumber(item.miktar_kg, 0)}</TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
+                      <SortableTable
+                        storageKey="cimento-reports-gunluk-harcanan-cols"
+                        data={stokRaporu.gunluk_harcanan}
+                        rowKey={(_, i) => i}
+                        rowClassName={() => 'border-slate-800'}
+                        headerRowClassName="border-slate-700"
+                        columns={[
+                          { key: 'tarih', label: 'Tarih', headCls: 'text-slate-400',
+                            renderCell: (item) => <TableCell key="tarih" className="text-cyan-300">{formatDate(item.tarih)}</TableCell> },
+                          { key: 'isletme', label: 'İşletme', headCls: 'text-slate-400',
+                            renderCell: (item) => <TableCell key="isletme" className="text-white">{item.isletme}</TableCell> },
+                          { key: 'miktar', label: 'Miktar (KG)', headCls: 'text-slate-400 text-right',
+                            renderCell: (item) => <TableCell key="miktar" className="text-right text-red-400">-{formatNumber(item.miktar_kg, 0)}</TableCell> },
+                        ]}
+                      />
                     </div>
                   </CardContent>
                 </Card>
@@ -624,95 +621,91 @@ const CimentoReports = () => {
                 <>
                   {activeReport === 'tarih' && (
                     <div className="overflow-x-auto">
-                      <Table>
-                        <TableHeader><TableRow className="border-slate-700">
-                          <TableHead className="text-slate-400">Tarih</TableHead>
-                          <TableHead className="text-slate-400">Plaka</TableHead>
-                          <TableHead className="text-slate-400">Firma</TableHead>
-                          <TableHead className="text-slate-400">İşletme</TableHead>
-                          <TableHead className="text-slate-400 text-right">Giriş TON</TableHead>
-                          <TableHead className="text-slate-400 text-right">Fark TON</TableHead>
-                          <TableHead className="text-slate-400 text-right">Ürün Tutarı</TableHead>
-                          <TableHead className="text-slate-400 text-right">Nakliye</TableHead>
-                          <TableHead className="text-slate-400 text-right">Genel Toplam</TableHead>
-                        </TableRow></TableHeader>
-                        <TableBody>
-                          {filteredRecords.map((r, i) => (
-                            <TableRow key={r.id} className={`border-slate-800 ${i % 2 === 0 ? 'bg-slate-800/30' : 'bg-slate-800/50'}`}>
-                              <TableCell className="text-cyan-300">{formatDate(r.bosaltim_tarihi)}</TableCell>
-                              <TableCell className="text-yellow-300">{r.plaka}</TableCell>
-                              <TableCell className="text-white">{r.cimento_alinan_firma}</TableCell>
-                              <TableCell className="text-purple-300">{r.bosaltim_isletmesi}</TableCell>
-                              <TableCell className="text-right text-green-400">{r.giris_miktari?.toFixed(2)}</TableCell>
-                              <TableCell className="text-right text-yellow-400">{r.aradaki_fark?.toFixed(2)}</TableCell>
-                              <TableCell className="text-right text-blue-400">₺{formatCurrency(r.giris_kdv_dahil_toplam)}</TableCell>
-                              <TableCell className="text-right text-purple-400">₺{formatCurrency(r.nakliye_genel_toplam)}</TableCell>
-                              <TableCell className="text-right text-emerald-400 font-bold">₺{formatCurrency(r.urun_nakliye_genel_toplam)}</TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
+                      <SortableTable
+                        storageKey="cimento-reports-tarih-cols"
+                        data={filteredRecords}
+                        rowKey={(r) => r.id}
+                        rowClassName={(_, i) => `border-slate-800 ${i % 2 === 0 ? 'bg-slate-800/30' : 'bg-slate-800/50'}`}
+                        headerRowClassName="border-slate-700"
+                        columns={[
+                          { key: 'tarih', label: 'Tarih', headCls: 'text-slate-400',
+                            renderCell: (r) => <TableCell key="tarih" className="text-cyan-300">{formatDate(r.bosaltim_tarihi)}</TableCell> },
+                          { key: 'plaka', label: 'Plaka', headCls: 'text-slate-400',
+                            renderCell: (r) => <TableCell key="plaka" className="text-yellow-300">{r.plaka}</TableCell> },
+                          { key: 'firma', label: 'Firma', headCls: 'text-slate-400',
+                            renderCell: (r) => <TableCell key="firma" className="text-white">{r.cimento_alinan_firma}</TableCell> },
+                          { key: 'isletme', label: 'İşletme', headCls: 'text-slate-400',
+                            renderCell: (r) => <TableCell key="isletme" className="text-purple-300">{r.bosaltim_isletmesi}</TableCell> },
+                          { key: 'giris', label: 'Giriş TON', headCls: 'text-slate-400 text-right',
+                            renderCell: (r) => <TableCell key="giris" className="text-right text-green-400">{r.giris_miktari?.toFixed(2)}</TableCell> },
+                          { key: 'fark', label: 'Fark TON', headCls: 'text-slate-400 text-right',
+                            renderCell: (r) => <TableCell key="fark" className="text-right text-yellow-400">{r.aradaki_fark?.toFixed(2)}</TableCell> },
+                          { key: 'tutar', label: 'Ürün Tutarı', headCls: 'text-slate-400 text-right',
+                            renderCell: (r) => <TableCell key="tutar" className="text-right text-blue-400">₺{formatCurrency(r.giris_kdv_dahil_toplam)}</TableCell> },
+                          { key: 'nakliye', label: 'Nakliye', headCls: 'text-slate-400 text-right',
+                            renderCell: (r) => <TableCell key="nakliye" className="text-right text-purple-400">₺{formatCurrency(r.nakliye_genel_toplam)}</TableCell> },
+                          { key: 'gtoplam', label: 'Genel Toplam', headCls: 'text-slate-400 text-right',
+                            renderCell: (r) => <TableCell key="gtoplam" className="text-right text-emerald-400 font-bold">₺{formatCurrency(r.urun_nakliye_genel_toplam)}</TableCell> },
+                        ]}
+                      />
                     </div>
                   )}
                   {activeReport === 'isletme' && (
-                    <Table>
-                      <TableHeader><TableRow className="border-slate-700">
-                        <TableHead className="text-slate-400">İşletme</TableHead>
-                        <TableHead className="text-slate-400 text-right">Kayıt</TableHead>
-                        <TableHead className="text-slate-400 text-right">Toplam Giriş (TON)</TableHead>
-                        <TableHead className="text-slate-400 text-right">Toplam Tutar</TableHead>
-                      </TableRow></TableHeader>
-                      <TableBody>
-                        {getIsletmeSummary().map((r, i) => (
-                          <TableRow key={r.isletme} className={`border-slate-800 ${i % 2 === 0 ? 'bg-slate-800/30' : 'bg-slate-800/50'}`}>
-                            <TableCell className="text-purple-300 font-medium">{r.isletme}</TableCell>
-                            <TableCell className="text-right text-orange-400">{r.kayit}</TableCell>
-                            <TableCell className="text-right text-green-400">{r.giris.toFixed(2)}</TableCell>
-                            <TableCell className="text-right text-emerald-400 font-bold">₺{formatCurrency(r.tutar)}</TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
+                    <SortableTable
+                      storageKey="cimento-reports-isletme-cols"
+                      data={getIsletmeSummary()}
+                      rowKey={(r) => r.isletme}
+                      rowClassName={(_, i) => `border-slate-800 ${i % 2 === 0 ? 'bg-slate-800/30' : 'bg-slate-800/50'}`}
+                      headerRowClassName="border-slate-700"
+                      columns={[
+                        { key: 'isletme', label: 'İşletme', headCls: 'text-slate-400',
+                          renderCell: (r) => <TableCell key="isletme" className="text-purple-300 font-medium">{r.isletme}</TableCell> },
+                        { key: 'kayit', label: 'Kayıt', headCls: 'text-slate-400 text-right',
+                          renderCell: (r) => <TableCell key="kayit" className="text-right text-orange-400">{r.kayit}</TableCell> },
+                        { key: 'giris', label: 'Toplam Giriş (TON)', headCls: 'text-slate-400 text-right',
+                          renderCell: (r) => <TableCell key="giris" className="text-right text-green-400">{r.giris.toFixed(2)}</TableCell> },
+                        { key: 'tutar', label: 'Toplam Tutar', headCls: 'text-slate-400 text-right',
+                          renderCell: (r) => <TableCell key="tutar" className="text-right text-emerald-400 font-bold">₺{formatCurrency(r.tutar)}</TableCell> },
+                      ]}
+                    />
                   )}
                   {activeReport === 'firma' && (
-                    <Table>
-                      <TableHeader><TableRow className="border-slate-700">
-                        <TableHead className="text-slate-400">Çimento Firması</TableHead>
-                        <TableHead className="text-slate-400 text-right">Kayıt</TableHead>
-                        <TableHead className="text-slate-400 text-right">Toplam Giriş (TON)</TableHead>
-                        <TableHead className="text-slate-400 text-right">Toplam Tutar</TableHead>
-                      </TableRow></TableHeader>
-                      <TableBody>
-                        {getFirmaSummary().map((r, i) => (
-                          <TableRow key={r.firma} className={`border-slate-800 ${i % 2 === 0 ? 'bg-slate-800/30' : 'bg-slate-800/50'}`}>
-                            <TableCell className="text-yellow-300 font-medium">{r.firma}</TableCell>
-                            <TableCell className="text-right text-orange-400">{r.kayit}</TableCell>
-                            <TableCell className="text-right text-green-400">{r.giris.toFixed(2)}</TableCell>
-                            <TableCell className="text-right text-emerald-400 font-bold">₺{formatCurrency(r.tutar)}</TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
+                    <SortableTable
+                      storageKey="cimento-reports-firma-cols"
+                      data={getFirmaSummary()}
+                      rowKey={(r) => r.firma}
+                      rowClassName={(_, i) => `border-slate-800 ${i % 2 === 0 ? 'bg-slate-800/30' : 'bg-slate-800/50'}`}
+                      headerRowClassName="border-slate-700"
+                      columns={[
+                        { key: 'firma', label: 'Çimento Firması', headCls: 'text-slate-400',
+                          renderCell: (r) => <TableCell key="firma" className="text-yellow-300 font-medium">{r.firma}</TableCell> },
+                        { key: 'kayit', label: 'Kayıt', headCls: 'text-slate-400 text-right',
+                          renderCell: (r) => <TableCell key="kayit" className="text-right text-orange-400">{r.kayit}</TableCell> },
+                        { key: 'giris', label: 'Toplam Giriş (TON)', headCls: 'text-slate-400 text-right',
+                          renderCell: (r) => <TableCell key="giris" className="text-right text-green-400">{r.giris.toFixed(2)}</TableCell> },
+                        { key: 'tutar', label: 'Toplam Tutar', headCls: 'text-slate-400 text-right',
+                          renderCell: (r) => <TableCell key="tutar" className="text-right text-emerald-400 font-bold">₺{formatCurrency(r.tutar)}</TableCell> },
+                      ]}
+                    />
                   )}
                   {activeReport === 'plaka' && (
-                    <Table>
-                      <TableHeader><TableRow className="border-slate-700">
-                        <TableHead className="text-slate-400">Plaka</TableHead>
-                        <TableHead className="text-slate-400 text-right">Sefer</TableHead>
-                        <TableHead className="text-slate-400 text-right">Toplam Taşıma (TON)</TableHead>
-                        <TableHead className="text-slate-400 text-right">Toplam Nakliye</TableHead>
-                      </TableRow></TableHeader>
-                      <TableBody>
-                        {getPlakaSummary().map((r, i) => (
-                          <TableRow key={r.plaka} className={`border-slate-800 ${i % 2 === 0 ? 'bg-slate-800/30' : 'bg-slate-800/50'}`}>
-                            <TableCell className="text-cyan-300 font-medium">{r.plaka}</TableCell>
-                            <TableCell className="text-right text-orange-400">{r.kayit}</TableCell>
-                            <TableCell className="text-right text-green-400">{r.giris.toFixed(2)}</TableCell>
-                            <TableCell className="text-right text-purple-400 font-bold">₺{formatCurrency(r.nakliye)}</TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
+                    <SortableTable
+                      storageKey="cimento-reports-plaka-cols"
+                      data={getPlakaSummary()}
+                      rowKey={(r) => r.plaka}
+                      rowClassName={(_, i) => `border-slate-800 ${i % 2 === 0 ? 'bg-slate-800/30' : 'bg-slate-800/50'}`}
+                      headerRowClassName="border-slate-700"
+                      columns={[
+                        { key: 'plaka', label: 'Plaka', headCls: 'text-slate-400',
+                          renderCell: (r) => <TableCell key="plaka" className="text-cyan-300 font-medium">{r.plaka}</TableCell> },
+                        { key: 'sefer', label: 'Sefer', headCls: 'text-slate-400 text-right',
+                          renderCell: (r) => <TableCell key="sefer" className="text-right text-orange-400">{r.kayit}</TableCell> },
+                        { key: 'tasima', label: 'Toplam Taşıma (TON)', headCls: 'text-slate-400 text-right',
+                          renderCell: (r) => <TableCell key="tasima" className="text-right text-green-400">{r.giris.toFixed(2)}</TableCell> },
+                        { key: 'nakliye', label: 'Toplam Nakliye', headCls: 'text-slate-400 text-right',
+                          renderCell: (r) => <TableCell key="nakliye" className="text-right text-purple-400 font-bold">₺{formatCurrency(r.nakliye)}</TableCell> },
+                      ]}
+                    />
                   )}
                 </>
               )}

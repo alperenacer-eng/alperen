@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { SortableTable } from '@/components/SortableTable';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import {
@@ -533,101 +534,77 @@ const AracYonetimi = () => {
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow className="border-slate-800">
-                  <TableHead className="text-slate-400">Plaka</TableHead>
-                  <TableHead className="text-slate-400">Araç Cinsi</TableHead>
-                  <TableHead className="text-slate-400">Marka / Model</TableHead>
-                  <TableHead className="text-slate-400">Şirket</TableHead>
-                  <TableHead className="text-slate-400">Muayene</TableHead>
-                  <TableHead className="text-slate-400">Kasko</TableHead>
-                  <TableHead className="text-slate-400">Sigorta</TableHead>
-                  <TableHead className="text-slate-400">Belgeler</TableHead>
-                  <TableHead className="text-slate-400 text-right">İşlemler</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredAraclar.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={9} className="text-center text-slate-400 py-8">
-                      {searchTerm ? 'Araç bulunamadı' : 'Henüz araç eklenmemiş'}
+            <SortableTable
+              storageKey="arac-yonetimi-cols"
+              data={filteredAraclar}
+              rowKey={(arac) => arac.id}
+              rowClassName={() => 'border-slate-800'}
+              headerRowClassName="border-slate-800"
+              emptyText={searchTerm ? 'Araç bulunamadı' : 'Henüz araç eklenmemiş'}
+              columns={[
+                { key: 'plaka', label: 'Plaka', headCls: 'text-slate-400',
+                  renderCell: (arac) => <TableCell key="plaka" className="font-medium text-white">{arac.plaka}</TableCell> },
+                { key: 'cins', label: 'Araç Cinsi', headCls: 'text-slate-400',
+                  renderCell: (arac) => <TableCell key="cins" className="text-slate-300">{arac.arac_cinsi || '-'}</TableCell> },
+                { key: 'marka', label: 'Marka / Model', headCls: 'text-slate-400',
+                  renderCell: (arac) => <TableCell key="marka" className="text-slate-300">{arac.marka} {arac.model} {arac.model_yili ? `(${arac.model_yili})` : ''}</TableCell> },
+                { key: 'sirket', label: 'Şirket', headCls: 'text-slate-400',
+                  renderCell: (arac) => <TableCell key="sirket" className="text-slate-300">{arac.kayitli_sirket || '-'}</TableCell> },
+                { key: 'muayene', label: 'Muayene', headCls: 'text-slate-400',
+                  renderCell: (arac) => (
+                    <TableCell key="muayene">
+                      {arac.muayene_tarihi ? (
+                        <Badge className={isDatePassed(arac.muayene_tarihi) ? 'bg-red-500/20 text-red-400' : isDateApproaching(arac.muayene_tarihi) ? 'bg-yellow-500/20 text-yellow-400' : 'bg-green-500/20 text-green-400'}>
+                          {arac.muayene_tarihi}
+                        </Badge>
+                      ) : '-'}
                     </TableCell>
-                  </TableRow>
-                ) : (
-                  filteredAraclar.map((arac) => (
-                    <TableRow key={arac.id} className="border-slate-800">
-                      <TableCell className="font-medium text-white">{arac.plaka}</TableCell>
-                      <TableCell className="text-slate-300">{arac.arac_cinsi || '-'}</TableCell>
-                      <TableCell className="text-slate-300">
-                        {arac.marka} {arac.model} {arac.model_yili ? `(${arac.model_yili})` : ''}
-                      </TableCell>
-                      <TableCell className="text-slate-300">{arac.kayitli_sirket || '-'}</TableCell>
-                      <TableCell>
-                        {arac.muayene_tarihi ? (
-                          <Badge className={
-                            isDatePassed(arac.muayene_tarihi) ? 'bg-red-500/20 text-red-400' :
-                            isDateApproaching(arac.muayene_tarihi) ? 'bg-yellow-500/20 text-yellow-400' :
-                            'bg-green-500/20 text-green-400'
-                          }>
-                            {arac.muayene_tarihi}
-                          </Badge>
-                        ) : '-'}
-                      </TableCell>
-                      <TableCell>
-                        {arac.kasko_yenileme_tarihi ? (
-                          <Badge className={
-                            isDatePassed(arac.kasko_yenileme_tarihi) ? 'bg-red-500/20 text-red-400' :
-                            isDateApproaching(arac.kasko_yenileme_tarihi) ? 'bg-yellow-500/20 text-yellow-400' :
-                            'bg-green-500/20 text-green-400'
-                          }>
-                            {arac.kasko_yenileme_tarihi}
-                          </Badge>
-                        ) : '-'}
-                      </TableCell>
-                      <TableCell>
-                        {arac.sigorta_yenileme_tarihi ? (
-                          <Badge className={
-                            isDatePassed(arac.sigorta_yenileme_tarihi) ? 'bg-red-500/20 text-red-400' :
-                            isDateApproaching(arac.sigorta_yenileme_tarihi) ? 'bg-yellow-500/20 text-yellow-400' :
-                            'bg-green-500/20 text-green-400'
-                          }>
-                            {arac.sigorta_yenileme_tarihi}
-                          </Badge>
-                        ) : '-'}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex flex-col gap-1">
-                          <FileUploadButton arac={arac} docType="ruhsat" label="Ruhsat" uploading={uploadingRuhsat} />
-                          <FileUploadButton arac={arac} docType="kasko" label="Kasko" uploading={uploadingKasko} />
-                          <FileUploadButton arac={arac} docType="sigorta" label="Sigorta" uploading={uploadingSigorta} />
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => openEditModal(arac)}
-                            className="text-slate-400 hover:text-white"
-                          >
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => handleDelete(arac.id)}
-                            className="text-red-400 hover:text-red-300 hover:bg-red-500/20"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
+                  ) },
+                { key: 'kasko', label: 'Kasko', headCls: 'text-slate-400',
+                  renderCell: (arac) => (
+                    <TableCell key="kasko">
+                      {arac.kasko_yenileme_tarihi ? (
+                        <Badge className={isDatePassed(arac.kasko_yenileme_tarihi) ? 'bg-red-500/20 text-red-400' : isDateApproaching(arac.kasko_yenileme_tarihi) ? 'bg-yellow-500/20 text-yellow-400' : 'bg-green-500/20 text-green-400'}>
+                          {arac.kasko_yenileme_tarihi}
+                        </Badge>
+                      ) : '-'}
+                    </TableCell>
+                  ) },
+                { key: 'sigorta', label: 'Sigorta', headCls: 'text-slate-400',
+                  renderCell: (arac) => (
+                    <TableCell key="sigorta">
+                      {arac.sigorta_yenileme_tarihi ? (
+                        <Badge className={isDatePassed(arac.sigorta_yenileme_tarihi) ? 'bg-red-500/20 text-red-400' : isDateApproaching(arac.sigorta_yenileme_tarihi) ? 'bg-yellow-500/20 text-yellow-400' : 'bg-green-500/20 text-green-400'}>
+                          {arac.sigorta_yenileme_tarihi}
+                        </Badge>
+                      ) : '-'}
+                    </TableCell>
+                  ) },
+                { key: 'belge', label: 'Belgeler', headCls: 'text-slate-400',
+                  renderCell: (arac) => (
+                    <TableCell key="belge">
+                      <div className="flex flex-col gap-1">
+                        <FileUploadButton arac={arac} docType="ruhsat" label="Ruhsat" uploading={uploadingRuhsat} />
+                        <FileUploadButton arac={arac} docType="kasko" label="Kasko" uploading={uploadingKasko} />
+                        <FileUploadButton arac={arac} docType="sigorta" label="Sigorta" uploading={uploadingSigorta} />
+                      </div>
+                    </TableCell>
+                  ) },
+                { key: 'islem', label: 'İşlemler', headCls: 'text-slate-400 text-right',
+                  renderCell: (arac) => (
+                    <TableCell key="islem" className="text-right">
+                      <div className="flex justify-end gap-2">
+                        <Button size="sm" variant="ghost" onClick={() => openEditModal(arac)} className="text-slate-400 hover:text-white">
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={() => handleDelete(arac.id)} className="text-red-400 hover:text-red-300 hover:bg-red-500/20">
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  ) },
+              ]}
+            />
           </div>
         </CardContent>
       </Card>

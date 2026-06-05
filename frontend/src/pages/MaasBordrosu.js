@@ -15,6 +15,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { SortableTable } from '@/components/SortableTable';
 import {
   Dialog,
   DialogContent,
@@ -927,53 +928,60 @@ const MaasBordrosu = () => {
             <div className="p-8 text-center text-slate-400">Bu dönem için bordro bulunmuyor</div>
           ) : (
             <ScrollArea className="w-full">
-              <Table>
-                <TableHeader>
-                  <TableRow className="border-slate-800 bg-slate-900/50">
-                    <TableHead className="text-slate-300">Personel</TableHead>
-                    <TableHead className="text-slate-300">Brüt Maaş</TableHead>
-                    <TableHead className="text-slate-300">SGK İşçi</TableHead>
-                    <TableHead className="text-slate-300">Gelir V.</TableHead>
-                    <TableHead className="text-slate-300">Net Maaş</TableHead>
-                    <TableHead className="text-slate-300">F.Mesai</TableHead>
-                    <TableHead className="text-slate-300">Pazar</TableHead>
-                    <TableHead className="text-slate-300">R.Tatil</TableHead>
-                    <TableHead className="text-amber-300" title="Durum bazlı ek ücretler toplamı (izinli/raporlu/tatil vs.)">Durum Ek</TableHead>
-                    <TableHead className="text-slate-300">Toplam</TableHead>
-                    <TableHead className="text-slate-300">Durum</TableHead>
-                    <TableHead className="text-slate-300">İşlem</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {bordrolar.map((b, idx) => (
-                    <TableRow key={b.id} className={`border-slate-800 ${idx % 2 === 0 ? 'bg-slate-900/30' : 'bg-slate-900/50'}`}>
-                      <TableCell className="font-medium text-white">{b.personel_adi}</TableCell>
-                      <TableCell className="text-slate-300">{formatCurrency(b.brut_maas)}</TableCell>
-                      <TableCell className="text-red-400">-{formatCurrency(b.sgk_isci)}</TableCell>
-                      <TableCell className="text-red-400">-{formatCurrency(b.gelir_vergisi)}</TableCell>
-                      <TableCell className="text-green-400">{formatCurrency(b.net_maas)}</TableCell>
-                      <TableCell className="text-blue-400" title={`${b.fazla_mesai_saat || 0} saat`}>+{formatCurrency(b.fazla_mesai_ucreti)}</TableCell>
-                      <TableCell className="text-cyan-400" title={`${b.pazar_gun || 0} gün`}>+{formatCurrency(b.pazar_ucreti)}</TableCell>
-                      <TableCell className="text-orange-400" title={`${b.resmi_tatil_gun || 0} gün`}>+{formatCurrency(b.resmi_tatil_ucreti)}</TableCell>
-                      <TableCell className="text-amber-400" title={(() => {
-                        try {
-                          const d = b.durum_detay_json ? JSON.parse(b.durum_detay_json) : null;
-                          if (!d) return 'Detay yok';
-                          return Object.entries(d)
+              <SortableTable
+                storageKey="maas-bordrosu-cols"
+                data={bordrolar}
+                rowKey={(b) => b.id}
+                emptyText="Bu dönem için bordro bulunmuyor"
+                columns={[
+                  { key: 'personel', label: 'Personel', headCls: 'text-slate-300',
+                    renderCell: (b) => <TableCell key="personel" className="font-medium text-white">{b.personel_adi}</TableCell> },
+                  { key: 'brut', label: 'Brüt Maaş', headCls: 'text-slate-300',
+                    renderCell: (b) => <TableCell key="brut" className="text-slate-300">{formatCurrency(b.brut_maas)}</TableCell> },
+                  { key: 'sgk', label: 'SGK İşçi', headCls: 'text-slate-300',
+                    renderCell: (b) => <TableCell key="sgk" className="text-red-400">-{formatCurrency(b.sgk_isci)}</TableCell> },
+                  { key: 'gv', label: 'Gelir V.', headCls: 'text-slate-300',
+                    renderCell: (b) => <TableCell key="gv" className="text-red-400">-{formatCurrency(b.gelir_vergisi)}</TableCell> },
+                  { key: 'net', label: 'Net Maaş', headCls: 'text-slate-300',
+                    renderCell: (b) => <TableCell key="net" className="text-green-400">{formatCurrency(b.net_maas)}</TableCell> },
+                  { key: 'fm', label: 'F.Mesai', headCls: 'text-slate-300',
+                    renderCell: (b) => <TableCell key="fm" className="text-blue-400" title={`${b.fazla_mesai_saat || 0} saat`}>+{formatCurrency(b.fazla_mesai_ucreti)}</TableCell> },
+                  { key: 'pazar', label: 'Pazar', headCls: 'text-slate-300',
+                    renderCell: (b) => <TableCell key="pazar" className="text-cyan-400" title={`${b.pazar_gun || 0} gün`}>+{formatCurrency(b.pazar_ucreti)}</TableCell> },
+                  { key: 'rtatil', label: 'R.Tatil', headCls: 'text-slate-300',
+                    renderCell: (b) => <TableCell key="rtatil" className="text-orange-400" title={`${b.resmi_tatil_gun || 0} gün`}>+{formatCurrency(b.resmi_tatil_ucreti)}</TableCell> },
+                  { key: 'durumek', label: 'Durum Ek',
+                    headCls: 'text-amber-300', headTitle: 'Durum bazlı ek ücretler toplamı (izinli/raporlu/tatil vs.)',
+                    renderCell: (b) => {
+                      let tip = 'Detay yok';
+                      try {
+                        const d = b.durum_detay_json ? JSON.parse(b.durum_detay_json) : null;
+                        if (d) {
+                          tip = Object.entries(d)
                             .filter(([_, v]) => (v.ucret || 0) > 0)
                             .map(([k, v]) => `${DURUM_EK_LABEL[k] || k}: ${v.gun}g × ${v.carpan} = ₺${v.ucret}`)
                             .join('\n') || 'Ek ücret yok';
-                        } catch (_) { return 'Detay yok'; }
-                      })()}>
-                        {(b.durum_ek_ucret_toplam || 0) > 0 ? '+' : ''}{formatCurrency(b.durum_ek_ucret_toplam || 0)}
-                      </TableCell>
-                      <TableCell className="text-purple-400 font-bold">{formatCurrency(b.toplam_odeme)}</TableCell>
-                      <TableCell>
+                        }
+                      } catch (_) { /* yoksay */ }
+                      return (
+                        <TableCell key="durumek" className="text-amber-400" title={tip}>
+                          {(b.durum_ek_ucret_toplam || 0) > 0 ? '+' : ''}{formatCurrency(b.durum_ek_ucret_toplam || 0)}
+                        </TableCell>
+                      );
+                    } },
+                  { key: 'toplam', label: 'Toplam', headCls: 'text-slate-300',
+                    renderCell: (b) => <TableCell key="toplam" className="text-purple-400 font-bold">{formatCurrency(b.toplam_odeme)}</TableCell> },
+                  { key: 'durum', label: 'Durum', headCls: 'text-slate-300',
+                    renderCell: (b) => (
+                      <TableCell key="durum">
                         <span className={`px-2 py-1 rounded text-xs ${b.odendi ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'}`}>
                           {b.odendi ? 'Ödendi' : 'Bekliyor'}
                         </span>
                       </TableCell>
-                      <TableCell>
+                    ) },
+                  { key: 'islem', label: 'İşlem', headCls: 'text-slate-300',
+                    renderCell: (b) => (
+                      <TableCell key="islem">
                         <div className="flex gap-1">
                           {!b.odendi && (
                             <Button size="sm" variant="ghost" className="text-green-500 hover:text-green-400" onClick={() => handleOdendi(b.id)}>
@@ -988,10 +996,9 @@ const MaasBordrosu = () => {
                           </Button>
                         </div>
                       </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                    ) },
+                ]}
+              />
             </ScrollArea>
           )}
         </CardContent>

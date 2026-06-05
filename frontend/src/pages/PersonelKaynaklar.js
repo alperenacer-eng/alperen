@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { SortableTable } from '@/components/SortableTable';
 import {
   Dialog,
   DialogContent,
@@ -157,43 +158,33 @@ const PersonelKaynaklar = () => {
               <p className="text-sm mt-1">"Yeni Departman" butonuyla ekleyebilirsiniz.</p>
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow className="border-slate-800 hover:bg-slate-800/30">
-                  <TableHead className="text-slate-300">Departman Adı</TableHead>
-                  <TableHead className="text-slate-300">Açıklama</TableHead>
-                  <TableHead className="text-slate-300 text-right">İşlemler</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filtered.map((d) => (
-                  <TableRow key={d.id} className="border-slate-800 hover:bg-slate-800/30">
-                    <TableCell className="text-white font-medium">{d.name}</TableCell>
-                    <TableCell className="text-slate-300">{d.aciklama || '-'}</TableCell>
-                    <TableCell className="text-right">
+            <SortableTable
+              storageKey="personel-kaynaklar-departman-cols"
+              data={filtered}
+              rowKey={(d) => d.id}
+              rowClassName={() => 'border-slate-800 hover:bg-slate-800/30'}
+              headerRowClassName="border-slate-800 hover:bg-slate-800/30"
+              emptyText="Departman bulunamadı"
+              columns={[
+                { key: 'ad', label: 'Departman Adı', headCls: 'text-slate-300',
+                  renderCell: (d) => <TableCell key="ad" className="text-white font-medium">{d.name}</TableCell> },
+                { key: 'aciklama', label: 'Açıklama', headCls: 'text-slate-300',
+                  renderCell: (d) => <TableCell key="aciklama" className="text-slate-300">{d.aciklama || '-'}</TableCell> },
+                { key: 'islem', label: 'İşlemler', headCls: 'text-slate-300 text-right',
+                  renderCell: (d) => (
+                    <TableCell key="islem" className="text-right">
                       <div className="flex justify-end gap-2">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => openEdit(d)}
-                          className="text-blue-400 hover:text-blue-300 hover:bg-blue-500/10"
-                        >
+                        <Button size="sm" variant="ghost" onClick={() => openEdit(d)} className="text-blue-400 hover:text-blue-300 hover:bg-blue-500/10">
                           <Edit className="w-4 h-4" />
                         </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => setDeleteId(d.id)}
-                          className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
-                        >
+                        <Button size="sm" variant="ghost" onClick={() => setDeleteId(d.id)} className="text-red-400 hover:text-red-300 hover:bg-red-500/10">
                           <Trash2 className="w-4 h-4" />
                         </Button>
                       </div>
                     </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                  ) },
+              ]}
+            />
           )}
         </CardContent>
       </Card>
