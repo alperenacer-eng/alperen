@@ -595,6 +595,62 @@ const Puantaj = () => {
     else toast.info('Boş gün bulunamadı');
   };
 
+  // Tek bir güne şablonu uygula (takvimden tıklama)
+  const applyTemplateToDate = (date) => {
+    setTopluRows(prev => {
+      const existing = prev[date] || {};
+      return {
+        ...prev,
+        [date]: {
+          ...existing,
+          durum: topluTemplate.durum,
+          giris_saati: topluTemplate.durum === 'geldi' ? topluTemplate.giris_saati : '',
+          cikis_saati: topluTemplate.durum === 'geldi' ? topluTemplate.cikis_saati : '',
+          fazla_mesai: topluTemplate.durum === 'geldi' ? topluTemplate.fazla_mesai : '0',
+          tesis_id: topluTemplate.tesis_id,
+          notlar: topluTemplate.notlar
+        }
+      };
+    });
+  };
+
+  // Takvim grid - haftalara böl (Pazartesi başlangıçlı)
+  const calendarWeeks = React.useMemo(() => {
+    if (topluDates.length === 0) return [];
+    const first = new Date(topluDates[0] + 'T00:00:00');
+    const last = new Date(topluDates[topluDates.length - 1] + 'T00:00:00');
+    // Pazartesi başlangıçlı haftaya hizala
+    const startDow = (first.getDay() + 6) % 7; // 0=Pzt, 6=Pzr
+    const gridStart = new Date(first);
+    gridStart.setDate(first.getDate() - startDow);
+    const endDow = (last.getDay() + 6) % 7;
+    const gridEnd = new Date(last);
+    gridEnd.setDate(last.getDate() + (6 - endDow));
+
+    const weeks = [];
+    let cur = new Date(gridStart);
+    const dateSet = new Set(topluDates);
+    while (cur <= gridEnd) {
+      const week = [];
+      for (let i = 0; i < 7; i++) {
+        const y = cur.getFullYear();
+        const m = String(cur.getMonth() + 1).padStart(2, '0');
+        const d = String(cur.getDate()).padStart(2, '0');
+        const dateStr = `${y}-${m}-${d}`;
+        week.push({
+          dateStr,
+          dayNum: cur.getDate(),
+          monthIdx: cur.getMonth(),
+          inRange: dateSet.has(dateStr),
+          isSunday: cur.getDay() === 0
+        });
+        cur.setDate(cur.getDate() + 1);
+      }
+      weeks.push(week);
+    }
+    return weeks;
+  }, [topluDates]);
+
   // Satırı temizle
   const clearTopluRow = (date) => {
     setTopluRows(prev => ({
@@ -1478,6 +1534,99 @@ const Puantaj = () => {
                   </Button>
                 </div>
               </div>
+
+              {/* TAKVIM - Tarih aralığındaki günler */}
+              {topluDates.length > 0 && (
+                <div className="mt-5 border-t border-slate-800 pt-5">
+                  <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
+                    <h4 className="text-sm font-semibold text-white flex items-center gap-2">
+                      <Calendar className="w-4 h-4 text-orange-400" />
+                      Takvimden Gün Seç
+                      <span className="text-xs font-normal text-slate-400">
+                        (Şablonu uygulamak istediğiniz günlere tıklayın)
+                      </span>
+                    </h4>
+                    <div className="flex items-center gap-3 text-xs text-slate-400">
+                      <span className="flex items-center gap-1">
+                        <span className="w-3 h-3 rounded bg-slate-800 border border-slate-700"></span>Boş
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <span className="w-3 h-3 rounded bg-green-500/30 border border-green-500/60"></span>Doldurulmuş
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <span className="w-3 h-3 rounded bg-amber-500/30 border border-amber-500/60"></span>Mevcut Kayıt
+                      </span>
+                    </div>
+                  </div>
+                  <div className="bg-slate-950/60 border border-slate-800 rounded-lg p-3">
+                    {/* Gün başlıkları */}
+                    <div className="grid grid-cols-7 gap-1.5 mb-2">
+                      {['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'].map((g, i) => (
+                        <div
+                          key={g}
+                          className={`text-center text-xs font-semibold py-1 ${i === 6 ? 'text-purple-300' : 'text-slate-400'}`}
+                        >
+                          {g}
+                        </div>
+                      ))}
+                    </div>
+                    {/* Hafta satırları */}
+                    <div className="space-y-1.5">
+                      {calendarWeeks.map((week, wi) => (
+                        <div key={wi} className="grid grid-cols-7 gap-1.5">
+                          {week.map((cell, ci) => {
+                            if (!cell.inRange) {
+                              return (
+                                <div
+                                  key={ci}
+                                  className="h-16 rounded-md border border-dashed border-slate-800/50 bg-slate-900/30 opacity-40"
+                                />
+                              );
+                            }
+                            const row = topluRows[cell.dateStr] || {};
+                            const hasData = !!row.durum;
+                            const durumInfo = hasData ? getDurumInfo(row.durum) : null;
+                            const DurumIcon = durumInfo?.icon;
+                            const isMevcut = row.mevcut;
+                            return (
+                              <button
+                                type="button"
+                                key={ci}
+                                data-testid={`calendar-cell-${cell.dateStr}`}
+                                onClick={() => applyTemplateToDate(cell.dateStr)}
+                                className={`relative h-16 rounded-md border text-left p-1.5 transition-all hover:scale-[1.03] hover:shadow-lg active:scale-95 ${
+                                  hasData
+                                    ? isMevcut
+                                      ? 'bg-amber-500/20 border-amber-500/60 hover:bg-amber-500/30'
+                                      : 'bg-green-500/20 border-green-500/60 hover:bg-green-500/30'
+                                    : cell.isSunday
+                                      ? 'bg-purple-900/20 border-purple-800/40 hover:bg-purple-800/30'
+                                      : 'bg-slate-800/50 border-slate-700 hover:bg-slate-700/60'
+                                }`}
+                                title={`${cell.dateStr} — ${hasData ? durumInfo.label : 'Boş'} (tıklayarak şablonu uygula)`}
+                              >
+                                <div className={`text-xs font-bold ${cell.isSunday && !hasData ? 'text-purple-300' : 'text-white'}`}>
+                                  {cell.dayNum}
+                                </div>
+                                {hasData && DurumIcon && (
+                                  <div className="absolute bottom-1 right-1.5 flex items-center gap-0.5">
+                                    <DurumIcon className={`w-3.5 h-3.5 ${durumInfo.color}`} />
+                                  </div>
+                                )}
+                                {hasData && row.giris_saati && (
+                                  <div className="absolute bottom-1 left-1.5 text-[10px] font-medium text-slate-200 leading-none">
+                                    {row.giris_saati}
+                                  </div>
+                                )}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
 
