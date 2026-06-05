@@ -520,13 +520,14 @@ async def init_db():
             ("durum_carpan_bayram_tatili", 1.0),
             ("durum_carpan_izinsiz_gelmedi", 0.0),
             ("durum_carpan_bayram_calisti", 2.0),
+            ("durum_carpan_eksik_calisma", 1.0),
         ]:
             try:
                 await db.execute(f"ALTER TABLE personeller ADD COLUMN {_col} REAL DEFAULT {_def}")
             except:
                 pass
-        # "Belirleme" özelliği: 11 ücret override sütunu (NULL = override yok, çarpana göre hesaplanır)
-        # F.Mesai için saatlik, diğerleri için günlük ücret birim olarak girilir.
+        # "Belirleme" özelliği: ücret override sütunları (NULL = override yok, çarpana göre hesaplanır)
+        # F.Mesai ve Eksik Çal. için saatlik, diğerleri için günlük ücret birim olarak girilir.
         for _ocol in [
             "ucret_override_fazla_mesai",
             "ucret_override_pazar",
@@ -539,6 +540,7 @@ async def init_db():
             "ucret_override_bayram_tatili",
             "ucret_override_izinsiz_gelmedi",
             "ucret_override_bayram_calisti",
+            "ucret_override_eksik_calisma",
         ]:
             try:
                 await db.execute(f"ALTER TABLE personeller ADD COLUMN {_ocol} REAL DEFAULT NULL")
@@ -3328,6 +3330,7 @@ class PersonelCreate(BaseModel):
     durum_carpan_bayram_tatili: float = 1.0
     durum_carpan_izinsiz_gelmedi: float = 0.0
     durum_carpan_bayram_calisti: float = 2.0
+    durum_carpan_eksik_calisma: float = 1.0
     # Opsiyonel ilk maaş dönemi
     ilk_maas_baslangic_yil: Optional[int] = None
     ilk_maas_baslangic_ay: Optional[int] = None
@@ -3368,6 +3371,7 @@ class PersonelUpdate(BaseModel):
     durum_carpan_bayram_tatili: Optional[float] = None
     durum_carpan_izinsiz_gelmedi: Optional[float] = None
     durum_carpan_bayram_calisti: Optional[float] = None
+    durum_carpan_eksik_calisma: Optional[float] = None
     # "Belirleme" — manuel ücret override'ları (None = yok, çarpana göre hesaplanır)
     ucret_override_fazla_mesai: Optional[float] = None
     ucret_override_pazar: Optional[float] = None
@@ -3380,6 +3384,7 @@ class PersonelUpdate(BaseModel):
     ucret_override_bayram_tatili: Optional[float] = None
     ucret_override_izinsiz_gelmedi: Optional[float] = None
     ucret_override_bayram_calisti: Optional[float] = None
+    ucret_override_eksik_calisma: Optional[float] = None
 
 @api_router.post("/personeller")
 async def create_personel(input: PersonelCreate, current_user: dict = Depends(get_current_user)):

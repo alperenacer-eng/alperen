@@ -206,6 +206,8 @@ const PuantajRaporlama = () => {
     const fmBirim = applyOvr(personel.ucret_override_fazla_mesai,         Math.ceil(saatlik * fc));
     const pzBirim = applyOvr(personel.ucret_override_pazar,                Math.ceil(gunluk * pc));
     const rtBirim = applyOvr(personel.ucret_override_resmi_tatil_calisti,  Math.ceil(gunluk * rc));
+    const eksikCarpan = parseFloat(personel.durum_carpan_eksik_calisma ?? 1.0);
+    const eksikBirim = applyOvr(personel.ucret_override_eksik_calisma,      Math.ceil(saatlik * eksikCarpan));
     let toplamFm = 0, pazarGun = 0, rtGun = 0;
     const durumGun = { izinli:0, raporlu:0, hafta_tatili:0, resmi_tatil:0, bayram_tatili:0, izinsiz_gelmedi:0 };
     puantajlari.forEach(p => {
@@ -240,6 +242,7 @@ const PuantajRaporlama = () => {
     const birimFiyatlar = {
       geldi: Math.ceil(gunluk),  // 'geldi' günleri ana maaşa dahil — günlük birim
       fazla_mesai: fmBirim,
+      eksik_calisma: eksikBirim,
       pazar_calismasi: pzBirim,
       resmi_tatil_calisti: rtBirim,
       bayram_calisti: rtBirim,  // bayram çal. → R.Tatil ücretine sayılır
@@ -333,6 +336,7 @@ const PuantajRaporlama = () => {
         'Fazla Mesai (saat)',
         'F.Mesai Birim (₺/sa)',
         'Eksik Çal. Saat',
+        'Eksik Çal. Birim (₺/sa)',
         'F.Mesai Ücreti (₺)',
         'Pazar Ücreti (₺)',
         'R.Tatil Çal. Ücreti (₺)',
@@ -354,6 +358,7 @@ const PuantajRaporlama = () => {
         Number(p.toplamFazlaMesai.toFixed(1)),
         Number(((p.hakedilen?.birimFiyatlar?.fazla_mesai) || 0).toFixed(2)),
         dakikayiFormatla(p.toplamEksikDakika),
+        Number(((p.hakedilen?.birimFiyatlar?.eksik_calisma) || 0).toFixed(2)),
         Number((p.hakedilen.fmUcret || 0).toFixed(2)),
         Number((p.hakedilen.pzUcret || 0).toFixed(2)),
         Number((p.hakedilen.rtUcret || 0).toFixed(2)),
@@ -460,6 +465,7 @@ const PuantajRaporlama = () => {
               <th>Fazla Mesai</th>
               <th style="font-size:10px;color:#64748b">F.Mesai ₺/sa</th>
               <th>Eksik Çal.</th>
+              <th style="font-size:10px;color:#64748b">Eksik Çal. ₺/sa</th>
               <th>Hak Edilen (₺)</th>
               <th>Çalıştığı Tesisler</th>
             </tr>
@@ -479,6 +485,7 @@ const PuantajRaporlama = () => {
                 <td style="text-align:center">${p.toplamFazlaMesai.toFixed(1)} sa</td>
                 <td style="text-align:center;font-size:10px;color:#64748b">${(p.hakedilen?.birimFiyatlar?.fazla_mesai || 0) > 0 ? formatCurrency(p.hakedilen.birimFiyatlar.fazla_mesai) + '/sa' : '-'}</td>
                 <td>${dakikayiFormatla(p.toplamEksikDakika)}</td>
+                <td style="text-align:center;font-size:10px;color:#64748b">${(p.hakedilen?.birimFiyatlar?.eksik_calisma || 0) > 0 ? formatCurrency(p.hakedilen.birimFiyatlar.eksik_calisma) + '/sa' : '-'}</td>
                 <td style="text-align:right;font-weight:600;color:#059669">${formatCurrency(p.hakedilen.toplam)}</td>
                 <td class="tesis-list">${p.tesisler.join(', ') || '-'}</td>
               </tr>
@@ -700,6 +707,19 @@ const PuantajRaporlama = () => {
           {dakikayiFormatla(p.toplamEksikDakika)}
         </TableCell>
       )
+    },
+    {
+      key: 'eksik_birim', label: 'Eksik Çal. ₺/sa',
+      headTitle: "Belirleme'deki eksik çalışılan saat için saatlik birim fiyat",
+      headCls: 'text-slate-400 text-center whitespace-nowrap text-xs',
+      renderCell: (p) => {
+        const birim = p.hakedilen?.birimFiyatlar?.eksik_calisma || 0;
+        return (
+          <TableCell key="eksik_birim" className="text-center whitespace-nowrap text-slate-400 text-xs" data-testid={`birim-fiyat-eksik-calisma-${p.id}`}>
+            {birim > 0 ? formatCurrency(birim) : '-'}
+          </TableCell>
+        );
+      }
     },
     {
       key: 'hak', label: 'Hak Edilen Ücret',

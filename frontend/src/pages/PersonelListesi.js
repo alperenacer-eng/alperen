@@ -82,6 +82,7 @@ const DURUM_CARPAN_FIELDS = [
 // tip: 'saatlik' (F.Mesai) veya 'gunluk' (diğerleri)
 const BELIRLEME_DURUMLARI = [
   { label: 'F.Mesai',         carpanKey: 'fazla_mesai_carpan',         overrideKey: 'ucret_override_fazla_mesai',         tip: 'saatlik', defCarpan: 1.5 },
+  { label: 'Eksik Çal.',      carpanKey: 'durum_carpan_eksik_calisma', overrideKey: 'ucret_override_eksik_calisma',       tip: 'saatlik', defCarpan: 1.0 },
   { label: 'Pazar Çal.',      carpanKey: 'pazar_carpan',               overrideKey: 'ucret_override_pazar',               tip: 'gunluk',  defCarpan: 2.0 },
   { label: 'R.Tatil Çal.',    carpanKey: 'resmi_tatil_carpan',         overrideKey: 'ucret_override_resmi_tatil_calisti', tip: 'gunluk',  defCarpan: 2.0 },
   { label: 'İzinli',          carpanKey: 'durum_carpan_izinli',        overrideKey: 'ucret_override_izinli',              tip: 'gunluk',  defCarpan: 1.0 },
@@ -715,6 +716,7 @@ const emptyPersonel = {
   durum_carpan_bayram_tatili: 1.0,
   durum_carpan_izinsiz_gelmedi: 0.0,
   durum_carpan_bayram_calisti: 2.0,
+  durum_carpan_eksik_calisma: 1.0,
   // İlk maaş dönemi opsiyonel alanları
   ilk_maas_baslangic_yil: null,
   ilk_maas_baslangic_ay: null,
