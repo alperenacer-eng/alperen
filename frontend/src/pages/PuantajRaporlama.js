@@ -780,8 +780,8 @@ const PuantajRaporlama = () => {
                   <Table>
                     <TableHeader>
                       <TableRow className="border-slate-800 bg-slate-900/50">
-                        <TableHead className="text-slate-300 sticky left-0 bg-slate-900/95 backdrop-blur z-10">#</TableHead>
-                        <TableHead className="text-slate-300 sticky left-10 bg-slate-900/95 backdrop-blur z-10 min-w-[180px]">Personel Adı</TableHead>
+                        <TableHead className="text-white font-semibold sticky left-0 bg-slate-950 z-10">#</TableHead>
+                        <TableHead className="text-white font-semibold sticky left-10 bg-slate-950 z-10 min-w-[180px]">Personel Adı</TableHead>
                         <TableHead className="text-slate-300 min-w-[120px]">Departman</TableHead>
                         <TableHead className="text-slate-300">Çal. Günü</TableHead>
                         {DURUM_KOLONLAR.map(d => (
@@ -798,8 +798,8 @@ const PuantajRaporlama = () => {
                     <TableBody>
                       {personelRaporu.map((p, idx) => (
                         <TableRow key={p.id} className={`border-slate-800 ${idx % 2 === 0 ? 'bg-slate-900/30' : 'bg-slate-900/50'}`}>
-                          <TableCell className="text-slate-400 sticky left-0 bg-slate-900/95 backdrop-blur">{idx + 1}</TableCell>
-                          <TableCell className="font-medium text-white sticky left-10 bg-slate-900/95 backdrop-blur">{p.ad_soyad}</TableCell>
+                          <TableCell className="text-slate-200 sticky left-0 bg-slate-950">{idx + 1}</TableCell>
+                          <TableCell className="font-semibold text-white sticky left-10 bg-slate-950">{p.ad_soyad}</TableCell>
                           <TableCell className="text-slate-400">{p.departman}</TableCell>
                           <TableCell className="text-blue-400 font-medium">{p.calismaGunu}</TableCell>
                           {DURUM_KOLONLAR.map(d => {
@@ -955,8 +955,8 @@ const PuantajRaporlama = () => {
                   <Table>
                     <TableHeader>
                       <TableRow className="border-slate-800 bg-slate-900/50">
-                        <TableHead className="text-slate-300 sticky left-0 bg-slate-900/95 backdrop-blur z-10 min-w-[110px]">Tarih</TableHead>
-                        <TableHead className="text-slate-300 sticky left-[110px] bg-slate-900/95 backdrop-blur z-10 min-w-[160px]">Personel</TableHead>
+                        <TableHead className="text-white font-semibold sticky left-0 bg-slate-950 z-10 min-w-[110px]">Tarih</TableHead>
+                        <TableHead className="text-white font-semibold sticky left-[110px] bg-slate-950 z-10 min-w-[160px]">Personel</TableHead>
                         <TableHead className="text-slate-300 min-w-[140px]">Tesis</TableHead>
                         <TableHead className="text-slate-300">Giriş</TableHead>
                         <TableHead className="text-slate-300">Çıkış</TableHead>
@@ -976,8 +976,8 @@ const PuantajRaporlama = () => {
                         const durum = p.durum || 'geldi';
                         return (
                           <TableRow key={p.id} className={`border-slate-800 ${idx % 2 === 0 ? 'bg-slate-900/30' : 'bg-slate-900/50'}`}>
-                            <TableCell className="text-white sticky left-0 bg-slate-900/95 backdrop-blur">{p.tarih}</TableCell>
-                            <TableCell className="font-medium text-white sticky left-[110px] bg-slate-900/95 backdrop-blur">{p.personel_adi}</TableCell>
+                            <TableCell className="text-white sticky left-0 bg-slate-950">{p.tarih}</TableCell>
+                            <TableCell className="font-semibold text-white sticky left-[110px] bg-slate-950">{p.personel_adi}</TableCell>
                             <TableCell className="text-cyan-400">{p.tesis_adi || '-'}</TableCell>
                             <TableCell className="text-green-400">{p.giris_saati || '-'}</TableCell>
                             <TableCell className="text-red-400">{p.cikis_saati || '-'}</TableCell>
