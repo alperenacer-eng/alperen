@@ -38,7 +38,7 @@ import {
 import { 
   Trash2, ArrowLeft, Clock, Calendar, Users, Save, 
   CheckCircle2, XCircle, AlertCircle, FileText, Building2, Plus, Pencil,
-  Home, Flag, PartyPopper, Ban, Search, X, Sun, User, CalendarDays, Wand2
+  Home, Flag, PartyPopper, Ban, Search, X, Sun, User, CalendarDays, Wand2, Heart, Baby
 } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL + '/api';
@@ -52,6 +52,8 @@ const DURUM_OPTIONS = [
   { value: 'resmi_tatil', label: 'Resmi Tatil', icon: Flag, color: 'text-orange-500', badgeClass: 'bg-orange-500/20 text-orange-400 border-orange-500/40' },
   { value: 'bayram_tatili', label: 'Bayram Tatili', icon: PartyPopper, color: 'text-pink-500', badgeClass: 'bg-pink-500/20 text-pink-400 border-pink-500/40' },
   { value: 'izinsiz_gelmedi', label: 'İzinsiz Gelmedi', icon: Ban, color: 'text-rose-600', badgeClass: 'bg-rose-600/20 text-rose-400 border-rose-600/40' },
+  { value: 'olum_izni', label: 'Ölüm İzni', icon: Heart, color: 'text-gray-400', badgeClass: 'bg-gray-500/20 text-gray-300 border-gray-500/40' },
+  { value: 'dogum_izni', label: 'Doğum İzni', icon: Baby, color: 'text-teal-400', badgeClass: 'bg-teal-500/20 text-teal-300 border-teal-500/40' },
   { value: 'pazar_calismasi', label: 'Pazar Çalışması', icon: Sun, color: 'text-cyan-500', badgeClass: 'bg-cyan-500/20 text-cyan-400 border-cyan-500/40' },
   { value: 'resmi_tatil_calisti', label: 'Resmi Tatil Çalıştı', icon: Flag, color: 'text-amber-500', badgeClass: 'bg-amber-500/20 text-amber-400 border-amber-500/40' },
   { value: 'bayram_calisti', label: 'Bayram Çalıştı', icon: PartyPopper, color: 'text-fuchsia-500', badgeClass: 'bg-fuchsia-500/20 text-fuchsia-400 border-fuchsia-500/40' },

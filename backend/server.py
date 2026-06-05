@@ -521,6 +521,8 @@ async def init_db():
             ("durum_carpan_izinsiz_gelmedi", 0.0),
             ("durum_carpan_bayram_calisti", 2.0),
             ("durum_carpan_eksik_calisma", 1.0),
+            ("durum_carpan_olum_izni", 1.0),
+            ("durum_carpan_dogum_izni", 1.0),
         ]:
             try:
                 await db.execute(f"ALTER TABLE personeller ADD COLUMN {_col} REAL DEFAULT {_def}")
@@ -541,6 +543,8 @@ async def init_db():
             "ucret_override_izinsiz_gelmedi",
             "ucret_override_bayram_calisti",
             "ucret_override_eksik_calisma",
+            "ucret_override_olum_izni",
+            "ucret_override_dogum_izni",
         ]:
             try:
                 await db.execute(f"ALTER TABLE personeller ADD COLUMN {_ocol} REAL DEFAULT NULL")
@@ -3331,6 +3335,8 @@ class PersonelCreate(BaseModel):
     durum_carpan_izinsiz_gelmedi: float = 0.0
     durum_carpan_bayram_calisti: float = 2.0
     durum_carpan_eksik_calisma: float = 1.0
+    durum_carpan_olum_izni: float = 1.0
+    durum_carpan_dogum_izni: float = 1.0
     # Opsiyonel ilk maaş dönemi
     ilk_maas_baslangic_yil: Optional[int] = None
     ilk_maas_baslangic_ay: Optional[int] = None
@@ -3372,6 +3378,8 @@ class PersonelUpdate(BaseModel):
     durum_carpan_izinsiz_gelmedi: Optional[float] = None
     durum_carpan_bayram_calisti: Optional[float] = None
     durum_carpan_eksik_calisma: Optional[float] = None
+    durum_carpan_olum_izni: Optional[float] = None
+    durum_carpan_dogum_izni: Optional[float] = None
     # "Belirleme" — manuel ücret override'ları (None = yok, çarpana göre hesaplanır)
     ucret_override_fazla_mesai: Optional[float] = None
     ucret_override_pazar: Optional[float] = None
@@ -3385,6 +3393,8 @@ class PersonelUpdate(BaseModel):
     ucret_override_izinsiz_gelmedi: Optional[float] = None
     ucret_override_bayram_calisti: Optional[float] = None
     ucret_override_eksik_calisma: Optional[float] = None
+    ucret_override_olum_izni: Optional[float] = None
+    ucret_override_dogum_izni: Optional[float] = None
 
 @api_router.post("/personeller")
 async def create_personel(input: PersonelCreate, current_user: dict = Depends(get_current_user)):

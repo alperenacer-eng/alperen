@@ -65,6 +65,8 @@ const DURUM_EK_LABEL = {
   resmi_tatil: 'Resmi Tatil',
   bayram_tatili: 'Bayram Tatili',
   izinsiz_gelmedi: 'İzinsiz Gelmedi',
+  olum_izni: 'Ölüm İzni',
+  dogum_izni: 'Doğum İzni',
 };
 
 // "Olağan dışı çarpan 0" uyarısı: bu durumlar yasal olarak 1.0 olmalı, 0 ise dikkat

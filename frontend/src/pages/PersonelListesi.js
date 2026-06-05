@@ -36,7 +36,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Plus, Trash2, Edit, Search, ArrowLeft, Eye, UserPlus, Wallet, X, FileSpreadsheet, Save, RotateCcw, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, Trash2, Edit, Search, ArrowLeft, Eye, UserPlus, Wallet, X, FileSpreadsheet, Save, RotateCcw, ChevronLeft, ChevronRight, AlertCircle } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL + '/api';
@@ -74,6 +74,8 @@ const DURUM_CARPAN_FIELDS = [
   { key: 'durum_carpan_bayram_tatili',   label: 'Bayram Tatili',    defVal: 1.0 },
   { key: 'durum_carpan_izinsiz_gelmedi', label: 'İzinsiz Gelmedi',  defVal: 0.0 },
   { key: 'durum_carpan_bayram_calisti',  label: 'Bayram Çalıştı',   defVal: 2.0 },
+  { key: 'durum_carpan_olum_izni',       label: 'Ölüm İzni',        defVal: 1.0 },
+  { key: 'durum_carpan_dogum_izni',      label: 'Doğum İzni',       defVal: 1.0 },
 ];
 
 // Belirleme tablosu için 11 durumun tam listesi (F.Mesai saatlik, diğerleri günlük)
@@ -92,6 +94,8 @@ const BELIRLEME_DURUMLARI = [
   { label: 'Bayram Tatili',   carpanKey: 'durum_carpan_bayram_tatili', overrideKey: 'ucret_override_bayram_tatili',       tip: 'gunluk',  defCarpan: 1.0 },
   { label: 'İzinsiz Gelm.',   carpanKey: 'durum_carpan_izinsiz_gelmedi', overrideKey: 'ucret_override_izinsiz_gelmedi',   tip: 'gunluk',  defCarpan: 0.0 },
   { label: 'Bayram Çal.',     carpanKey: 'durum_carpan_bayram_calisti', overrideKey: 'ucret_override_bayram_calisti',     tip: 'gunluk',  defCarpan: 2.0 },
+  { label: 'Ölüm İzni',       carpanKey: 'durum_carpan_olum_izni',     overrideKey: 'ucret_override_olum_izni',           tip: 'gunluk',  defCarpan: 1.0 },
+  { label: 'Doğum İzni',      carpanKey: 'durum_carpan_dogum_izni',    overrideKey: 'ucret_override_dogum_izni',          tip: 'gunluk',  defCarpan: 1.0 },
 ];
 
 // "Belirleme" sekmesi — Personel × 11 durum, çarpan ve ücret düzenlenebilir tablo.
@@ -348,6 +352,36 @@ const BelirlemeTab = ({ personeller, formatCurrency, onSavePersonel }) => {
   const dirtyCount = Object.keys(edits).filter(id => Object.keys(edits[id] || {}).length > 0).length;
   const anySaving = savingIds.size > 0;
 
+  // ============================================================
+  // BELİRLENDİ TESPİTİ — bir hücre "belirlenmiş" sayılır eğer:
+  //   - override değeri set edilmişse, VEYA
+  //   - çarpan defCarpan'dan farklıysa
+  // ============================================================
+  const isMaasBelirlendi = (p) => maasOf(p) > 0;
+  const isCellBelirlendi = (p, d) => {
+    const ovr = valOf(p, d.overrideKey);
+    if (ovr !== null && ovr !== undefined && ovr !== '') return true;
+    const c = valOf(p, d.carpanKey);
+    if (c === null || c === undefined || c === '') return false;
+    return parseFloat(c) !== d.defCarpan;
+  };
+  const isPersonelTamBelirlendi = (p) => {
+    if (!isMaasBelirlendi(p)) return false;
+    return BELIRLEME_DURUMLARI.every(d => isCellBelirlendi(p, d));
+  };
+  const eksikBelirlenenler = personeller.filter(p => !isPersonelTamBelirlendi(p));
+  const eksikSayisi = eksikBelirlenenler.length;
+
+  // Bir personelin eksik kalemleri (uyarı listesinde göstermek için)
+  const eksikKalemleriOf = (p) => {
+    const eksikler = [];
+    if (!isMaasBelirlendi(p)) eksikler.push('Maaş');
+    BELIRLEME_DURUMLARI.forEach(d => {
+      if (!isCellBelirlendi(p, d)) eksikler.push(d.label);
+    });
+    return eksikler;
+  };
+
   return (
     <div className="space-y-4" data-testid="belirleme-tab">
       <div className="flex items-start justify-between gap-3 px-1">
@@ -369,6 +403,46 @@ const BelirlemeTab = ({ personeller, formatCurrency, onSavePersonel }) => {
           Tümünü Kaydet {dirtyCount > 0 && <span className="ml-1 px-1.5 py-0.5 rounded-full bg-white/20 text-[10px]">{dirtyCount}</span>}
         </Button>
       </div>
+
+      {/* Belirlenmemiş Personeller Uyarı Paneli */}
+      {eksikSayisi > 0 && (
+        <Card className="glass-effect border-rose-700/60 bg-rose-950/20" data-testid="belirleme-uyari-panel">
+          <CardHeader className="border-b border-rose-800/40 pb-3">
+            <CardTitle className="text-base text-rose-300 flex items-center gap-2">
+              <AlertCircle className="w-5 h-5" />
+              Belirlenmemiş Personel{' '}
+              <span className="text-xs font-normal text-rose-400/80">
+                ({eksikSayisi} kişi — maaş veya en az bir kalem eksik)
+              </span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-3">
+            <div className="flex flex-wrap gap-2" data-testid="belirleme-uyari-liste">
+              {eksikBelirlenenler.map(p => {
+                const eksikler = eksikKalemleriOf(p);
+                return (
+                  <div
+                    key={p.id}
+                    className="px-3 py-2 rounded-md border border-rose-700/40 bg-rose-900/20 text-xs"
+                    title={`Eksik: ${eksikler.join(', ')}`}
+                    data-testid={`belirleme-eksik-${p.id}`}
+                  >
+                    <div className="font-semibold text-rose-200">{p.ad_soyad}</div>
+                    <div className="text-rose-400/70 text-[10px] mt-0.5">
+                      Eksik: {eksikler.slice(0, 3).join(', ')}
+                      {eksikler.length > 3 && <span> +{eksikler.length - 3}</span>}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <p className="text-[11px] text-rose-400/70 mt-3">
+              ℹ️ Bu listedeki personellerin <strong>maaşı veya en az bir kalem çarpanı</strong> belirlenmemiş.
+              Belirleme tablosundan değer girip kaydedince otomatik olarak listeden kaldırılır.
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Toplu Belirleme Paneli */}
       <Card className="glass-effect border-amber-700/50" data-testid="toplu-belirleme-panel">
@@ -544,24 +618,29 @@ const BelirlemeTab = ({ personeller, formatCurrency, onSavePersonel }) => {
                         <TableCell className="font-medium text-white sticky left-12 bg-slate-950 z-10">{p.ad_soyad}</TableCell>
                         {belirlemeOrder.order.map(k => {
                           if (k === 'dep') return <TableCell key="dep" className="text-blue-300 text-sm">{p.departman || '-'}</TableCell>;
-                          if (k === 'maas') return (
-                            <TableCell key="maas">
-                              <Input
-                                type="number"
-                                value={valOf(p, 'maas') ?? ''}
-                                onChange={(e) => setEditField(p.id, 'maas', e.target.value === '' ? '' : parseFloat(e.target.value))}
-                                className="bg-slate-950 border-slate-700 h-8 text-sm w-[100px]"
-                                data-testid={`belirleme-maas-${p.id}`}
-                              />
-                            </TableCell>
-                          );
+                          if (k === 'maas') {
+                            const belirlendi = isMaasBelirlendi(p);
+                            return (
+                              <TableCell key="maas" className={belirlendi ? 'bg-emerald-900/20' : 'bg-rose-900/20'}>
+                                <Input
+                                  type="number"
+                                  value={valOf(p, 'maas') ?? ''}
+                                  onChange={(e) => setEditField(p.id, 'maas', e.target.value === '' ? '' : parseFloat(e.target.value))}
+                                  className={`bg-slate-950 h-8 text-sm w-[100px] ${belirlendi ? 'border-emerald-700' : 'border-rose-700'}`}
+                                  data-testid={`belirleme-maas-${p.id}`}
+                                  title={belirlendi ? 'Belirlenmiş' : 'Belirlenmemiş — lütfen maaş girin'}
+                                />
+                              </TableCell>
+                            );
+                          }
                           if (k === 'gunluk') return <TableCell key="gunluk" className="text-cyan-300 text-sm">{formatCurrency(gunlukOf(p))}</TableCell>;
                           const d = BELIRLEME_DURUMLARI.find(x => `durum_${x.carpanKey}` === k);
                           if (!d) return null;
                           const ovrAktif = overrideAktif(p, d);
                           const gost = gosterTutar(p, d);
+                          const belirlendi = isCellBelirlendi(p, d);
                           return (
-                            <TableCell key={k} className="border-l border-slate-800/50">
+                            <TableCell key={k} className={`border-l border-slate-800/50 ${belirlendi ? 'bg-emerald-900/15' : 'bg-rose-900/15'}`} title={belirlendi ? 'Belirlenmiş' : 'Belirlenmemiş (varsayılan değer kullanılıyor)'}>
                               <div className="flex items-center gap-1">
                                 <Input
                                   type="number"
@@ -717,6 +796,8 @@ const emptyPersonel = {
   durum_carpan_izinsiz_gelmedi: 0.0,
   durum_carpan_bayram_calisti: 2.0,
   durum_carpan_eksik_calisma: 1.0,
+  durum_carpan_olum_izni: 1.0,
+  durum_carpan_dogum_izni: 1.0,
   // İlk maaş dönemi opsiyonel alanları
   ilk_maas_baslangic_yil: null,
   ilk_maas_baslangic_ay: null,

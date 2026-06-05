@@ -46,6 +46,8 @@ const DURUM_KOLONLAR = [
   { value: 'resmi_tatil', label: 'Resmi Tatil', short: 'R. Tatil', color: 'text-orange-400' },
   { value: 'bayram_tatili', label: 'Bayram Tatili', short: 'Byr. Tatil', color: 'text-pink-400' },
   { value: 'izinsiz_gelmedi', label: 'İzinsiz Gelmedi', short: 'İzinsiz', color: 'text-rose-400' },
+  { value: 'olum_izni', label: 'Ölüm İzni', short: 'Ölüm İz.', color: 'text-gray-300' },
+  { value: 'dogum_izni', label: 'Doğum İzni', short: 'Doğum İz.', color: 'text-teal-300' },
   { value: 'pazar_calismasi', label: 'Pazar Çalışması', short: 'Pazar Çal.', color: 'text-cyan-400' },
   { value: 'resmi_tatil_calisti', label: 'Resmi Tatil Çalıştı', short: 'R.T. Çal.', color: 'text-amber-400' },
   { value: 'bayram_calisti', label: 'Bayram Çalıştı', short: 'Byr. Çal.', color: 'text-fuchsia-400' },
@@ -209,7 +211,7 @@ const PuantajRaporlama = () => {
     const eksikCarpan = parseFloat(personel.durum_carpan_eksik_calisma ?? 1.0);
     const eksikBirim = applyOvr(personel.ucret_override_eksik_calisma,      Math.ceil(saatlik * eksikCarpan));
     let toplamFm = 0, pazarGun = 0, rtGun = 0;
-    const durumGun = { izinli:0, raporlu:0, hafta_tatili:0, resmi_tatil:0, bayram_tatili:0, izinsiz_gelmedi:0 };
+    const durumGun = { izinli:0, raporlu:0, hafta_tatili:0, resmi_tatil:0, bayram_tatili:0, izinsiz_gelmedi:0, olum_izni:0, dogum_izni:0 };
     puantajlari.forEach(p => {
       const durum = (p.durum || 'geldi').toLowerCase();
       const fm = parseFloat(p.fazla_mesai) || 0;
@@ -236,6 +238,8 @@ const PuantajRaporlama = () => {
       ['resmi_tatil',     personel.durum_carpan_resmi_tatil,     personel.ucret_override_resmi_tatil,     1.0],
       ['bayram_tatili',   personel.durum_carpan_bayram_tatili,   personel.ucret_override_bayram_tatili,   1.0],
       ['izinsiz_gelmedi', personel.durum_carpan_izinsiz_gelmedi, personel.ucret_override_izinsiz_gelmedi, 0.0],
+      ['olum_izni',       personel.durum_carpan_olum_izni,       personel.ucret_override_olum_izni,       1.0],
+      ['dogum_izni',      personel.durum_carpan_dogum_izni,      personel.ucret_override_dogum_izni,      1.0],
     ];
     let durumEk = 0;
     // Her durum için birim fiyatları topla (Belirleme tablosundan)
