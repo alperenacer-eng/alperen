@@ -105,6 +105,12 @@ const BelirlemeTab = ({ personeller, formatCurrency, onSavePersonel }) => {
   const [savingIds, setSavingIds] = useState(new Set());
   // Departman bazında yatay scroll yönetimi
   const scrollRefs = React.useRef({});
+  // Sürüklenebilir sütun sırası — Belirleme tablosunun orta kolonları
+  const belirlemeDefaultOrder = React.useMemo(
+    () => ['dep', 'maas', 'gunluk', ...BELIRLEME_DURUMLARI.map(d => `durum_${d.carpanKey}`)],
+    []
+  );
+  const belirlemeOrder = useColumnOrder('personel-belirleme-cols', belirlemeDefaultOrder);
   const scrollBy = (dep, delta) => {
     const el = scrollRefs.current[dep];
     if (el) el.scrollBy({ left: delta, behavior: 'smooth' });
@@ -456,15 +462,21 @@ const BelirlemeTab = ({ personeller, formatCurrency, onSavePersonel }) => {
                       />
                     </TableHead>
                     <TableHead className="text-slate-300 sticky left-12 bg-slate-950 z-10 min-w-[180px]">Ad Soyad</TableHead>
-                    <TableHead className="text-slate-300 min-w-[130px]">Departman</TableHead>
-                    <TableHead className="text-slate-300 min-w-[110px]">Maaş</TableHead>
-                    <TableHead className="text-slate-300 min-w-[110px]">Günlük</TableHead>
-                    {BELIRLEME_DURUMLARI.map(d => (
-                      <TableHead key={d.carpanKey} className="text-slate-300 min-w-[170px] text-center border-l border-slate-800">
-                        <div>{d.label}</div>
-                        <div className="text-[10px] text-slate-500 font-normal">{d.tip === 'saatlik' ? '(₺/saat)' : '(₺/gün)'}</div>
-                      </TableHead>
-                    ))}
+                    {belirlemeOrder.order.map(k => {
+                      if (k === 'dep') return <DraggableTableHead key="dep" colKey="dep" onReorder={belirlemeOrder.reorder} className="text-slate-300 min-w-[130px]">Departman</DraggableTableHead>;
+                      if (k === 'maas') return <DraggableTableHead key="maas" colKey="maas" onReorder={belirlemeOrder.reorder} className="text-slate-300 min-w-[110px]">Maaş</DraggableTableHead>;
+                      if (k === 'gunluk') return <DraggableTableHead key="gunluk" colKey="gunluk" onReorder={belirlemeOrder.reorder} className="text-slate-300 min-w-[110px]">Günlük</DraggableTableHead>;
+                      const d = BELIRLEME_DURUMLARI.find(x => `durum_${x.carpanKey}` === k);
+                      if (!d) return null;
+                      return (
+                        <DraggableTableHead key={k} colKey={k} onReorder={belirlemeOrder.reorder} className="text-slate-300 min-w-[170px] text-center border-l border-slate-800">
+                          <div>
+                            <div>{d.label}</div>
+                            <div className="text-[10px] text-slate-500 font-normal">{d.tip === 'saatlik' ? '(₺/saat)' : '(₺/gün)'}</div>
+                          </div>
+                        </DraggableTableHead>
+                      );
+                    })}
                     <TableHead className="text-slate-300 sticky right-0 bg-slate-950 z-10 min-w-[120px]">İşlem</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -484,22 +496,26 @@ const BelirlemeTab = ({ personeller, formatCurrency, onSavePersonel }) => {
                           />
                         </TableCell>
                         <TableCell className="font-medium text-white sticky left-12 bg-slate-950 z-10">{p.ad_soyad}</TableCell>
-                        <TableCell className="text-blue-300 text-sm">{p.departman || '-'}</TableCell>
-                        <TableCell>
-                          <Input
-                            type="number"
-                            value={valOf(p, 'maas') ?? ''}
-                            onChange={(e) => setEditField(p.id, 'maas', e.target.value === '' ? '' : parseFloat(e.target.value))}
-                            className="bg-slate-950 border-slate-700 h-8 text-sm w-[100px]"
-                            data-testid={`belirleme-maas-${p.id}`}
-                          />
-                        </TableCell>
-                        <TableCell className="text-cyan-300 text-sm">{formatCurrency(gunlukOf(p))}</TableCell>
-                        {BELIRLEME_DURUMLARI.map(d => {
+                        {belirlemeOrder.order.map(k => {
+                          if (k === 'dep') return <TableCell key="dep" className="text-blue-300 text-sm">{p.departman || '-'}</TableCell>;
+                          if (k === 'maas') return (
+                            <TableCell key="maas">
+                              <Input
+                                type="number"
+                                value={valOf(p, 'maas') ?? ''}
+                                onChange={(e) => setEditField(p.id, 'maas', e.target.value === '' ? '' : parseFloat(e.target.value))}
+                                className="bg-slate-950 border-slate-700 h-8 text-sm w-[100px]"
+                                data-testid={`belirleme-maas-${p.id}`}
+                              />
+                            </TableCell>
+                          );
+                          if (k === 'gunluk') return <TableCell key="gunluk" className="text-cyan-300 text-sm">{formatCurrency(gunlukOf(p))}</TableCell>;
+                          const d = BELIRLEME_DURUMLARI.find(x => `durum_${x.carpanKey}` === k);
+                          if (!d) return null;
                           const ovrAktif = overrideAktif(p, d);
                           const gost = gosterTutar(p, d);
                           return (
-                            <TableCell key={d.carpanKey} className="border-l border-slate-800/50">
+                            <TableCell key={k} className="border-l border-slate-800/50">
                               <div className="flex items-center gap-1">
                                 <Input
                                   type="number"

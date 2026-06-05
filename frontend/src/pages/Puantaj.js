@@ -26,6 +26,8 @@ import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { useColumnOrder } from '@/hooks/useColumnOrder';
+import { DraggableTableHead } from '@/components/DraggableTableHead';
 import {
   Dialog,
   DialogContent,
@@ -812,6 +814,11 @@ const Puantaj = () => {
     }
   };
 
+  // Sürüklenebilir sütun sırası — Puantaj iç tabloları
+  const puantajKayitSizOrder = useColumnOrder('puantaj-kayit-siz-cols', ['ad', 'dep', 'poz']);
+  const puantajKayitliOrder = useColumnOrder('puantaj-kayitli-cols', ['ad', 'durum', 'giris', 'cikis', 'fm', 'tesis', 'not', 'islem']);
+  const topluPuantajOrder = useColumnOrder('puantaj-toplu-tarih-cols', ['tarih', 'durum', 'giris', 'cikis', 'fm', 'tesis', 'not', 'islem']);
+
   return (
     <div className="animate-fade-in">
       {/* Header */}
@@ -1225,6 +1232,14 @@ const Puantaj = () => {
             </div>
           ) : (
             <div className="max-h-[500px] overflow-y-auto custom-scrollbar">
+              {(() => {
+                const ksCols = [
+                  { key: 'ad', label: 'Personel Adı', cellRender: (p) => <TableCell key="ad" className="font-medium text-white">{p.ad_soyad}</TableCell> },
+                  { key: 'dep', label: 'Departman', cellRender: (p) => <TableCell key="dep" className="text-slate-400">{p.departman || '-'}</TableCell> },
+                  { key: 'poz', label: 'Pozisyon', cellRender: (p) => <TableCell key="poz" className="text-slate-400">{p.pozisyon || '-'}</TableCell> },
+                ];
+                const orderedKs = puantajKayitSizOrder.order.map(k => ksCols.find(c => c.key === k)).filter(Boolean);
+                return (
               <Table>
                 <TableHeader className="sticky top-0 z-10 bg-slate-950">
                   <TableRow className="border-slate-800 bg-slate-900/95 backdrop-blur">
@@ -1234,16 +1249,18 @@ const Puantaj = () => {
                         onCheckedChange={handleSelectAll}
                       />
                     </TableHead>
-                    <TableHead className="text-slate-300">Personel Adı</TableHead>
-                    <TableHead className="text-slate-300">Departman</TableHead>
-                    <TableHead className="text-slate-300">Pozisyon</TableHead>
+                    {orderedKs.map(col => (
+                      <DraggableTableHead key={col.key} colKey={col.key} onReorder={puantajKayitSizOrder.reorder} className="text-slate-300">
+                        {col.label}
+                      </DraggableTableHead>
+                    ))}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {groupedKayitSiz.map((grup) => (
                     <React.Fragment key={`ks-${grup.departman}`}>
                       <TableRow className="border-slate-800 bg-blue-900/20 hover:bg-blue-900/30">
-                        <TableCell colSpan={4} className="py-2">
+                        <TableCell colSpan={orderedKs.length + 1} className="py-2">
                           <div className="flex items-center gap-2 text-sm font-semibold text-blue-300">
                             <span className="inline-block w-2 h-2 rounded-full bg-blue-400"></span>
                             <span className="uppercase tracking-wide">{grup.departman}</span>
@@ -1272,9 +1289,9 @@ const Puantaj = () => {
                                 onCheckedChange={(checked) => handlePersonelSelect(personel.id, checked)}
                               />
                             </TableCell>
-                            <TableCell className="font-medium text-white">{personel.ad_soyad}</TableCell>
-                            <TableCell className="text-slate-400">{personel.departman || '-'}</TableCell>
-                            <TableCell className="text-slate-400">{personel.pozisyon || '-'}</TableCell>
+                            {orderedKs.map(col => (
+                              <React.Fragment key={col.key}>{col.cellRender(personel)}</React.Fragment>
+                            ))}
                           </TableRow>
                         );
                       })}
@@ -1282,6 +1299,8 @@ const Puantaj = () => {
                   ))}
                 </TableBody>
               </Table>
+                );
+              })()}
             </div>
           )}
         </CardContent>
@@ -1334,24 +1353,56 @@ const Puantaj = () => {
             </div>
           ) : (
             <div className="max-h-[450px] overflow-y-auto custom-scrollbar">
+              {(() => {
+                const klCols = [
+                  { key: 'ad', label: 'Personel', cellRender: (p) => <TableCell key="ad" className="font-medium text-white">{p.personel_adi}</TableCell> },
+                  { key: 'durum', label: 'Durum', cellRender: (p) => {
+                    const durumInfo = getDurumInfo(p.durum || 'geldi');
+                    const DurumIcon = durumInfo.icon;
+                    return (
+                      <TableCell key="durum">
+                        <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium border ${durumInfo.badgeClass}`}>
+                          <DurumIcon className="w-3.5 h-3.5" />
+                          {durumInfo.label}
+                        </span>
+                      </TableCell>
+                    );
+                  }},
+                  { key: 'giris', label: 'Giriş', cellRender: (p) => <TableCell key="giris" className="text-green-400">{p.giris_saati || '-'}</TableCell> },
+                  { key: 'cikis', label: 'Çıkış', cellRender: (p) => <TableCell key="cikis" className="text-red-400">{p.cikis_saati || '-'}</TableCell> },
+                  { key: 'fm', label: 'Fazla Mesai', cellRender: (p) => <TableCell key="fm" className="text-orange-400">{p.fazla_mesai?.toFixed(1) || '0'}</TableCell> },
+                  { key: 'tesis', label: 'Tesis', cellRender: (p) => <TableCell key="tesis" className="text-blue-400">{p.tesis_adi || '-'}</TableCell> },
+                  { key: 'not', label: 'Not', cellRender: (p) => <TableCell key="not" className="text-slate-400 text-sm">{p.notlar || '-'}</TableCell> },
+                  { key: 'islem', label: 'İşlem', cellRender: (p) => (
+                    <TableCell key="islem">
+                      <div className="flex gap-1">
+                        <Button size="icon" variant="ghost" className="h-8 w-8 text-blue-500 hover:text-blue-400 hover:bg-blue-500/10" onClick={() => handleEditPuantaj(p)}>
+                          <Pencil className="w-4 h-4" />
+                        </Button>
+                        <Button size="icon" variant="ghost" className="h-8 w-8 text-red-500 hover:text-red-400 hover:bg-red-500/10" onClick={() => handleDeletePuantaj(p.id)}>
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  )},
+                ];
+                const orderedKl = puantajKayitliOrder.order.map(k => klCols.find(c => c.key === k)).filter(Boolean);
+                return (
               <Table>
                 <TableHeader className="sticky top-0 z-10 bg-slate-950">
                   <TableRow className="border-slate-800 bg-slate-900/95 backdrop-blur">
-                    <TableHead className="text-slate-300">Personel</TableHead>
-                    <TableHead className="text-slate-300">Durum</TableHead>
-                    <TableHead className="text-slate-300">Giriş</TableHead>
-                    <TableHead className="text-slate-300">Çıkış</TableHead>
-                    <TableHead className="text-slate-300">Fazla Mesai</TableHead>
-                    <TableHead className="text-slate-300">Tesis</TableHead>
-                    <TableHead className="text-slate-300">Not</TableHead>
-                    <TableHead className="text-slate-300 w-16">İşlem</TableHead>
+                    {orderedKl.map(col => (
+                      <DraggableTableHead key={col.key} colKey={col.key} onReorder={puantajKayitliOrder.reorder} className="text-slate-300">
+                        {col.label}
+                      </DraggableTableHead>
+                    ))}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {groupedKayitli.map((grup) => (
                     <React.Fragment key={`kl-${grup.departman}`}>
                       <TableRow className="border-slate-800 bg-blue-900/20 hover:bg-blue-900/30">
-                        <TableCell colSpan={8} className="py-2">
+                        <TableCell colSpan={orderedKl.length} className="py-2">
                           <div className="flex items-center gap-2 text-sm font-semibold text-blue-300">
                             <span className="inline-block w-2 h-2 rounded-full bg-blue-400"></span>
                             <span className="uppercase tracking-wide">{grup.departman}</span>
@@ -1359,40 +1410,19 @@ const Puantaj = () => {
                           </div>
                         </TableCell>
                       </TableRow>
-                      {grup.items.map((p, idx) => {
-                        const durumInfo = getDurumInfo(p.durum || 'geldi');
-                        const DurumIcon = durumInfo.icon;
-                        return (
-                          <TableRow key={p.id} className={`border-slate-800 ${idx % 2 === 0 ? 'bg-slate-900/30' : 'bg-slate-900/50'}`}>
-                            <TableCell className="font-medium text-white">{p.personel_adi}</TableCell>
-                            <TableCell>
-                              <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium border ${durumInfo.badgeClass}`}>
-                                <DurumIcon className="w-3.5 h-3.5" />
-                                {durumInfo.label}
-                              </span>
-                            </TableCell>
-                            <TableCell className="text-green-400">{p.giris_saati || '-'}</TableCell>
-                            <TableCell className="text-red-400">{p.cikis_saati || '-'}</TableCell>
-                            <TableCell className="text-orange-400">{p.fazla_mesai?.toFixed(1) || '0'}</TableCell>
-                            <TableCell className="text-blue-400">{p.tesis_adi || '-'}</TableCell>
-                            <TableCell className="text-slate-400 text-sm">{p.notlar || '-'}</TableCell>
-                            <TableCell>
-                              <div className="flex gap-1">
-                                <Button size="icon" variant="ghost" className="h-8 w-8 text-blue-500 hover:text-blue-400 hover:bg-blue-500/10" onClick={() => handleEditPuantaj(p)}>
-                                  <Pencil className="w-4 h-4" />
-                                </Button>
-                                <Button size="icon" variant="ghost" className="h-8 w-8 text-red-500 hover:text-red-400 hover:bg-red-500/10" onClick={() => handleDeletePuantaj(p.id)}>
-                                  <Trash2 className="w-4 h-4" />
-                                </Button>
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
+                      {grup.items.map((p, idx) => (
+                        <TableRow key={p.id} className={`border-slate-800 ${idx % 2 === 0 ? 'bg-slate-900/30' : 'bg-slate-900/50'}`}>
+                          {orderedKl.map(col => (
+                            <React.Fragment key={col.key}>{col.cellRender(p)}</React.Fragment>
+                          ))}
+                        </TableRow>
+                      ))}
                     </React.Fragment>
                   ))}
                 </TableBody>
               </Table>
+                );
+              })()}
             </div>
           )}
         </CardContent>
@@ -1812,17 +1842,102 @@ const Puantaj = () => {
                 </div>
               ) : (
                 <div className="max-h-[600px] overflow-y-auto custom-scrollbar">
+                  {(() => {
+                    const tpCols = [
+                      { key: 'tarih', label: 'Tarih', headCls: 'text-slate-300 w-44',
+                        cellRender: (d, row, isWeekend) => (
+                          <TableCell key="tarih" className="font-medium">
+                            <div className="flex flex-col">
+                              <span className={`${isWeekend ? 'text-purple-300' : 'text-white'}`}>{d}</span>
+                              <span className="text-xs text-slate-400">
+                                {getGunAdi(d)}
+                                {row.mevcut && <span className="ml-2 text-amber-400">· Mevcut kayıt</span>}
+                              </span>
+                            </div>
+                          </TableCell>
+                        )},
+                      { key: 'durum', label: 'Durum', headCls: 'text-slate-300 w-44',
+                        cellRender: (d, row) => (
+                          <TableCell key="durum">
+                            <Select value={row.durum || "none"} onValueChange={(v) => updateTopluRow(d, 'durum', v === "none" ? "" : v)}>
+                              <SelectTrigger className="bg-slate-950 border-slate-700 h-8 text-xs">
+                                <SelectValue placeholder="Seçiniz" />
+                              </SelectTrigger>
+                              <SelectContent className="bg-slate-900 border-slate-700">
+                                <SelectItem value="none">— Boş —</SelectItem>
+                                {DURUM_OPTIONS.map(opt => {
+                                  const Icon = opt.icon;
+                                  return (
+                                    <SelectItem key={opt.value} value={opt.value}>
+                                      <span className="flex items-center gap-2">
+                                        <Icon className={`w-4 h-4 ${opt.color}`} /> {opt.label}
+                                      </span>
+                                    </SelectItem>
+                                  );
+                                })}
+                              </SelectContent>
+                            </Select>
+                          </TableCell>
+                        )},
+                      { key: 'giris', label: 'Giriş', headCls: 'text-slate-300 w-28',
+                        cellRender: (d, row, _w, durumDisabled) => (
+                          <TableCell key="giris">
+                            <Input type="time" value={row.giris_saati || ''} onChange={(e) => updateTopluRow(d, 'giris_saati', e.target.value)} disabled={durumDisabled} className="bg-slate-950 border-slate-700 h-8 text-xs" />
+                          </TableCell>
+                        )},
+                      { key: 'cikis', label: 'Çıkış', headCls: 'text-slate-300 w-28',
+                        cellRender: (d, row, _w, durumDisabled) => (
+                          <TableCell key="cikis">
+                            <Input type="time" value={row.cikis_saati || ''} onChange={(e) => updateTopluRow(d, 'cikis_saati', e.target.value)} disabled={durumDisabled} className="bg-slate-950 border-slate-700 h-8 text-xs" />
+                          </TableCell>
+                        )},
+                      { key: 'fm', label: 'Fazla Mesai', headCls: 'text-slate-300 w-28',
+                        cellRender: (d, row, _w, durumDisabled) => (
+                          <TableCell key="fm">
+                            <Input type="number" step="0.5" min="0" max="24" value={row.fazla_mesai ?? '0'} onChange={(e) => updateTopluRow(d, 'fazla_mesai', e.target.value)} disabled={durumDisabled} className="bg-slate-950 border-slate-700 h-8 text-xs" />
+                          </TableCell>
+                        )},
+                      { key: 'tesis', label: 'Tesis', headCls: 'text-slate-300 w-40',
+                        cellRender: (d, row) => (
+                          <TableCell key="tesis">
+                            <Select value={row.tesis_id || "none"} onValueChange={(v) => updateTopluRow(d, 'tesis_id', v === "none" ? "" : v)}>
+                              <SelectTrigger className="bg-slate-950 border-slate-700 h-8 text-xs">
+                                <SelectValue placeholder="Tesis" />
+                              </SelectTrigger>
+                              <SelectContent className="bg-slate-900 border-slate-700">
+                                <SelectItem value="none">Seçiniz</SelectItem>
+                                {tesisler.map(t => (
+                                  <SelectItem key={t.id} value={t.id}>{t.tesis_adi}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </TableCell>
+                        )},
+                      { key: 'not', label: 'Not', headCls: 'text-slate-300',
+                        cellRender: (d, row) => (
+                          <TableCell key="not">
+                            <Input type="text" value={row.notlar || ''} onChange={(e) => updateTopluRow(d, 'notlar', e.target.value)} placeholder="Not..." className="bg-slate-950 border-slate-700 h-8 text-xs" />
+                          </TableCell>
+                        )},
+                      { key: 'islem', label: 'İşlem', headCls: 'text-slate-300 w-16',
+                        cellRender: (d) => (
+                          <TableCell key="islem">
+                            <Button size="icon" variant="ghost" className="h-7 w-7 text-slate-400 hover:text-red-400" onClick={() => clearTopluRow(d)} title="Satırı temizle">
+                              <X className="w-4 h-4" />
+                            </Button>
+                          </TableCell>
+                        )},
+                    ];
+                    const orderedTp = topluPuantajOrder.order.map(k => tpCols.find(c => c.key === k)).filter(Boolean);
+                    return (
                   <Table>
                     <TableHeader className="sticky top-0 z-10 bg-slate-950">
                       <TableRow className="border-slate-800 bg-slate-900/95 backdrop-blur">
-                        <TableHead className="text-slate-300 w-44">Tarih</TableHead>
-                        <TableHead className="text-slate-300 w-44">Durum</TableHead>
-                        <TableHead className="text-slate-300 w-28">Giriş</TableHead>
-                        <TableHead className="text-slate-300 w-28">Çıkış</TableHead>
-                        <TableHead className="text-slate-300 w-28">Fazla Mesai</TableHead>
-                        <TableHead className="text-slate-300 w-40">Tesis</TableHead>
-                        <TableHead className="text-slate-300">Not</TableHead>
-                        <TableHead className="text-slate-300 w-16">İşlem</TableHead>
+                        {orderedTp.map(col => (
+                          <DraggableTableHead key={col.key} colKey={col.key} onReorder={topluPuantajOrder.reorder} className={col.headCls}>
+                            {col.label}
+                          </DraggableTableHead>
+                        ))}
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -1836,109 +1951,16 @@ const Puantaj = () => {
                             data-testid={`toplu-row-${d}`}
                             className={`border-slate-800 ${idx % 2 === 0 ? 'bg-slate-900/30' : 'bg-slate-900/50'} ${isWeekend ? 'bg-purple-900/10' : ''}`}
                           >
-                            <TableCell className="font-medium">
-                              <div className="flex flex-col">
-                                <span className={`${isWeekend ? 'text-purple-300' : 'text-white'}`}>{d}</span>
-                                <span className="text-xs text-slate-400">
-                                  {getGunAdi(d)}
-                                  {row.mevcut && <span className="ml-2 text-amber-400">· Mevcut kayıt</span>}
-                                </span>
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <Select
-                                value={row.durum || "none"}
-                                onValueChange={(v) => updateTopluRow(d, 'durum', v === "none" ? "" : v)}
-                              >
-                                <SelectTrigger className="bg-slate-950 border-slate-700 h-8 text-xs">
-                                  <SelectValue placeholder="Seçiniz" />
-                                </SelectTrigger>
-                                <SelectContent className="bg-slate-900 border-slate-700">
-                                  <SelectItem value="none">— Boş —</SelectItem>
-                                  {DURUM_OPTIONS.map(opt => {
-                                    const Icon = opt.icon;
-                                    return (
-                                      <SelectItem key={opt.value} value={opt.value}>
-                                        <span className="flex items-center gap-2">
-                                          <Icon className={`w-4 h-4 ${opt.color}`} /> {opt.label}
-                                        </span>
-                                      </SelectItem>
-                                    );
-                                  })}
-                                </SelectContent>
-                              </Select>
-                            </TableCell>
-                            <TableCell>
-                              <Input
-                                type="time"
-                                value={row.giris_saati || ''}
-                                onChange={(e) => updateTopluRow(d, 'giris_saati', e.target.value)}
-                                disabled={durumDisabled}
-                                className="bg-slate-950 border-slate-700 h-8 text-xs"
-                              />
-                            </TableCell>
-                            <TableCell>
-                              <Input
-                                type="time"
-                                value={row.cikis_saati || ''}
-                                onChange={(e) => updateTopluRow(d, 'cikis_saati', e.target.value)}
-                                disabled={durumDisabled}
-                                className="bg-slate-950 border-slate-700 h-8 text-xs"
-                              />
-                            </TableCell>
-                            <TableCell>
-                              <Input
-                                type="number"
-                                step="0.5"
-                                min="0"
-                                max="24"
-                                value={row.fazla_mesai ?? '0'}
-                                onChange={(e) => updateTopluRow(d, 'fazla_mesai', e.target.value)}
-                                disabled={durumDisabled}
-                                className="bg-slate-950 border-slate-700 h-8 text-xs"
-                              />
-                            </TableCell>
-                            <TableCell>
-                              <Select
-                                value={row.tesis_id || "none"}
-                                onValueChange={(v) => updateTopluRow(d, 'tesis_id', v === "none" ? "" : v)}
-                              >
-                                <SelectTrigger className="bg-slate-950 border-slate-700 h-8 text-xs">
-                                  <SelectValue placeholder="Tesis" />
-                                </SelectTrigger>
-                                <SelectContent className="bg-slate-900 border-slate-700">
-                                  <SelectItem value="none">Seçiniz</SelectItem>
-                                  {tesisler.map(t => (
-                                    <SelectItem key={t.id} value={t.id}>{t.tesis_adi}</SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </TableCell>
-                            <TableCell>
-                              <Input
-                                type="text"
-                                value={row.notlar || ''}
-                                onChange={(e) => updateTopluRow(d, 'notlar', e.target.value)}
-                                placeholder="Not..."
-                                className="bg-slate-950 border-slate-700 h-8 text-xs"
-                              />
-                            </TableCell>
-                            <TableCell>
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                className="h-7 w-7 text-slate-400 hover:text-red-400"
-                                onClick={() => clearTopluRow(d)}
-                                title="Satırı temizle"
-                              >
-                                <X className="w-4 h-4" />
-                              </Button>
-                            </TableCell>
+                            {orderedTp.map(col => (
+                              <React.Fragment key={col.key}>{col.cellRender(d, row, isWeekend, durumDisabled)}</React.Fragment>
+                            ))}
                           </TableRow>
                         );
                       })}
                     </TableBody>
                   </Table>
+                    );
+                  })()}
                 </div>
               )}
             </CardContent>
