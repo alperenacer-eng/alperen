@@ -336,11 +336,13 @@ const PuantajRaporlama = () => {
         'Baz Alınan Gün',
         'Departman',
         'Çal. Günü',
-        ...DURUM_KOLONLAR.flatMap(d => [d.label, `${d.short} Birim (₺)`]),
+        ...DURUM_KOLONLAR.flatMap(d => [d.label, `${d.short} Birim (₺)`, `${d.short} Tutar (₺)`]),
         'Fazla Mesai (saat)',
         'F.Mesai Birim (₺/sa)',
+        'F.Mesai Tutar (₺)',
         'Eksik Çal. Saat',
         'Eksik Çal. Birim (₺/sa)',
+        'Eksik Çal. Tutar (₺)',
         'F.Mesai Ücreti (₺)',
         'Pazar Ücreti (₺)',
         'R.Tatil Çal. Ücreti (₺)',
@@ -355,14 +357,21 @@ const PuantajRaporlama = () => {
         30,
         p.departman,
         p.calismaGunu,
-        ...DURUM_KOLONLAR.flatMap(d => [
-          p.durumSayilari[d.value] || 0,
-          Number(((p.hakedilen?.birimFiyatlar?.[d.value]) || 0).toFixed(2)),
-        ]),
+        ...DURUM_KOLONLAR.flatMap(d => {
+          const sayi = p.durumSayilari[d.value] || 0;
+          const birim = (p.hakedilen?.birimFiyatlar?.[d.value]) || 0;
+          return [
+            sayi,
+            Number(birim.toFixed(2)),
+            Number((sayi * birim).toFixed(2)),
+          ];
+        }),
         Number(p.toplamFazlaMesai.toFixed(1)),
         Number(((p.hakedilen?.birimFiyatlar?.fazla_mesai) || 0).toFixed(2)),
+        Number((p.hakedilen?.fmUcret || 0).toFixed(2)),
         dakikayiFormatla(p.toplamEksikDakika),
         Number(((p.hakedilen?.birimFiyatlar?.eksik_calisma) || 0).toFixed(2)),
+        Number(((p.toplamEksikDakika / 60) * ((p.hakedilen?.birimFiyatlar?.eksik_calisma) || 0)).toFixed(2)),
         Number((p.hakedilen.fmUcret || 0).toFixed(2)),
         Number((p.hakedilen.pzUcret || 0).toFixed(2)),
         Number((p.hakedilen.rtUcret || 0).toFixed(2)),
@@ -465,11 +474,13 @@ const PuantajRaporlama = () => {
               <th>Baz Alınan Gün</th>
               <th>Departman</th>
               <th>Çal. Günü</th>
-              ${DURUM_KOLONLAR.map(d => `<th>${d.short}</th><th style="font-size:10px;color:#64748b">${d.short} ₺</th>`).join('')}
+              ${DURUM_KOLONLAR.map(d => `<th>${d.short}</th><th style="font-size:10px;color:#64748b">${d.short} ₺</th><th style="color:#059669">${d.short} Tutar</th>`).join('')}
               <th>Fazla Mesai</th>
               <th style="font-size:10px;color:#64748b">F.Mesai ₺/sa</th>
+              <th style="color:#059669">F.Mesai Tutar</th>
               <th>Eksik Çal.</th>
               <th style="font-size:10px;color:#64748b">Eksik Çal. ₺/sa</th>
+              <th style="color:#e11d48">Eksik Çal. Tutar</th>
               <th>Hak Edilen (₺)</th>
               <th>Çalıştığı Tesisler</th>
             </tr>
@@ -483,13 +494,17 @@ const PuantajRaporlama = () => {
                 <td>${p.departman}</td>
                 <td>${p.calismaGunu}</td>
                 ${DURUM_KOLONLAR.map(d => {
+                  const sayi = p.durumSayilari[d.value] || 0;
                   const birim = (p.hakedilen?.birimFiyatlar?.[d.value]) || 0;
-                  return `<td style="text-align:center">${p.durumSayilari[d.value] || 0}</td><td style="text-align:center;font-size:10px;color:#64748b">${birim > 0 ? formatCurrency(birim) : '-'}</td>`;
+                  const tutar = sayi * birim;
+                  return `<td style="text-align:center">${sayi}</td><td style="text-align:center;font-size:10px;color:#64748b">${birim > 0 ? formatCurrency(birim) : '-'}</td><td style="text-align:right;color:#059669;font-weight:600">${tutar > 0 ? formatCurrency(tutar) : '-'}</td>`;
                 }).join('')}
                 <td style="text-align:center">${p.toplamFazlaMesai.toFixed(1)} sa</td>
                 <td style="text-align:center;font-size:10px;color:#64748b">${(p.hakedilen?.birimFiyatlar?.fazla_mesai || 0) > 0 ? formatCurrency(p.hakedilen.birimFiyatlar.fazla_mesai) + '/sa' : '-'}</td>
+                <td style="text-align:right;color:#059669;font-weight:600">${(p.hakedilen?.fmUcret || 0) > 0 ? formatCurrency(p.hakedilen.fmUcret) : '-'}</td>
                 <td>${dakikayiFormatla(p.toplamEksikDakika)}</td>
                 <td style="text-align:center;font-size:10px;color:#64748b">${(p.hakedilen?.birimFiyatlar?.eksik_calisma || 0) > 0 ? formatCurrency(p.hakedilen.birimFiyatlar.eksik_calisma) + '/sa' : '-'}</td>
+                <td style="text-align:right;color:#e11d48;font-weight:600">${(() => { const t = Math.ceil((p.toplamEksikDakika / 60) * (p.hakedilen?.birimFiyatlar?.eksik_calisma || 0)); return t > 0 ? formatCurrency(t) : '-'; })()}</td>
                 <td style="text-align:right;font-weight:600;color:#059669">${formatCurrency(p.hakedilen.toplam)}</td>
                 <td class="tesis-list">${p.tesisler.join(', ') || '-'}</td>
               </tr>
@@ -679,6 +694,22 @@ const PuantajRaporlama = () => {
             </TableCell>
           );
         }
+      },
+      {
+        key: `tutar_${d.value}`,
+        label: `${d.short} Tutar`,
+        headTitle: `${d.label} — gün × birim fiyat = toplam tutar`,
+        headCls: 'text-emerald-300 text-center whitespace-nowrap',
+        renderCell: (p) => {
+          const val = p.durumSayilari[d.value] || 0;
+          const birim = p.hakedilen?.birimFiyatlar?.[d.value] || 0;
+          const tutar = val * birim;
+          return (
+            <TableCell key={`tutar_${d.value}`} className={`text-center whitespace-nowrap font-medium ${tutar > 0 ? 'text-emerald-300' : 'text-slate-600'}`} data-testid={`tutar-${d.value}-${p.id}`}>
+              {tutar > 0 ? formatCurrency(tutar) : '-'}
+            </TableCell>
+          );
+        }
       }
     ]),
     {
@@ -703,6 +734,19 @@ const PuantajRaporlama = () => {
       }
     },
     {
+      key: 'fm_tutar', label: 'F.Mesai Tutar',
+      headTitle: 'Fazla mesai saati × saatlik birim fiyat',
+      headCls: 'text-emerald-300 text-center whitespace-nowrap',
+      renderCell: (p) => {
+        const tutar = p.hakedilen?.fmUcret || 0;
+        return (
+          <TableCell key="fm_tutar" className={`text-center whitespace-nowrap font-medium ${tutar > 0 ? 'text-emerald-300' : 'text-slate-600'}`} data-testid={`tutar-fazla-mesai-${p.id}`}>
+            {tutar > 0 ? formatCurrency(tutar) : '-'}
+          </TableCell>
+        );
+      }
+    },
+    {
       key: 'eksik', label: 'Eksik Çal.',
       headTitle: "17:00'dan önce çıkılan toplam süre (sadece 'Geldi' günlerinde)",
       headCls: 'text-rose-300 whitespace-nowrap',
@@ -721,6 +765,21 @@ const PuantajRaporlama = () => {
         return (
           <TableCell key="eksik_birim" className="text-center whitespace-nowrap text-slate-400 text-xs" data-testid={`birim-fiyat-eksik-calisma-${p.id}`}>
             {birim > 0 ? formatCurrency(birim) : '-'}
+          </TableCell>
+        );
+      }
+    },
+    {
+      key: 'eksik_tutar', label: 'Eksik Çal. Tutar',
+      headTitle: 'Eksik çalışma saati × saatlik birim fiyat (maaştan düşülen / hesaplanan tutar)',
+      headCls: 'text-rose-300 text-center whitespace-nowrap',
+      renderCell: (p) => {
+        const saat = (p.toplamEksikDakika || 0) / 60;
+        const birim = p.hakedilen?.birimFiyatlar?.eksik_calisma || 0;
+        const tutar = Math.ceil(saat * birim);
+        return (
+          <TableCell key="eksik_tutar" className={`text-center whitespace-nowrap font-medium ${tutar > 0 ? 'text-rose-300' : 'text-slate-600'}`} data-testid={`tutar-eksik-calisma-${p.id}`}>
+            {tutar > 0 ? formatCurrency(tutar) : '-'}
           </TableCell>
         );
       }
