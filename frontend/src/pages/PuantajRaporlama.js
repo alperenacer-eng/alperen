@@ -266,6 +266,7 @@ const PuantajRaporlama = () => {
       id: personel.id,
       ad_soyad: personel.ad_soyad,
       departman: personel.departman || '-',
+      maas: personel.maas || 0,
       calismaGunu: personelPuantajlari.length,
       toplamFazlaMesai: personelPuantajlari.reduce((sum, p) => sum + (p.fazla_mesai || 0), 0),
       tesisler: calisilanTesisler,
@@ -595,6 +596,10 @@ const PuantajRaporlama = () => {
     {
       key: 'ad', label: 'Personel Adı', headCls: 'text-white font-semibold min-w-[180px]',
       renderCell: (p) => <TableCell key="ad" className="font-semibold text-white">{p.ad_soyad}</TableCell>
+    },
+    {
+      key: 'maas', label: 'Maaş', headCls: 'text-emerald-300 whitespace-nowrap',
+      renderCell: (p) => <TableCell key="maas" className="text-emerald-300 font-medium whitespace-nowrap">{formatCurrency(p.maas)}</TableCell>
     },
     {
       key: 'dep', label: 'Departman', headCls: 'text-slate-300 min-w-[120px]',
