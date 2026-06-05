@@ -154,6 +154,27 @@ const BelirlemeTab = ({ personeller, formatCurrency, onSavePersonel }) => {
     setEdits(prev => ({ ...prev, [id]: { ...(prev[id] || {}), [key]: value } }));
   };
 
+  // Bir personel için kaydedilecek alanları "belirlenmis_kalemler" listesine ekler
+  // (mevcut listeyi parse eder, yeni keylari birleştirir, JSON string olarak döner)
+  const mergeBelirlenmisKalemler = (p, payload) => {
+    let mevcut = [];
+    try {
+      const raw = p?.belirlenmis_kalemler;
+      if (raw) {
+        const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+        if (Array.isArray(parsed)) mevcut = parsed;
+      }
+    } catch (_) { mevcut = []; }
+    const set = new Set(mevcut);
+    Object.keys(payload || {}).forEach(k => {
+      // 'belirlenmis_kalemler' kendisi listede tutulmasın
+      if (k === 'belirlenmis_kalemler') return;
+      // null değer (override temizleme) yine de "kullanıcı bu alana dokundu" sayılır
+      set.add(k);
+    });
+    return JSON.stringify(Array.from(set));
+  };
+
   // Çarpan değişti: override'ı temizle (çarpana göre yeniden hesaplanır)
   const onCarpanChange = (p, d, val) => {
     setEdits(prev => ({
@@ -187,6 +208,8 @@ const BelirlemeTab = ({ personeller, formatCurrency, onSavePersonel }) => {
       Object.keys(payload).forEach(k => {
         if (payload[k] === '') payload[k] = null;
       });
+      // belirlenmis_kalemler listesini güncelle
+      payload.belirlenmis_kalemler = mergeBelirlenmisKalemler(p, payload);
       await onSavePersonel(p.id, payload);
       // Edit state temizle
       setEdits(prev => {
@@ -225,6 +248,7 @@ const BelirlemeTab = ({ personeller, formatCurrency, onSavePersonel }) => {
       try {
         const payload = { ...edits[p.id] };
         Object.keys(payload).forEach(k => { if (payload[k] === '') payload[k] = null; });
+        payload.belirlenmis_kalemler = mergeBelirlenmisKalemler(p, payload);
         await onSavePersonel(p.id, payload);
         ok += 1;
       } catch (err) {
@@ -313,7 +337,10 @@ const BelirlemeTab = ({ personeller, formatCurrency, onSavePersonel }) => {
     let fail = 0;
     await Promise.all(ids.map(async (id) => {
       try {
-        await onSavePersonel(id, newFieldsPerId[id]);
+        const p = personeller.find(x => x.id === id);
+        const payload = { ...newFieldsPerId[id] };
+        payload.belirlenmis_kalemler = mergeBelirlenmisKalemler(p, payload);
+        await onSavePersonel(id, payload);
         ok += 1;
       } catch (err) {
         console.error(`Toplu uygula kayıt hatası (${id}):`, err);
@@ -354,11 +381,27 @@ const BelirlemeTab = ({ personeller, formatCurrency, onSavePersonel }) => {
 
   // ============================================================
   // BELİRLENDİ TESPİTİ — bir hücre "belirlenmiş" sayılır eğer:
+  //   - personelin belirlenmis_kalemler listesinde alan varsa, VEYA
   //   - override değeri set edilmişse, VEYA
   //   - çarpan defCarpan'dan farklıysa
   // ============================================================
-  const isMaasBelirlendi = (p) => maasOf(p) > 0;
+  const getBelirlenmisSet = (p) => {
+    try {
+      const raw = valOf(p, 'belirlenmis_kalemler');
+      if (!raw) return new Set();
+      const arr = typeof raw === 'string' ? JSON.parse(raw) : raw;
+      return new Set(Array.isArray(arr) ? arr : []);
+    } catch (_) {
+      return new Set();
+    }
+  };
+  const isMaasBelirlendi = (p) => {
+    if (maasOf(p) > 0) return true;
+    return getBelirlenmisSet(p).has('maas');
+  };
   const isCellBelirlendi = (p, d) => {
+    const set = getBelirlenmisSet(p);
+    if (set.has(d.carpanKey) || set.has(d.overrideKey)) return true;
     const ovr = valOf(p, d.overrideKey);
     if (ovr !== null && ovr !== undefined && ovr !== '') return true;
     const c = valOf(p, d.carpanKey);

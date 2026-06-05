@@ -550,6 +550,11 @@ async def init_db():
                 await db.execute(f"ALTER TABLE personeller ADD COLUMN {_ocol} REAL DEFAULT NULL")
             except:
                 pass
+        # "Belirleme" izleme listesi: kullanıcının açıkça belirlediği alan adlarının JSON listesi
+        try:
+            await db.execute("ALTER TABLE personeller ADD COLUMN belirlenmis_kalemler TEXT DEFAULT '[]'")
+        except Exception:
+            pass
         # Maas bordrolari yeni sütunlar (Pazar, Resmi Tatil ücretleri + detaylar)
         for _col in [
             ("pazar_ucreti", "REAL DEFAULT 0"),
@@ -3395,6 +3400,8 @@ class PersonelUpdate(BaseModel):
     ucret_override_eksik_calisma: Optional[float] = None
     ucret_override_olum_izni: Optional[float] = None
     ucret_override_dogum_izni: Optional[float] = None
+    # Belirlenmiş kalemler izleme listesi (JSON string)
+    belirlenmis_kalemler: Optional[str] = None
 
 @api_router.post("/personeller")
 async def create_personel(input: PersonelCreate, current_user: dict = Depends(get_current_user)):
