@@ -328,102 +328,43 @@ const PuantajRaporlama = () => {
   // Excel Export - Personel Bazlı tabloyu birebir yansıtır (xlsx)
   const exportToExcel = () => {
     try {
-      // 1) Personel Bazlı sheet (ekrandaki tablo ile aynı)
+      // 1) Personel Bazlı sheet — kullanıcının sıraladığı sütun düzenini KULLANIR
+      const orderedKeys = personelOrder.order.filter(k => personelExportMap[k]);
       const personelHeader = [
-        '#',
-        'Personel Adı',
-        'Maaş (₺)',
-        'Baz Alınan Gün',
-        'Departman',
-        'Çal. Günü',
-        ...DURUM_KOLONLAR.flatMap(d => [d.label, `${d.short} Birim (₺)`, `${d.short} Tutar (₺)`]),
-        'Fazla Mesai (saat)',
-        'F.Mesai Birim (₺/sa)',
-        'F.Mesai Tutar (₺)',
-        'Eksik Çal. Saat',
-        'Eksik Çal. Birim (₺/sa)',
-        'Eksik Çal. Tutar (₺)',
+        ...orderedKeys.map(k => personelExportMap[k].label),
+        // Ek özet sütunları (her zaman sonda)
         'F.Mesai Ücreti (₺)',
         'Pazar Ücreti (₺)',
         'R.Tatil Çal. Ücreti (₺)',
         'Durum Ek Ücret (₺)',
-        'Hak Edilen Toplam (₺)',
-        'Çalıştığı Tesisler',
       ];
       const personelRows = personelRaporu.map((p, idx) => [
-        idx + 1,
-        p.ad_soyad,
-        Number((p.maas || 0).toFixed(2)),
-        30,
-        p.departman,
-        p.calismaGunu,
-        ...DURUM_KOLONLAR.flatMap(d => {
-          const sayi = p.durumSayilari[d.value] || 0;
-          const birim = (p.hakedilen?.birimFiyatlar?.[d.value]) || 0;
-          return [
-            sayi,
-            Number(birim.toFixed(2)),
-            Number((sayi * birim).toFixed(2)),
-          ];
-        }),
-        Number(p.toplamFazlaMesai.toFixed(1)),
-        Number(((p.hakedilen?.birimFiyatlar?.fazla_mesai) || 0).toFixed(2)),
-        Number((p.hakedilen?.fmUcret || 0).toFixed(2)),
-        dakikayiFormatla(p.toplamEksikDakika),
-        Number(((p.hakedilen?.birimFiyatlar?.eksik_calisma) || 0).toFixed(2)),
-        Number(((p.toplamEksikDakika / 60) * ((p.hakedilen?.birimFiyatlar?.eksik_calisma) || 0)).toFixed(2)),
+        ...orderedKeys.map(k => personelExportMap[k].value(p, idx)),
         Number((p.hakedilen.fmUcret || 0).toFixed(2)),
         Number((p.hakedilen.pzUcret || 0).toFixed(2)),
         Number((p.hakedilen.rtUcret || 0).toFixed(2)),
         Number((p.hakedilen.durumEk || 0).toFixed(2)),
-        Number((p.hakedilen.toplam || 0).toFixed(2)),
-        p.tesisler.join(', ') || '-',
       ]);
       const wsPersonel = XLSX.utils.aoa_to_sheet([personelHeader, ...personelRows]);
 
-      // 2) Tesis Bazlı sheet
-      const tesisHeader = ['Tesis Adı', 'Kayıt Sayısı', 'Personel Sayısı', 'Toplam Fazla Mesai (saat)', 'Çalışan Personeller'];
-      const tesisRows = tesisRaporu.map(t => [
-        t.tesis_adi,
-        t.kayitSayisi,
-        t.personelSayisi,
-        Number(t.toplamFazlaMesai.toFixed(1)),
-        t.personelListesi.join(', '),
-      ]);
+      // 2) Tesis Bazlı sheet - sıralı sütunlar
+      const tesisOrderedKeys = tesisOrder.order.filter(k => tesisExportMap[k]);
+      const tesisHeader = tesisOrderedKeys.map(k => tesisExportMap[k].label);
+      const tesisRows = tesisRaporu.map(t => tesisOrderedKeys.map(k => tesisExportMap[k].value(t)));
       const wsTesis = XLSX.utils.aoa_to_sheet([tesisHeader, ...tesisRows]);
 
-      // 3) Gün Bazlı sheet
-      const gunHeader = ['Tarih', 'Gün', 'Personel Sayısı', 'Toplam Fazla Mesai (saat)'];
-      const gunRows = gunRaporu.map(g => {
-        const d = new Date(g.tarih);
-        const gunAdi = ['Pazar', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi'][d.getDay()];
-        return [g.tarih, gunAdi, g.personelSayisi, Number(g.toplamFazlaMesai.toFixed(1))];
-      });
+      // 3) Gün Bazlı sheet - sıralı sütunlar
+      const gunOrderedKeys = gunOrder.order.filter(k => gunExportMap[k]);
+      const gunHeader = gunOrderedKeys.map(k => gunExportMap[k].label);
+      const gunRows = gunRaporu.map(g => gunOrderedKeys.map(k => gunExportMap[k].value(g)));
       const wsGun = XLSX.utils.aoa_to_sheet([gunHeader, ...gunRows]);
 
-      // 4) Detaylı Liste sheet (ekrandaki Detaylı tablosu ile aynı: tüm durum kolonları)
-      const detayHeader = [
-        'Tarih', 'Personel', 'Tesis', 'Giriş', 'Çıkış', 'Fazla Mesai (saat)', 'Çalışılan Süre', 'Eksik Çal.',
-        ...DURUM_KOLONLAR.map(d => d.label),
-        'Not',
-      ];
+      // 4) Detaylı Liste sheet - sıralı sütunlar
+      const detayOrderedKeys = detayOrder.order.filter(k => detayExportMap[k]);
+      const detayHeader = detayOrderedKeys.map(k => detayExportMap[k].label);
       const detayRows = [...filteredPuantajlar]
         .sort((a, b) => b.tarih.localeCompare(a.tarih))
-        .map(p => {
-          const durum = p.durum || 'geldi';
-          return [
-            p.tarih,
-            p.personel_adi || '',
-            p.tesis_adi || '-',
-            p.giris_saati || '-',
-            p.cikis_saati || '-',
-            Number((p.fazla_mesai || 0).toFixed(1)),
-            calismaSuresi(p),
-            dakikayiFormatla(eksikDakikaKaydi(p)),
-            ...DURUM_KOLONLAR.map(d => (durum === d.value ? 1 : 0)),
-            p.notlar || '-',
-          ];
-        });
+        .map(p => detayOrderedKeys.map(k => detayExportMap[k].value(p)));
       const wsDetay = XLSX.utils.aoa_to_sheet([detayHeader, ...detayRows]);
 
       const wb = XLSX.utils.book_new();
@@ -465,136 +406,105 @@ const PuantajRaporlama = () => {
 
     let tableHtml = '';
     if (activeTab === 'personel') {
+      // Kullanıcının sıraladığı sütun düzenini kullan
+      const orderedKeys = personelOrder.order.filter(k => personelExportMap[k]);
+      const escapeHtml = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);
+      const fmtCell = (k, val, p) => {
+        if (val === '' || val === '-' || val == null) return '-';
+        if (typeof val === 'number') {
+          if (k === 'maas' || k.startsWith('birim_') || k.startsWith('tutar_') || k === 'fm_birim' || k === 'fm_tutar' || k === 'eksik_birim' || k === 'eksik_tutar' || k === 'hak') return formatCurrency(val);
+          if (k === 'fm') return `${val.toFixed(1)} sa`;
+          return val;
+        }
+        return escapeHtml(val);
+      };
+      const cellStyle = (k) => {
+        if (k === 'baz_gun') return 'text-align:center;color:#b45309;font-weight:600';
+        if (k === 'maas' || k === 'hak') return 'text-align:right;color:#059669;font-weight:600';
+        if (k.startsWith('birim_') || k === 'fm_birim' || k === 'eksik_birim') return 'text-align:center;font-size:10px;color:#64748b';
+        if (k.startsWith('tutar_') || k === 'fm_tutar') return 'text-align:right;color:#059669;font-weight:600';
+        if (k === 'eksik_tutar') return 'text-align:right;color:#e11d48;font-weight:600';
+        if (k.startsWith('durum_') || k === 'fm' || k === 'gun') return 'text-align:center';
+        return '';
+      };
+      const headStyle = (k) => {
+        if (k.startsWith('birim_') || k === 'fm_birim' || k === 'eksik_birim') return 'font-size:10px;color:#64748b';
+        if (k.startsWith('tutar_') || k === 'fm_tutar') return 'color:#059669';
+        if (k === 'eksik_tutar') return 'color:#e11d48';
+        return '';
+      };
       tableHtml = `
         <table>
           <thead>
             <tr>
-              <th>Personel Adı</th>
-              <th>Maaş (₺)</th>
-              <th>Baz Alınan Gün</th>
-              <th>Departman</th>
-              <th>Çal. Günü</th>
-              ${DURUM_KOLONLAR.map(d => `<th>${d.short}</th><th style="font-size:10px;color:#64748b">${d.short} ₺</th><th style="color:#059669">${d.short} Tutar</th>`).join('')}
-              <th>Fazla Mesai</th>
-              <th style="font-size:10px;color:#64748b">F.Mesai ₺/sa</th>
-              <th style="color:#059669">F.Mesai Tutar</th>
-              <th>Eksik Çal.</th>
-              <th style="font-size:10px;color:#64748b">Eksik Çal. ₺/sa</th>
-              <th style="color:#e11d48">Eksik Çal. Tutar</th>
-              <th>Hak Edilen (₺)</th>
-              <th>Çalıştığı Tesisler</th>
+              ${orderedKeys.map(k => `<th style="${headStyle(k)}">${escapeHtml(personelExportMap[k].label)}</th>`).join('')}
             </tr>
           </thead>
           <tbody>
-            ${personelRaporu.map(p => `
+            ${personelRaporu.map((p, idx) => `
               <tr>
-                <td>${p.ad_soyad}</td>
-                <td style="text-align:right;color:#059669">${formatCurrency(p.maas || 0)}</td>
-                <td style="text-align:center;color:#b45309;font-weight:600">30</td>
-                <td>${p.departman}</td>
-                <td>${p.calismaGunu}</td>
-                ${DURUM_KOLONLAR.map(d => {
-                  const sayi = p.durumSayilari[d.value] || 0;
-                  const birim = (p.hakedilen?.birimFiyatlar?.[d.value]) || 0;
-                  const tutar = sayi * birim;
-                  return `<td style="text-align:center">${sayi}</td><td style="text-align:center;font-size:10px;color:#64748b">${birim > 0 ? formatCurrency(birim) : '-'}</td><td style="text-align:right;color:#059669;font-weight:600">${tutar > 0 ? formatCurrency(tutar) : '-'}</td>`;
+                ${orderedKeys.map(k => {
+                  const v = personelExportMap[k].value(p, idx);
+                  return `<td style="${cellStyle(k)}">${fmtCell(k, v, p)}</td>`;
                 }).join('')}
-                <td style="text-align:center">${p.toplamFazlaMesai.toFixed(1)} sa</td>
-                <td style="text-align:center;font-size:10px;color:#64748b">${(p.hakedilen?.birimFiyatlar?.fazla_mesai || 0) > 0 ? formatCurrency(p.hakedilen.birimFiyatlar.fazla_mesai) + '/sa' : '-'}</td>
-                <td style="text-align:right;color:#059669;font-weight:600">${(p.hakedilen?.fmUcret || 0) > 0 ? formatCurrency(p.hakedilen.fmUcret) : '-'}</td>
-                <td>${dakikayiFormatla(p.toplamEksikDakika)}</td>
-                <td style="text-align:center;font-size:10px;color:#64748b">${(p.hakedilen?.birimFiyatlar?.eksik_calisma || 0) > 0 ? formatCurrency(p.hakedilen.birimFiyatlar.eksik_calisma) + '/sa' : '-'}</td>
-                <td style="text-align:right;color:#e11d48;font-weight:600">${(() => { const t = Math.ceil((p.toplamEksikDakika / 60) * (p.hakedilen?.birimFiyatlar?.eksik_calisma || 0)); return t > 0 ? formatCurrency(t) : '-'; })()}</td>
-                <td style="text-align:right;font-weight:600;color:#059669">${formatCurrency(p.hakedilen.toplam)}</td>
-                <td class="tesis-list">${p.tesisler.join(', ') || '-'}</td>
               </tr>
             `).join('')}
           </tbody>
         </table>`;
     } else if (activeTab === 'tesis') {
+      const tesisKeys = tesisOrder.order.filter(k => tesisExportMap[k]);
       tableHtml = `
         <table>
           <thead>
             <tr>
-              <th>Tesis Adı</th>
-              <th>Kayıt Sayısı</th>
-              <th>Personel Sayısı</th>
-              <th>Fazla Mesai</th>
-              <th>Çalışan Personeller</th>
+              ${tesisKeys.map(k => `<th>${tesisExportMap[k].label}</th>`).join('')}
             </tr>
           </thead>
           <tbody>
             ${tesisRaporu.map(t => `
               <tr>
-                <td>${t.tesis_adi}</td>
-                <td>${t.kayitSayisi}</td>
-                <td>${t.personelSayisi}</td>
-                <td>${t.toplamFazlaMesai.toFixed(1)} saat</td>
-                <td class="tesis-list">${t.personelListesi.join(', ')}</td>
+                ${tesisKeys.map(k => `<td>${tesisExportMap[k].value(t)}</td>`).join('')}
               </tr>
             `).join('')}
           </tbody>
         </table>`;
     } else if (activeTab === 'gun') {
+      const gunKeys = gunOrder.order.filter(k => gunExportMap[k]);
       tableHtml = `
         <table>
           <thead>
             <tr>
-              <th>Tarih</th>
-              <th>Gün</th>
-              <th>Personel Sayısı</th>
-              <th>Fazla Mesai</th>
+              ${gunKeys.map(k => `<th>${gunExportMap[k].label}</th>`).join('')}
             </tr>
           </thead>
           <tbody>
-            ${gunRaporu.map(g => {
-              const date = new Date(g.tarih);
-              const gunAdi = ['Pazar', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi'][date.getDay()];
-              return `
-                <tr>
-                  <td>${g.tarih}</td>
-                  <td>${gunAdi}</td>
-                  <td>${g.personelSayisi}</td>
-                  <td>${g.toplamFazlaMesai.toFixed(1)} saat</td>
-                </tr>`;
-            }).join('')}
+            ${gunRaporu.map(g => `
+              <tr>
+                ${gunKeys.map(k => `<td>${gunExportMap[k].value(g)}</td>`).join('')}
+              </tr>
+            `).join('')}
           </tbody>
         </table>`;
     } else if (activeTab === 'detay') {
+      const detayKeys = detayOrder.order.filter(k => detayExportMap[k]);
       const detaySorted = [...filteredPuantajlar].sort((a, b) => b.tarih.localeCompare(a.tarih));
       tableHtml = `
         <table>
           <thead>
             <tr>
-              <th>Tarih</th>
-              <th>Personel</th>
-              <th>Tesis</th>
-              <th>Giriş</th>
-              <th>Çıkış</th>
-              <th>F. Mesai</th>
-              <th>Çalışılan Süre</th>
-              <th>Eksik Çal.</th>
-              ${DURUM_KOLONLAR.map(d => `<th>${d.short}</th>`).join('')}
-              <th>Not</th>
+              ${detayKeys.map(k => `<th>${detayExportMap[k].label}</th>`).join('')}
             </tr>
           </thead>
           <tbody>
-            ${detaySorted.map(p => {
-              const durum = p.durum || 'geldi';
-              return `
+            ${detaySorted.map(p => `
               <tr>
-                <td>${p.tarih}</td>
-                <td>${p.personel_adi || ''}</td>
-                <td>${p.tesis_adi || '-'}</td>
-                <td>${p.giris_saati || '-'}</td>
-                <td>${p.cikis_saati || '-'}</td>
-                <td>${(p.fazla_mesai || 0).toFixed(1)}</td>
-                <td>${calismaSuresi(p)}</td>
-                <td>${dakikayiFormatla(eksikDakikaKaydi(p))}</td>
-                ${DURUM_KOLONLAR.map(d => `<td style="text-align:center">${durum === d.value ? '✓' : ''}</td>`).join('')}
-                <td>${p.notlar || '-'}</td>
-              </tr>`;
-            }).join('')}
+                ${detayKeys.map(k => {
+                  const v = detayExportMap[k].value(p);
+                  const isDurum = k.startsWith('durum_');
+                  return `<td${isDurum ? ' style="text-align:center"' : ''}>${isDurum ? (v === 1 ? '✓' : '') : v}</td>`;
+                }).join('')}
+              </tr>
+            `).join('')}
           </tbody>
         </table>`;
     }
@@ -817,6 +727,36 @@ const PuantajRaporlama = () => {
     },
   ], []);
 
+  // PERSONEL EXPORT MAP: her sütun key'i için Excel/PDF için { label, value(p, idx) }
+  const personelExportMap = React.useMemo(() => {
+    const map = {
+      no:       { label: '#', value: (p, idx) => idx + 1 },
+      ad:       { label: 'Personel Adı', value: (p) => p.ad_soyad },
+      maas:     { label: 'Maaş (₺)', value: (p) => Number((p.maas || 0).toFixed(2)) },
+      baz_gun:  { label: 'Baz Alınan Gün', value: () => 30 },
+      dep:      { label: 'Departman', value: (p) => p.departman || '-' },
+      gun:      { label: 'Çal. Günü', value: (p) => p.calismaGunu },
+      fm:       { label: 'Fazla Mesai (saat)', value: (p) => Number(p.toplamFazlaMesai.toFixed(1)) },
+      fm_birim: { label: 'F.Mesai Birim (₺/sa)', value: (p) => Number(((p.hakedilen?.birimFiyatlar?.fazla_mesai) || 0).toFixed(2)) },
+      fm_tutar: { label: 'F.Mesai Tutar (₺)', value: (p) => Number((p.hakedilen?.fmUcret || 0).toFixed(2)) },
+      eksik:    { label: 'Eksik Çal. Saat', value: (p) => dakikayiFormatla(p.toplamEksikDakika) },
+      eksik_birim: { label: 'Eksik Çal. Birim (₺/sa)', value: (p) => Number(((p.hakedilen?.birimFiyatlar?.eksik_calisma) || 0).toFixed(2)) },
+      eksik_tutar: { label: 'Eksik Çal. Tutar (₺)', value: (p) => Number((((p.toplamEksikDakika || 0) / 60) * ((p.hakedilen?.birimFiyatlar?.eksik_calisma) || 0)).toFixed(2)) },
+      hak:      { label: 'Hak Edilen Toplam (₺)', value: (p) => Number((p.hakedilen?.toplam || 0).toFixed(2)) },
+      tesisler: { label: 'Çalıştığı Tesisler', value: (p) => (p.tesisler || []).join(', ') || '-' },
+    };
+    DURUM_KOLONLAR.forEach(d => {
+      map[`durum_${d.value}`] = { label: d.label, value: (p) => p.durumSayilari[d.value] || 0 };
+      map[`birim_${d.value}`] = { label: `${d.short} Birim (₺)`, value: (p) => Number(((p.hakedilen?.birimFiyatlar?.[d.value]) || 0).toFixed(2)) };
+      map[`tutar_${d.value}`] = { label: `${d.short} Tutar (₺)`, value: (p) => {
+        const v = p.durumSayilari[d.value] || 0;
+        const b = p.hakedilen?.birimFiyatlar?.[d.value] || 0;
+        return Number((v * b).toFixed(2));
+      }};
+    });
+    return map;
+  }, []);
+
   // 2) Tesis Bazlı tablo sütunları
   const tesisColumns = React.useMemo(() => [
     {
@@ -957,6 +897,40 @@ const PuantajRaporlama = () => {
   const orderedTesisCols = tesisOrder.order.map(k => tesisColumns.find(c => c.key === k)).filter(Boolean);
   const orderedGunCols = gunOrder.order.map(k => gunColumns.find(c => c.key === k)).filter(Boolean);
   const orderedDetayCols = detayOrder.order.map(k => detayColumns.find(c => c.key === k)).filter(Boolean);
+
+  // TESİS/GÜN/DETAY Export Mapları
+  const tesisExportMap = React.useMemo(() => ({
+    tesis:           { label: 'Tesis Adı', value: (t) => t.tesis_adi },
+    kayit:           { label: 'Kayıt Sayısı', value: (t) => t.kayitSayisi },
+    personel:        { label: 'Personel Sayısı', value: (t) => t.personelSayisi },
+    fm:              { label: 'Toplam Fazla Mesai (saat)', value: (t) => Number(t.toplamFazlaMesai.toFixed(1)) },
+    personeller:     { label: 'Çalışan Personeller', value: (t) => t.personelListesi.join(', ') },
+  }), []);
+
+  const gunExportMap = React.useMemo(() => ({
+    tarih:           { label: 'Tarih', value: (g) => g.tarih },
+    gun_adi:         { label: 'Gün', value: (g) => ['Pazar','Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi'][new Date(g.tarih).getDay()] },
+    personel_sayisi: { label: 'Personel Sayısı', value: (g) => g.personelSayisi },
+    fm:              { label: 'Toplam Fazla Mesai (saat)', value: (g) => Number(g.toplamFazlaMesai.toFixed(1)) },
+  }), []);
+
+  const detayExportMap = React.useMemo(() => {
+    const m = {
+      tarih:    { label: 'Tarih', value: (p) => p.tarih },
+      personel: { label: 'Personel', value: (p) => p.personel_adi || '' },
+      tesis:    { label: 'Tesis', value: (p) => p.tesis_adi || '-' },
+      giris:    { label: 'Giriş', value: (p) => p.giris_saati || '-' },
+      cikis:    { label: 'Çıkış', value: (p) => p.cikis_saati || '-' },
+      fm:       { label: 'Fazla Mesai (saat)', value: (p) => Number((p.fazla_mesai || 0).toFixed(1)) },
+      sure:     { label: 'Çalışılan Süre', value: (p) => calismaSuresi(p) },
+      eksik:    { label: 'Eksik Çal.', value: (p) => dakikayiFormatla(eksikDakikaKaydi(p)) },
+      not:      { label: 'Not', value: (p) => p.notlar || '-' },
+    };
+    DURUM_KOLONLAR.forEach(d => {
+      m[`durum_${d.value}`] = { label: d.label, value: (p) => ((p.durum || 'geldi') === d.value ? 1 : 0) };
+    });
+    return m;
+  }, []);
 
   return (
     <div className="animate-fade-in">
