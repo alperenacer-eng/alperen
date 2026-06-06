@@ -1649,93 +1649,253 @@ const PuantajRaporlama = () => {
                 </Button>
               </div>
               <p className="text-xs text-slate-500 mt-1">
-                Kişiyi, yılı ve ayı seçin. Sol panelden metrikleri Topla veya Çıkart alanına sürükleyip net sonucu hesaplayın.
+                Önce Topla / Çıkart şablonunuzu tasarlayın, sonra altta personel ve dönem seçerek farklı kombinasyonları anlık görün.
               </p>
-
-              {/* Filtreler */}
-              <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div>
-                  <Label className="text-xs text-slate-400 mb-1 block">Personel</Label>
-                  <Select value={acerPersonelId} onValueChange={setAcerPersonelId}>
-                    <SelectTrigger data-testid="acer-rapor-personel-select" className="bg-slate-900 border-slate-700 text-white h-9">
-                      <SelectValue placeholder="Personel seçin..." />
-                    </SelectTrigger>
-                    <SelectContent className="bg-slate-900 border-slate-700 text-white max-h-64">
-                      {personeller
-                        .slice()
-                        .sort((a, b) => (a.ad_soyad || '').localeCompare(b.ad_soyad || '', 'tr'))
-                        .map(p => (
-                          <SelectItem key={p.id} value={p.id} className="text-white focus:bg-slate-800 focus:text-white">
-                            {p.ad_soyad}
-                          </SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label className="text-xs text-slate-400 mb-1 block">Yıl</Label>
-                  <Select value={acerYear} onValueChange={setAcerYear}>
-                    <SelectTrigger data-testid="acer-rapor-yil-select" className="bg-slate-900 border-slate-700 text-white h-9">
-                      <SelectValue placeholder="Yıl" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-slate-900 border-slate-700 text-white">
-                      {(() => {
-                        const cy = new Date().getFullYear();
-                        const years = [];
-                        for (let y = cy + 1; y >= cy - 6; y--) years.push(y);
-                        return years.map(y => (
-                          <SelectItem key={y} value={String(y)} className="text-white focus:bg-slate-800 focus:text-white">{y}</SelectItem>
-                        ));
-                      })()}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label className="text-xs text-slate-400 mb-1 block">Ay</Label>
-                  <Select value={acerMonth} onValueChange={setAcerMonth}>
-                    <SelectTrigger data-testid="acer-rapor-ay-select" className="bg-slate-900 border-slate-700 text-white h-9">
-                      <SelectValue placeholder="Ay" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-slate-900 border-slate-700 text-white">
-                      {['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'].map((nm, i) => (
-                        <SelectItem key={i+1} value={String(i+1)} className="text-white focus:bg-slate-800 focus:text-white">{nm}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
             </CardHeader>
 
-            <CardContent className="p-4">
+            <CardContent className="p-4 space-y-5">
+              {/* ─────── 1) HESAPLAMA ALANI (ÜSTTE) ─────── */}
+              <div className="rounded-xl border border-orange-500/30 bg-gradient-to-br from-orange-900/10 to-amber-900/5 p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <Calculator className="w-4 h-4 text-orange-400" />
+                  <h3 className="text-sm font-bold text-orange-200 tracking-wide uppercase">Hesaplama Alanı</h3>
+                  <span className="text-[10px] text-orange-300/60 ml-2">Metrikleri aşağıdan sürükleyin</span>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {/* Toplama Zone */}
+                  <div
+                    data-testid="acer-rapor-topla-zone"
+                    className={`rounded-lg border-2 border-dashed p-3 min-h-[180px] transition-colors ${acerDragKey ? 'border-emerald-500/60 bg-emerald-900/15' : 'border-emerald-700/40 bg-emerald-900/5'}`}
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={() => acerOnDrop('topla')}
+                  >
+                    <div className="flex items-center gap-2 mb-2">
+                      <Plus className="w-4 h-4 text-emerald-400" />
+                      <h4 className="text-sm font-semibold text-emerald-300">Topla (+)</h4>
+                      <span className="ml-auto text-xs text-emerald-400/80">{acerTopla.length}</span>
+                    </div>
+                    <div className="space-y-1.5">
+                      {acerTopla.length === 0 ? (
+                        <div className="text-xs text-emerald-200/40 italic p-6 text-center border border-dashed border-emerald-800/40 rounded-md">
+                          Buraya sürükleyin
+                        </div>
+                      ) : acerTopla.map(k => {
+                        const m = acerMetrikGetir(k);
+                        if (!m) return null;
+                        return (
+                          <div
+                            key={k}
+                            draggable
+                            onDragStart={() => acerOnDragStart(k)}
+                            onDragEnd={acerOnDragEnd}
+                            className="flex items-center justify-between gap-2 p-2 rounded-md bg-emerald-900/30 hover:bg-emerald-900/40 border border-emerald-700/50 cursor-grab active:cursor-grabbing"
+                          >
+                            <div className="min-w-0 flex-1">
+                              <div className="text-sm text-emerald-100 truncate">{m.label}</div>
+                              <div className="text-[11px] text-emerald-300/70">
+                                {m.count} {m.unit} × {formatCurrency(m.birim)}
+                              </div>
+                            </div>
+                            <div className="text-sm font-semibold text-emerald-200">+{formatCurrency(m.tutar)}</div>
+                            <button
+                              onClick={() => acerKaldir(k, 'topla')}
+                              className="text-emerald-300/60 hover:text-rose-400 p-0.5"
+                              title="Kaldır"
+                              data-testid={`acer-topla-remove-${k}`}
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Çıkarma Zone */}
+                  <div
+                    data-testid="acer-rapor-cikart-zone"
+                    className={`rounded-lg border-2 border-dashed p-3 min-h-[180px] transition-colors ${acerDragKey ? 'border-rose-500/60 bg-rose-900/15' : 'border-rose-700/40 bg-rose-900/5'}`}
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={() => acerOnDrop('cikart')}
+                  >
+                    <div className="flex items-center gap-2 mb-2">
+                      <Minus className="w-4 h-4 text-rose-400" />
+                      <h4 className="text-sm font-semibold text-rose-300">Çıkart (−)</h4>
+                      <span className="ml-auto text-xs text-rose-400/80">{acerCikart.length}</span>
+                    </div>
+                    <div className="space-y-1.5">
+                      {acerCikart.length === 0 ? (
+                        <div className="text-xs text-rose-200/40 italic p-6 text-center border border-dashed border-rose-800/40 rounded-md">
+                          Buraya sürükleyin
+                        </div>
+                      ) : acerCikart.map(k => {
+                        const m = acerMetrikGetir(k);
+                        if (!m) return null;
+                        return (
+                          <div
+                            key={k}
+                            draggable
+                            onDragStart={() => acerOnDragStart(k)}
+                            onDragEnd={acerOnDragEnd}
+                            className="flex items-center justify-between gap-2 p-2 rounded-md bg-rose-900/30 hover:bg-rose-900/40 border border-rose-700/50 cursor-grab active:cursor-grabbing"
+                          >
+                            <div className="min-w-0 flex-1">
+                              <div className="text-sm text-rose-100 truncate">{m.label}</div>
+                              <div className="text-[11px] text-rose-300/70">
+                                {m.count} {m.unit} × {formatCurrency(m.birim)}
+                              </div>
+                            </div>
+                            <div className="text-sm font-semibold text-rose-200">−{formatCurrency(m.tutar)}</div>
+                            <button
+                              onClick={() => acerKaldir(k, 'cikart')}
+                              className="text-rose-300/60 hover:text-rose-400 p-0.5"
+                              title="Kaldır"
+                              data-testid={`acer-cikart-remove-${k}`}
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Sabit input + Sonuç özet */}
+                <div className="mt-4 grid grid-cols-1 lg:grid-cols-5 gap-3">
+                  <div className="lg:col-span-1">
+                    <Label className="text-xs text-slate-400 mb-1 block">Sabit (±TL)</Label>
+                    <Input
+                      type="number"
+                      value={acerSabit}
+                      onChange={(e) => setAcerSabit(e.target.value)}
+                      data-testid="acer-rapor-sabit-input"
+                      placeholder="0"
+                      className="bg-slate-900 border-slate-700 text-white h-10"
+                    />
+                  </div>
+                  <div className="rounded-lg border border-emerald-700/40 bg-emerald-900/10 p-2.5">
+                    <div className="text-[11px] text-emerald-300/80">Toplam (+)</div>
+                    <div data-testid="acer-rapor-toplam-topla" className="text-lg font-bold text-emerald-200 mt-0.5">
+                      {formatCurrency(acerTotals.topla)}
+                    </div>
+                  </div>
+                  <div className="rounded-lg border border-rose-700/40 bg-rose-900/10 p-2.5">
+                    <div className="text-[11px] text-rose-300/80">Toplam (−)</div>
+                    <div data-testid="acer-rapor-toplam-cikart" className="text-lg font-bold text-rose-200 mt-0.5">
+                      −{formatCurrency(acerTotals.cikart)}
+                    </div>
+                  </div>
+                  <div className="rounded-lg border border-slate-700 bg-slate-900/40 p-2.5">
+                    <div className="text-[11px] text-slate-400">Sabit</div>
+                    <div className={`text-lg font-bold mt-0.5 ${acerTotals.sabit < 0 ? 'text-rose-200' : 'text-slate-200'}`}>
+                      {acerTotals.sabit >= 0 ? '+' : ''}{formatCurrency(acerTotals.sabit)}
+                    </div>
+                  </div>
+                  <div className="rounded-lg border-2 border-orange-500/60 bg-gradient-to-br from-orange-900/40 to-amber-900/30 p-2.5">
+                    <div className="text-[11px] text-orange-300">Net Sonuç</div>
+                    <div data-testid="acer-rapor-net-sonuc" className={`text-xl font-extrabold mt-0.5 ${acerTotals.net < 0 ? 'text-rose-300' : 'text-orange-200'}`}>
+                      {formatCurrency(acerTotals.net)}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* ─────── 2) PERSONEL & DÖNEM (ALTTA) ─────── */}
+              <div className="rounded-xl border border-slate-800 bg-slate-900/30 p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <User className="w-4 h-4 text-orange-400" />
+                  <h3 className="text-sm font-bold text-slate-200 tracking-wide uppercase">Personel & Dönem</h3>
+                  {acerSecilenPersonel && (
+                    <span className="ml-auto text-xs text-slate-400">
+                      Seçili: <strong className="text-white">{acerSecilenPersonel.ad_soyad}</strong> · {acerYear}/{String(acerMonth).padStart(2,'0')}
+                    </span>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <Label className="text-xs text-slate-400 mb-1 block">Personel</Label>
+                    <Select value={acerPersonelId} onValueChange={setAcerPersonelId}>
+                      <SelectTrigger data-testid="acer-rapor-personel-select" className="bg-slate-900 border-slate-700 text-white h-9">
+                        <SelectValue placeholder="Personel seçin..." />
+                      </SelectTrigger>
+                      <SelectContent className="bg-slate-900 border-slate-700 text-white max-h-64">
+                        {personeller
+                          .slice()
+                          .sort((a, b) => (a.ad_soyad || '').localeCompare(b.ad_soyad || '', 'tr'))
+                          .map(p => (
+                            <SelectItem key={p.id} value={p.id} className="text-white focus:bg-slate-800 focus:text-white">
+                              {p.ad_soyad}
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-slate-400 mb-1 block">Yıl</Label>
+                    <Select value={acerYear} onValueChange={setAcerYear}>
+                      <SelectTrigger data-testid="acer-rapor-yil-select" className="bg-slate-900 border-slate-700 text-white h-9">
+                        <SelectValue placeholder="Yıl" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-slate-900 border-slate-700 text-white">
+                        {(() => {
+                          const cy = new Date().getFullYear();
+                          const years = [];
+                          for (let y = cy + 1; y >= cy - 6; y--) years.push(y);
+                          return years.map(y => (
+                            <SelectItem key={y} value={String(y)} className="text-white focus:bg-slate-800 focus:text-white">{y}</SelectItem>
+                          ));
+                        })()}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-slate-400 mb-1 block">Ay</Label>
+                    <Select value={acerMonth} onValueChange={setAcerMonth}>
+                      <SelectTrigger data-testid="acer-rapor-ay-select" className="bg-slate-900 border-slate-700 text-white h-9">
+                        <SelectValue placeholder="Ay" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-slate-900 border-slate-700 text-white">
+                        {['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'].map((nm, i) => (
+                          <SelectItem key={i+1} value={String(i+1)} className="text-white focus:bg-slate-800 focus:text-white">{nm}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
+
+              {/* ─────── 3) METRİK LİSTESİ (ALTTA) ─────── */}
               {!acerSecilenPersonel ? (
-                <div className="p-8 text-center text-slate-400">
-                  Raporu görmek için yukarıdan bir personel seçin.
+                <div className="p-8 text-center text-slate-400 rounded-lg border border-dashed border-slate-700">
+                  Metriklerin hesaplanması için bir personel seçin.
                 </div>
               ) : (
                 <>
                   {acerPuantajlari.length === 0 && (
-                    <div className="mb-3 p-2.5 rounded-md bg-amber-900/20 border border-amber-700/40 text-xs text-amber-200">
+                    <div className="p-2.5 rounded-md bg-amber-900/20 border border-amber-700/40 text-xs text-amber-200">
                       <strong>{acerSecilenPersonel.ad_soyad}</strong> için {acerYear}/{String(acerMonth).padStart(2,'0')} döneminde puantaj kaydı yok. Tüm metrikler 0 değerle gösteriliyor; yine de Topla/Çıkart alanına atayıp şablon hazırlayabilirsiniz.
                     </div>
                   )}
-                  {/* Drag/Drop Üç Sütun */}
-                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
-                    {/* Mevcut Metrikler */}
-                    <div
-                      data-testid="acer-rapor-mevcut-zone"
-                      className={`rounded-lg border-2 border-dashed p-3 min-h-[240px] transition-colors ${acerDragKey ? 'border-slate-600 bg-slate-900/30' : 'border-slate-800 bg-slate-900/20'}`}
-                      onDragOver={(e) => e.preventDefault()}
-                      onDrop={() => acerOnDrop('mevcut')}
-                    >
-                      <div className="flex items-center gap-2 mb-2">
-                        <GripVertical className="w-4 h-4 text-slate-400" />
-                        <h3 className="text-sm font-semibold text-slate-200">Mevcut Metrikler</h3>
-                        <span className="ml-auto text-xs text-slate-500">{acerKullanilabilir.length}</span>
-                      </div>
-                      <div className="space-y-1.5">
-                        {acerKullanilabilir.length === 0 ? (
-                          <div className="text-xs text-slate-500 italic p-3 text-center">Tüm metrikler kullanımda</div>
-                        ) : acerKullanilabilir.map(m => (
+
+                  <div
+                    data-testid="acer-rapor-mevcut-zone"
+                    className={`rounded-lg border-2 border-dashed p-3 transition-colors ${acerDragKey ? 'border-slate-600 bg-slate-900/40' : 'border-slate-800 bg-slate-900/20'}`}
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={() => acerOnDrop('mevcut')}
+                  >
+                    <div className="flex items-center gap-2 mb-3">
+                      <GripVertical className="w-4 h-4 text-slate-400" />
+                      <h3 className="text-sm font-bold text-slate-200 tracking-wide uppercase">Mevcut Metrikler</h3>
+                      <span className="ml-auto text-xs text-slate-500">{acerKullanilabilir.length} metrik</span>
+                    </div>
+                    {acerKullanilabilir.length === 0 ? (
+                      <div className="text-xs text-slate-500 italic p-6 text-center">Tüm metrikler kullanımda — Topla veya Çıkart&apos;tan tekrar buraya sürükleyerek geri alabilirsiniz.</div>
+                    ) : (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                        {acerKullanilabilir.map(m => (
                           <div
                             key={m.key}
                             draggable
@@ -1764,153 +1924,12 @@ const PuantajRaporlama = () => {
                           </div>
                         ))}
                       </div>
-                    </div>
-
-                    {/* Toplama Zone */}
-                    <div
-                      data-testid="acer-rapor-topla-zone"
-                      className={`rounded-lg border-2 border-dashed p-3 min-h-[240px] transition-colors ${acerDragKey ? 'border-emerald-500/60 bg-emerald-900/10' : 'border-emerald-700/40 bg-emerald-900/5'}`}
-                      onDragOver={(e) => e.preventDefault()}
-                      onDrop={() => acerOnDrop('topla')}
-                    >
-                      <div className="flex items-center gap-2 mb-2">
-                        <Plus className="w-4 h-4 text-emerald-400" />
-                        <h3 className="text-sm font-semibold text-emerald-300">Topla (+)</h3>
-                        <span className="ml-auto text-xs text-emerald-400/80">{acerTopla.length}</span>
-                      </div>
-                      <div className="space-y-1.5">
-                        {acerTopla.length === 0 ? (
-                          <div className="text-xs text-emerald-200/40 italic p-6 text-center border border-dashed border-emerald-800/40 rounded-md">
-                            Buraya sürükleyin
-                          </div>
-                        ) : acerTopla.map(k => {
-                          const m = acerMetrikGetir(k);
-                          if (!m) return null;
-                          return (
-                            <div
-                              key={k}
-                              draggable
-                              onDragStart={() => acerOnDragStart(k)}
-                              onDragEnd={acerOnDragEnd}
-                              className="flex items-center justify-between gap-2 p-2 rounded-md bg-emerald-900/30 hover:bg-emerald-900/40 border border-emerald-700/50 cursor-grab active:cursor-grabbing"
-                            >
-                              <div className="min-w-0 flex-1">
-                                <div className="text-sm text-emerald-100 truncate">{m.label}</div>
-                                <div className="text-[11px] text-emerald-300/70">
-                                  {m.count} {m.unit} × {formatCurrency(m.birim)}
-                                </div>
-                              </div>
-                              <div className="text-sm font-semibold text-emerald-200">+{formatCurrency(m.tutar)}</div>
-                              <button
-                                onClick={() => acerKaldir(k, 'topla')}
-                                className="text-emerald-300/60 hover:text-rose-400 p-0.5"
-                                title="Kaldır"
-                                data-testid={`acer-topla-remove-${k}`}
-                              >
-                                <X className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-
-                    {/* Çıkarma Zone */}
-                    <div
-                      data-testid="acer-rapor-cikart-zone"
-                      className={`rounded-lg border-2 border-dashed p-3 min-h-[240px] transition-colors ${acerDragKey ? 'border-rose-500/60 bg-rose-900/10' : 'border-rose-700/40 bg-rose-900/5'}`}
-                      onDragOver={(e) => e.preventDefault()}
-                      onDrop={() => acerOnDrop('cikart')}
-                    >
-                      <div className="flex items-center gap-2 mb-2">
-                        <Minus className="w-4 h-4 text-rose-400" />
-                        <h3 className="text-sm font-semibold text-rose-300">Çıkart (−)</h3>
-                        <span className="ml-auto text-xs text-rose-400/80">{acerCikart.length}</span>
-                      </div>
-                      <div className="space-y-1.5">
-                        {acerCikart.length === 0 ? (
-                          <div className="text-xs text-rose-200/40 italic p-6 text-center border border-dashed border-rose-800/40 rounded-md">
-                            Buraya sürükleyin
-                          </div>
-                        ) : acerCikart.map(k => {
-                          const m = acerMetrikGetir(k);
-                          if (!m) return null;
-                          return (
-                            <div
-                              key={k}
-                              draggable
-                              onDragStart={() => acerOnDragStart(k)}
-                              onDragEnd={acerOnDragEnd}
-                              className="flex items-center justify-between gap-2 p-2 rounded-md bg-rose-900/30 hover:bg-rose-900/40 border border-rose-700/50 cursor-grab active:cursor-grabbing"
-                            >
-                              <div className="min-w-0 flex-1">
-                                <div className="text-sm text-rose-100 truncate">{m.label}</div>
-                                <div className="text-[11px] text-rose-300/70">
-                                  {m.count} {m.unit} × {formatCurrency(m.birim)}
-                                </div>
-                              </div>
-                              <div className="text-sm font-semibold text-rose-200">−{formatCurrency(m.tutar)}</div>
-                              <button
-                                onClick={() => acerKaldir(k, 'cikart')}
-                                className="text-rose-300/60 hover:text-rose-400 p-0.5"
-                                title="Kaldır"
-                                data-testid={`acer-cikart-remove-${k}`}
-                              >
-                                <X className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
+                    )}
                   </div>
 
-                  {/* Sabit ekle/çıkar (ikramiye/kesinti) */}
-                  <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <Label className="text-xs text-slate-400 mb-1 block">Sabit Ekleme / Çıkarma (TL) — pozitif ekler, negatif çıkarır</Label>
-                      <Input
-                        type="number"
-                        value={acerSabit}
-                        onChange={(e) => setAcerSabit(e.target.value)}
-                        data-testid="acer-rapor-sabit-input"
-                        placeholder="0"
-                        className="bg-slate-900 border-slate-700 text-white"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Sonuç Özet */}
-                  <div className="mt-4 grid grid-cols-1 sm:grid-cols-4 gap-3">
-                    <div className="rounded-lg border border-emerald-700/40 bg-emerald-900/10 p-3">
-                      <div className="text-xs text-emerald-300/80">Toplam (+)</div>
-                      <div data-testid="acer-rapor-toplam-topla" className="text-xl font-bold text-emerald-200 mt-1">
-                        {formatCurrency(acerTotals.topla)}
-                      </div>
-                    </div>
-                    <div className="rounded-lg border border-rose-700/40 bg-rose-900/10 p-3">
-                      <div className="text-xs text-rose-300/80">Toplam (−)</div>
-                      <div data-testid="acer-rapor-toplam-cikart" className="text-xl font-bold text-rose-200 mt-1">
-                        −{formatCurrency(acerTotals.cikart)}
-                      </div>
-                    </div>
-                    <div className="rounded-lg border border-slate-700 bg-slate-900/40 p-3">
-                      <div className="text-xs text-slate-400">Sabit</div>
-                      <div className={`text-xl font-bold mt-1 ${acerTotals.sabit < 0 ? 'text-rose-200' : 'text-slate-200'}`}>
-                        {acerTotals.sabit >= 0 ? '+' : ''}{formatCurrency(acerTotals.sabit)}
-                      </div>
-                    </div>
-                    <div className="rounded-lg border-2 border-orange-500/60 bg-gradient-to-br from-orange-900/30 to-amber-900/20 p-3">
-                      <div className="text-xs text-orange-300">Net Sonuç</div>
-                      <div data-testid="acer-rapor-net-sonuc" className={`text-2xl font-extrabold mt-1 ${acerTotals.net < 0 ? 'text-rose-300' : 'text-orange-200'}`}>
-                        {formatCurrency(acerTotals.net)}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Aşağıda detay: seçilen metriklerin tablosu */}
+                  {/* Detay tablosu */}
                   {(acerTopla.length > 0 || acerCikart.length > 0) && (
-                    <div className="mt-4 rounded-lg border border-slate-800 overflow-hidden">
+                    <div className="rounded-lg border border-slate-800 overflow-hidden">
                       <Table>
                         <TableHeader>
                           <TableRow className="border-slate-800 bg-slate-900/60">
@@ -1955,6 +1974,7 @@ const PuantajRaporlama = () => {
             </CardContent>
           </Card>
         </TabsContent>
+
       </Tabs>
     </div>
   );
