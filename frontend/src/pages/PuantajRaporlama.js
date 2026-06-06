@@ -127,6 +127,12 @@ const PuantajRaporlama = () => {
   const [periodType, setPeriodType] = useState('monthly');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+
+  // Personel Bazlı sekmesi için yıl/ay/sıralama filtreleri
+  const _today = new Date();
+  const [personelYear, setPersonelYear] = useState(String(_today.getFullYear()));
+  const [personelMonth, setPersonelMonth] = useState(String(_today.getMonth() + 1));
+  const [personelSort, setPersonelSort] = useState('ad_asc');
   
   const headers = { Authorization: `Bearer ${token}` };
 
@@ -298,8 +304,18 @@ const PuantajRaporlama = () => {
   };
 
   // Personel Bazlı Rapor (tesis bilgisiyle + her durum sayısı + eksik çalışma saati + hak edilen toplam)
+  // Personel sekmesi için yıl + ay filtresi uygulanır
+  const personelPuantajFiltresi = puantajlar.filter(p => {
+    if (!p.tarih) return false;
+    const parts = p.tarih.split('-');
+    if (parts.length < 2) return false;
+    const yyyy = parts[0];
+    const mm = String(parseInt(parts[1], 10));
+    return yyyy === String(personelYear) && mm === String(personelMonth);
+  });
+
   const personelRaporu = personeller.map(personel => {
-    const personelPuantajlari = filteredPuantajlar.filter(p => p.personel_id === personel.id);
+    const personelPuantajlari = personelPuantajFiltresi.filter(p => p.personel_id === personel.id);
     const calisilanTesisler = [...new Set(personelPuantajlari.map(p => p.tesis_adi).filter(Boolean))];
     // Her durumun toplamını hesapla
     const durumSayilari = {};
@@ -323,7 +339,21 @@ const PuantajRaporlama = () => {
       toplamEksikDakika,
       hakedilen: hak,
     };
-  }).filter(p => p.calismaGunu > 0).sort((a, b) => b.calismaGunu - a.calismaGunu);
+  }).filter(p => p.calismaGunu > 0).sort((a, b) => {
+    const trCmp = (x, y) => (x || '').localeCompare((y || ''), 'tr', { sensitivity: 'base' });
+    switch (personelSort) {
+      case 'ad_desc':       return trCmp(b.ad_soyad, a.ad_soyad);
+      case 'gun_desc':      return (b.calismaGunu || 0) - (a.calismaGunu || 0);
+      case 'gun_asc':       return (a.calismaGunu || 0) - (b.calismaGunu || 0);
+      case 'fm_desc':       return (b.toplamFazlaMesai || 0) - (a.toplamFazlaMesai || 0);
+      case 'fm_asc':        return (a.toplamFazlaMesai || 0) - (b.toplamFazlaMesai || 0);
+      case 'hak_desc':      return (b.hakedilen?.toplam || 0) - (a.hakedilen?.toplam || 0);
+      case 'hak_asc':       return (a.hakedilen?.toplam || 0) - (b.hakedilen?.toplam || 0);
+      case 'departman_asc': return trCmp(a.departman, b.departman) || trCmp(a.ad_soyad, b.ad_soyad);
+      case 'ad_asc':
+      default:              return trCmp(a.ad_soyad, b.ad_soyad);
+    }
+  });
 
   // Tesis Bazlı Rapor
   const tesisRaporu = (() => {
@@ -564,7 +594,9 @@ const PuantajRaporlama = () => {
       <body>
         <h1>Puantaj Raporu</h1>
         <div class="header-info">
-          <strong>Tarih Aralığı:</strong> ${start} - ${end}
+          ${activeTab === 'personel'
+            ? `<strong>Dönem:</strong> ${personelYear} / ${String(personelMonth).padStart(2,'0')}`
+            : `<strong>Tarih Aralığı:</strong> ${start} - ${end}`}
         </div>
         <h2>${tabBasliklari[activeTab] || 'Rapor'}</h2>
         ${tableHtml}
@@ -1160,6 +1192,77 @@ const PuantajRaporlama = () => {
                 </Button>
               </div>
               <p className="text-xs text-slate-500 mt-1">Sütun başlıklarını sürükleyerek yer değiştirebilirsiniz.</p>
+
+              {/* Kişi Bazlı Filtreler: Yıl + Ay + Sıralama */}
+              <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <Label className="text-xs text-slate-400 mb-1 block">Yıl</Label>
+                  <Select value={personelYear} onValueChange={setPersonelYear}>
+                    <SelectTrigger data-testid="personel-rapor-yil-select" className="bg-slate-900 border-slate-700 text-white h-9">
+                      <SelectValue placeholder="Yıl" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-slate-900 border-slate-700 text-white">
+                      {(() => {
+                        const cy = new Date().getFullYear();
+                        const years = [];
+                        for (let y = cy + 1; y >= cy - 6; y--) years.push(y);
+                        return years.map(y => (
+                          <SelectItem key={y} value={String(y)} className="text-white focus:bg-slate-800 focus:text-white">
+                            {y}
+                          </SelectItem>
+                        ));
+                      })()}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="text-xs text-slate-400 mb-1 block">Ay</Label>
+                  <Select value={personelMonth} onValueChange={setPersonelMonth}>
+                    <SelectTrigger data-testid="personel-rapor-ay-select" className="bg-slate-900 border-slate-700 text-white h-9">
+                      <SelectValue placeholder="Ay" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-slate-900 border-slate-700 text-white">
+                      {[
+                        { v: '1',  l: 'Ocak' },
+                        { v: '2',  l: 'Şubat' },
+                        { v: '3',  l: 'Mart' },
+                        { v: '4',  l: 'Nisan' },
+                        { v: '5',  l: 'Mayıs' },
+                        { v: '6',  l: 'Haziran' },
+                        { v: '7',  l: 'Temmuz' },
+                        { v: '8',  l: 'Ağustos' },
+                        { v: '9',  l: 'Eylül' },
+                        { v: '10', l: 'Ekim' },
+                        { v: '11', l: 'Kasım' },
+                        { v: '12', l: 'Aralık' },
+                      ].map(m => (
+                        <SelectItem key={m.v} value={m.v} className="text-white focus:bg-slate-800 focus:text-white">
+                          {m.l}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="text-xs text-slate-400 mb-1 block">Sıralama</Label>
+                  <Select value={personelSort} onValueChange={setPersonelSort}>
+                    <SelectTrigger data-testid="personel-rapor-sort-select" className="bg-slate-900 border-slate-700 text-white h-9">
+                      <SelectValue placeholder="Sıralama" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-slate-900 border-slate-700 text-white">
+                      <SelectItem value="ad_asc"        className="text-white focus:bg-slate-800 focus:text-white">Ada Göre (A → Z)</SelectItem>
+                      <SelectItem value="ad_desc"       className="text-white focus:bg-slate-800 focus:text-white">Ada Göre (Z → A)</SelectItem>
+                      <SelectItem value="gun_desc"      className="text-white focus:bg-slate-800 focus:text-white">Çalışma Günü (Çok → Az)</SelectItem>
+                      <SelectItem value="gun_asc"       className="text-white focus:bg-slate-800 focus:text-white">Çalışma Günü (Az → Çok)</SelectItem>
+                      <SelectItem value="fm_desc"       className="text-white focus:bg-slate-800 focus:text-white">Fazla Mesai (Çok → Az)</SelectItem>
+                      <SelectItem value="fm_asc"        className="text-white focus:bg-slate-800 focus:text-white">Fazla Mesai (Az → Çok)</SelectItem>
+                      <SelectItem value="hak_desc"      className="text-white focus:bg-slate-800 focus:text-white">Hak Ediş (Çok → Az)</SelectItem>
+                      <SelectItem value="hak_asc"       className="text-white focus:bg-slate-800 focus:text-white">Hak Ediş (Az → Çok)</SelectItem>
+                      <SelectItem value="departman_asc" className="text-white focus:bg-slate-800 focus:text-white">Departmana Göre (A → Z)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
             </CardHeader>
             <CardContent className="p-0">
               {loading ? (
