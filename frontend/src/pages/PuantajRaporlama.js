@@ -1711,12 +1711,13 @@ const PuantajRaporlama = () => {
                 <div className="p-8 text-center text-slate-400">
                   Raporu görmek için yukarıdan bir personel seçin.
                 </div>
-              ) : acerPuantajlari.length === 0 ? (
-                <div className="p-8 text-center text-slate-400">
-                  {acerSecilenPersonel.ad_soyad} için {acerYear}/{String(acerMonth).padStart(2,'0')} döneminde puantaj kaydı bulunmuyor.
-                </div>
               ) : (
                 <>
+                  {acerPuantajlari.length === 0 && (
+                    <div className="mb-3 p-2.5 rounded-md bg-amber-900/20 border border-amber-700/40 text-xs text-amber-200">
+                      <strong>{acerSecilenPersonel.ad_soyad}</strong> için {acerYear}/{String(acerMonth).padStart(2,'0')} döneminde puantaj kaydı yok. Tüm metrikler 0 değerle gösteriliyor; yine de Topla/Çıkart alanına atayıp şablon hazırlayabilirsiniz.
+                    </div>
+                  )}
                   {/* Drag/Drop Üç Sütun */}
                   <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
                     {/* Mevcut Metrikler */}
@@ -1741,18 +1742,23 @@ const PuantajRaporlama = () => {
                             onDragStart={() => acerOnDragStart(m.key)}
                             onDragEnd={acerOnDragEnd}
                             data-testid={`acer-metric-${m.key}`}
-                            className="group flex items-center justify-between gap-2 p-2 rounded-md bg-slate-800/60 hover:bg-slate-800 border border-slate-700 cursor-grab active:cursor-grabbing"
+                            className={`group flex items-center justify-between gap-2 p-2 rounded-md bg-slate-800/60 hover:bg-slate-800 border border-slate-700 cursor-grab active:cursor-grabbing ${m.count === 0 ? 'opacity-60' : ''}`}
                           >
                             <div className="flex items-center gap-2 min-w-0">
                               <GripVertical className="w-3.5 h-3.5 text-slate-500 group-hover:text-slate-300 shrink-0" />
                               <div className="min-w-0">
-                                <div className="text-sm text-white truncate">{m.label}</div>
+                                <div className="text-sm text-white truncate flex items-center gap-1.5">
+                                  {m.label}
+                                  {m.count === 0 && (
+                                    <span className="text-[10px] px-1 py-0 rounded bg-slate-700 text-slate-400 border border-slate-600">veri yok</span>
+                                  )}
+                                </div>
                                 <div className="text-[11px] text-slate-400">
                                   {m.count} {m.unit} × {formatCurrency(m.birim)}
                                 </div>
                               </div>
                             </div>
-                            <div className="text-sm font-semibold text-slate-200 shrink-0">
+                            <div className={`text-sm font-semibold shrink-0 ${m.count === 0 ? 'text-slate-500' : 'text-slate-200'}`}>
                               {formatCurrency(m.tutar)}
                             </div>
                           </div>
