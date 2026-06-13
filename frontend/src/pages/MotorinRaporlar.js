@@ -22,9 +22,20 @@ const MotorinRaporlar = () => {
   const [ozet, setOzet] = useState({});
   const [loading, setLoading] = useState(true);
   const [dateFilter, setDateFilter] = useState({
-    baslangic: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
+    baslangic: new Date(new Date().getFullYear() - 1, new Date().getMonth(), 1).toISOString().split('T')[0],
     bitis: new Date().toISOString().split('T')[0]
   });
+
+  const handleTumZamanlar = () => {
+    setDateFilter({ baslangic: '2000-01-01', bitis: new Date().toISOString().split('T')[0] });
+  };
+
+  const handleBuAy = () => {
+    setDateFilter({
+      baslangic: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
+      bitis: new Date().toISOString().split('T')[0]
+    });
+  };
 
   useEffect(() => {
     fetchData();
@@ -98,9 +109,26 @@ const MotorinRaporlar = () => {
           <Button
             onClick={fetchData}
             className="bg-orange-600 hover:bg-orange-700"
+            data-testid="filter-apply-btn"
           >
             <Calendar className="w-4 h-4 mr-2" />
             Filtrele
+          </Button>
+          <Button
+            variant="outline"
+            onClick={handleBuAy}
+            className="border-slate-700 text-slate-300"
+            data-testid="filter-bu-ay-btn"
+          >
+            Bu Ay
+          </Button>
+          <Button
+            variant="outline"
+            onClick={handleTumZamanlar}
+            className="border-slate-700 text-slate-300"
+            data-testid="filter-tum-zamanlar-btn"
+          >
+            Tüm Zamanlar
           </Button>
         </div>
       </div>

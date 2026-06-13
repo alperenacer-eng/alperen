@@ -5633,28 +5633,36 @@ async def get_motorin_arac_tuketim(baslangic_tarihi: str = None, bitis_tarihi: s
     arac_tuketim = {}
     
     for v in vermeler:
-        arac_id = v.get('arac_id', '')
-        if arac_id not in arac_tuketim:
-            arac_tuketim[arac_id] = {
-                "arac_id": arac_id,
-                "arac_plaka": v.get('arac_plaka', ''),
-                "arac_bilgi": v.get('arac_bilgi', ''),
+        # Plakaya göre grupla (boş plakalar 'BİLİNMEYEN' altında toplanır).
+        # Bu sayede Excel'den yüklenip arac_id eşleşmeyen kayıtlar plaka plaka ayrı satır olur.
+        plaka_raw = (v.get('arac_plaka') or '').upper().strip()
+        key = plaka_raw.replace(' ', '') if plaka_raw else 'BILINMEYEN'
+        if key not in arac_tuketim:
+            arac_tuketim[key] = {
+                "arac_id": v.get('arac_id', '') or '',
+                "arac_plaka": plaka_raw or 'BİLİNMEYEN',
+                "arac_bilgi": v.get('arac_bilgi', '') or '',
                 "toplam_litre": 0,
                 "kayit_sayisi": 0,
                 "son_kilometre": 0,
                 "ilk_kilometre": float('inf')
             }
-        arac_tuketim[arac_id]["toplam_litre"] += v.get('miktar_litre', 0) or 0
-        arac_tuketim[arac_id]["kayit_sayisi"] += 1
+        # arac_bilgi boşsa, dolu olan ilk değeri sakla
+        if not arac_tuketim[key]["arac_bilgi"] and v.get('arac_bilgi'):
+            arac_tuketim[key]["arac_bilgi"] = v.get('arac_bilgi')
+        if not arac_tuketim[key]["arac_id"] and v.get('arac_id'):
+            arac_tuketim[key]["arac_id"] = v.get('arac_id')
+        arac_tuketim[key]["toplam_litre"] += v.get('miktar_litre', 0) or 0
+        arac_tuketim[key]["kayit_sayisi"] += 1
         km = v.get('kilometre', 0) or 0
         if km > 0:
-            if km > arac_tuketim[arac_id]["son_kilometre"]:
-                arac_tuketim[arac_id]["son_kilometre"] = km
-            if km < arac_tuketim[arac_id]["ilk_kilometre"]:
-                arac_tuketim[arac_id]["ilk_kilometre"] = km
+            if km > arac_tuketim[key]["son_kilometre"]:
+                arac_tuketim[key]["son_kilometre"] = km
+            if km < arac_tuketim[key]["ilk_kilometre"]:
+                arac_tuketim[key]["ilk_kilometre"] = km
     
     result = []
-    for arac_id, data in arac_tuketim.items():
+    for _key, data in arac_tuketim.items():
         if data["ilk_kilometre"] == float('inf'):
             data["ilk_kilometre"] = 0
         km_fark = data["son_kilometre"] - data["ilk_kilometre"]
