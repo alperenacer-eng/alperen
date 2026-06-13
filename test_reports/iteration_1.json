@@ -1,0 +1,47 @@
+{
+  "summary": "Tested Motorin Verme bulk upload + uploads management end-to-end. Backend (7/7 pytest passed): bulk create, list uploads (tesis filter), get records by upload, download (returns dosya_adi + base64), update single record, delete single record, cascade delete upload (records also removed). Frontend UI flow worked: login -> motorin-verme-giris -> tesis selection (BİMS POMPA) -> Excel mode -> uploads section visible (empty initially) -> file picker + template button present -> uploaded a header-SHUFFLED xlsx (columns: Plaka, KM, Tarih, Miktar (Litre), Şoför Adı, Notlar) -> header-based parser correctly mapped every column to its field -> save created upload row + records modal worked with inline editable fields and edit/delete buttons. HOWEVER one CRITICAL data-integrity bug discovered while validating values.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "/api/personeller", "issue": "Returns 404 on page load (frontend logs 'Personeller yüklenemedi'). Endpoint either missing or path mismatch. Non-blocking for motorin-verme flow but should be confirmed."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "MotorinVerme.js -> parseSayi() helper (around line 79-85)",
+        "issue": "CRITICAL DATA BUG: Decimal values from Excel are corrupted. Original cell value 250.5 was parsed and stored as 2505. parseSayi strips ALL dots assuming Turkish thousands separator ('1.234,56' style), but XLSX with raw:false returns formatted strings like '250.5' where the dot IS the decimal separator. Steps to reproduce: upload an xlsx with Miktar=250.5; preview & saved record both show 2505. Integer values (e.g. 300) are unaffected. This is EXACTLY the 'Excel data is being mapped incorrectly' issue the user reported -- header mapping is fine, but numeric parsing destroys decimals.",
+        "selector": "parseSayi() in /app/frontend/src/pages/MotorinVerme.js line ~79",
+        "priority": "CRITICAL"
+      }
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_motorin_verme_bulk.py",
+    "/app/test_reports/pytest/iter1_results.xml"
+  ],
+  "action_items": [
+    "FIX parseSayi() in MotorinVerme.js: when value is a number, keep as-is (already done). When string, detect locale smartly: if string matches /^\\d+\\.\\d+$/ (pure decimal like '250.5'), parse directly with parseFloat. Only strip dots when comma is present (Turkish style '1.234,56'). Suggested impl: const s=String(val).trim(); if(s.includes(',')){return parseFloat(s.replace(/\\./g,'').replace(',','.'))||0;} return parseFloat(s)||0;",
+    "Investigate /api/personeller 404 (called from MotorinVerme page) -- either implement endpoint or remove the fetch call to silence console error.",
+    "Consider also using raw:true in XLSX.utils.sheet_to_json to let numeric cells stay as numbers (parseSayi already short-circuits when typeof number)."
+  ],
+  "critical_code_review_comments": [
+    "server.py is 6845 lines -- well past the 700-line threshold; should be modularized.",
+    "MotorinVerme.js is 1431 lines and contains multiple modals + bulk save + uploads CRUD in one file; consider splitting into sub-components.",
+    "parseSayi locale assumption (Turkish-only) is unsafe for xlsx-derived strings.",
+    "bulk endpoint uses individual INSERTs in a loop -- acceptable for small files, but consider executemany() for larger Excel imports.",
+    "DELETE /api/motorin-verme-uploads/{id} default 'delete_records=True' silently drops linked records; this matches the test plan but ensure UI always passes the query param explicitly so behavior is unambiguous."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_motorin_verme_bulk.py (created)"
+  ],
+  "success_rate": {"backend": "100%", "frontend": "80% (header parsing OK, decimal parsing broken)"},
+  "test_credentials": "alperenacer@acerler.com / 1234 (from /app/memory/test_credentials.md)",
+  "seed_data_creation": "Created (and cleaned up) TEST_BIMS_POMPA_BULK tesis, vehicle plaka TEST34BULK99, sample upload+records via pytest fixture and via UI upload. All cleaned up at end.",
+  "retest_needed": true,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Backend pytest at /app/backend/tests/test_motorin_verme_bulk.py covers all bulk/uploads endpoints. UI testid map: motorin-verme-page, tesis-card-<id>, mode-excel-btn, uploads-section, excel-template-download-btn, excel-file-input, excel-save-btn, upload-row-<id>, upload-view/download/delete-<id>, records-modal, record-edit/delete/save-<id>, edit-record-modal, edit-modal-save-btn. After parseSayi fix is applied, re-upload a file with decimal Miktar (e.g. 250.5) and verify the preview row + saved record show 250.5 (NOT 2505).",
+  "rca_of_the_issue": "Excel-mapping-incorrect bug: header detection via HEADER_SYNONYMS works correctly even when columns are shuffled (verified by uploading [Plaka,KM,Tarih,Miktar (Litre),Şoför Adı,Notlar] order and seeing each field land in the right column). The remaining 'incorrect mapping' user-perception comes from parseSayi() (MotorinVerme.js ~L79) which unconditionally strips '.' before parsing. For Turkish formatted strings like '1.234,56' this is correct (it becomes 1234.56). For plain decimal strings produced by xlsx with raw:false such as '250.5', the dot is the actual decimal point and stripping it yields '2505'. Fix: only strip dots when a comma is present in the string; otherwise call parseFloat directly. Alternatively switch XLSX.utils.sheet_to_json to raw:true so numeric cells arrive as JS numbers (parseSayi already short-circuits numbers)."
+}

@@ -897,6 +897,26 @@ async def init_db():
             )
         ''')
         
+        # Motorin Verme Uploads table (Excel dosyaları)
+        await db.execute('''
+            CREATE TABLE IF NOT EXISTS motorin_verme_uploads (
+                id TEXT PRIMARY KEY,
+                dosya_adi TEXT NOT NULL,
+                tesis_adi TEXT DEFAULT '',
+                file_data TEXT DEFAULT '',
+                satir_sayisi INTEGER DEFAULT 0,
+                created_at TEXT NOT NULL,
+                created_by TEXT NOT NULL,
+                created_by_name TEXT NOT NULL
+            )
+        ''')
+
+        # Migration: motorin_verme tablosuna upload_id kolonu ekle
+        try:
+            await db.execute("ALTER TABLE motorin_verme ADD COLUMN upload_id TEXT DEFAULT ''")
+        except:
+            pass
+
         # Motorin Stok table
         await db.execute('''
             CREATE TABLE IF NOT EXISTS motorin_stok (
@@ -5414,6 +5434,130 @@ async def delete_motorin_verme(id: str, current_user: dict = Depends(get_current
     await db.close()
     await update_motorin_stok_sqlite()
     return {"message": "Verme kaydı silindi"}
+
+# Motorin Verme - Toplu Yükleme (Excel)
+class MotorinVermeRecordInput(BaseModel):
+    tarih: str
+    bosaltim_tesisi: str = ""
+    arac_plaka: str = ""
+    miktar_litre: float = 0
+    kilometre: float = 0
+    sofor_adi: str = ""
+    notlar: str = ""
+
+class MotorinVermeBulkCreate(BaseModel):
+    records: List[MotorinVermeRecordInput]
+    dosya_adi: str = ""
+    file_data: str = ""  # base64 of original Excel file
+    tesis_adi: str = ""
+
+@api_router.post("/motorin-verme/bulk")
+async def create_motorin_verme_bulk(input: MotorinVermeBulkCreate, current_user: dict = Depends(get_current_user)):
+    db = await get_db()
+    created_at = datetime.now(timezone.utc).isoformat()
+
+    # Plakaları arac tablosundan id'ye eşle
+    async with db.execute("SELECT id, plaka, marka, model, arac_cinsi FROM araclar") as cursor:
+        arac_rows = await cursor.fetchall()
+    plaka_map = {}
+    for r in arac_rows:
+        plaka_norm = (r['plaka'] or '').upper().replace(' ', '').strip()
+        plaka_map[plaka_norm] = dict(r)
+
+    # Upload kaydı oluştur (varsa dosya bilgisi de saklanır)
+    upload_id = generate_id()
+    if input.dosya_adi or input.file_data:
+        await db.execute(
+            """INSERT INTO motorin_verme_uploads (id, dosya_adi, tesis_adi, file_data, satir_sayisi,
+               created_at, created_by, created_by_name) VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+            (upload_id, input.dosya_adi or 'excel_upload.xlsx', input.tesis_adi, input.file_data,
+             len(input.records), created_at, current_user['id'], current_user['name'])
+        )
+
+    created_count = 0
+    errors = []
+    created_ids = []
+
+    for idx, rec in enumerate(input.records):
+        try:
+            plaka_norm = (rec.arac_plaka or '').upper().replace(' ', '').strip()
+            arac_info = plaka_map.get(plaka_norm)
+            arac_id = arac_info['id'] if arac_info else ''
+            arac_bilgi = ''
+            if arac_info:
+                arac_bilgi = f"{arac_info.get('marka', '') or ''} {arac_info.get('model', '') or ''} - {arac_info.get('arac_cinsi', '') or ''}".strip()
+
+            verme_id = generate_id()
+            await db.execute(
+                """INSERT INTO motorin_verme (id, tarih, bosaltim_tesisi, arac_id, arac_plaka, arac_bilgi,
+                   miktar_litre, kilometre, sofor_id, sofor_adi, personel_id, personel_adi, notlar,
+                   created_at, created_by, created_by_name, upload_id)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (verme_id, rec.tarih, rec.bosaltim_tesisi or input.tesis_adi, arac_id, rec.arac_plaka.upper(), arac_bilgi,
+                 rec.miktar_litre, rec.kilometre, '', rec.sofor_adi, '', '', rec.notlar,
+                 created_at, current_user['id'], current_user['name'], upload_id)
+            )
+            created_ids.append(verme_id)
+            created_count += 1
+        except Exception as e:
+            errors.append({"row": idx + 1, "plaka": rec.arac_plaka, "error": str(e)})
+
+    await db.commit()
+    await db.close()
+    await update_motorin_stok_sqlite()
+
+    return {
+        "created_count": created_count,
+        "errors": errors,
+        "upload_id": upload_id if (input.dosya_adi or input.file_data) else None,
+        "created_ids": created_ids
+    }
+
+# Motorin Verme Excel Uploads - Listeleme & Yönetim
+@api_router.get("/motorin-verme-uploads")
+async def get_motorin_verme_uploads(tesis_adi: str = None, current_user: dict = Depends(get_current_user)):
+    db = await get_db()
+    if tesis_adi:
+        query = "SELECT id, dosya_adi, tesis_adi, satir_sayisi, created_at, created_by_name FROM motorin_verme_uploads WHERE tesis_adi = ? ORDER BY created_at DESC"
+        params = (tesis_adi,)
+    else:
+        query = "SELECT id, dosya_adi, tesis_adi, satir_sayisi, created_at, created_by_name FROM motorin_verme_uploads ORDER BY created_at DESC"
+        params = ()
+    async with db.execute(query, params) as cursor:
+        rows = await cursor.fetchall()
+    await db.close()
+    return rows_to_list(rows)
+
+@api_router.get("/motorin-verme-uploads/{upload_id}/records")
+async def get_motorin_verme_upload_records(upload_id: str, current_user: dict = Depends(get_current_user)):
+    db = await get_db()
+    async with db.execute("SELECT * FROM motorin_verme WHERE upload_id = ? ORDER BY tarih DESC", (upload_id,)) as cursor:
+        rows = await cursor.fetchall()
+    await db.close()
+    return rows_to_list(rows)
+
+@api_router.get("/motorin-verme-uploads/{upload_id}/download")
+async def download_motorin_verme_upload(upload_id: str, current_user: dict = Depends(get_current_user)):
+    db = await get_db()
+    async with db.execute("SELECT dosya_adi, file_data FROM motorin_verme_uploads WHERE id = ?", (upload_id,)) as cursor:
+        row = await cursor.fetchone()
+    await db.close()
+    if not row:
+        raise HTTPException(status_code=404, detail="Yükleme bulunamadı")
+    return {"dosya_adi": row['dosya_adi'], "file_data": row['file_data']}
+
+@api_router.delete("/motorin-verme-uploads/{upload_id}")
+async def delete_motorin_verme_upload(upload_id: str, delete_records: bool = True, current_user: dict = Depends(get_current_user)):
+    db = await get_db()
+    if delete_records:
+        await db.execute("DELETE FROM motorin_verme WHERE upload_id = ?", (upload_id,))
+    else:
+        await db.execute("UPDATE motorin_verme SET upload_id = '' WHERE upload_id = ?", (upload_id,))
+    await db.execute("DELETE FROM motorin_verme_uploads WHERE id = ?", (upload_id,))
+    await db.commit()
+    await db.close()
+    await update_motorin_stok_sqlite()
+    return {"message": "Yükleme silindi"}
 
 @api_router.get("/motorin-stok")
 async def get_motorin_stok(current_user: dict = Depends(get_current_user)):
