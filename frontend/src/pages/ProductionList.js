@@ -37,18 +37,56 @@ const COLUMNS = [
   { id: 'operator_name',   label: 'Operatör',       default: true,  width: 'w-32' },
   { id: 'worked_hours',    label: 'Çal. Saat',      default: false, width: 'w-20' },
   { id: 'required_hours',  label: 'Ger. Saat',      default: false, width: 'w-20' },
+  { id: 'kayip_zaman',     label: 'Kayıp Zaman',    default: false, width: 'w-24', computed: true },
   { id: 'product_name',    label: 'Ürün',           default: true,  width: 'w-40' },
   { id: 'mold_no',         label: 'Kalıp No',       default: false, width: 'w-20' },
   { id: 'strip_used',      label: 'Şerit',          default: false, width: 'w-20' },
   { id: 'pallet_count',    label: 'Ür. Palet',      default: false, width: 'w-20' },
   { id: 'waste',           label: 'Fire',           default: false, width: 'w-16' },
+  { id: 'net_palet',       label: 'Net Palet',      default: false, width: 'w-20', computed: true },
   { id: 'pieces_per_pallet', label: 'Palet Adet',   default: false, width: 'w-20' },
   { id: 'quantity',        label: 'Top. Üretim',    default: true,  width: 'w-24' },
   { id: 'mix_count',       label: 'Karma',          default: false, width: 'w-16' },
   { id: 'cement_in_mix',   label: 'Karm. Çimt.',    default: false, width: 'w-20' },
+  { id: 'harcanan_cimento',label: 'Harc. Çimt.',    default: false, width: 'w-20', computed: true },
   { id: 'machine_cement',  label: 'Mak. Çimt.',     default: false, width: 'w-20' },
+  { id: 'cimento_fark',    label: 'Çimt. Fark',     default: false, width: 'w-20', computed: true },
+  { id: 'adet_basi_cimt',  label: 'Adet Başı Çimt.',default: false, width: 'w-24', computed: true },
+  // Çıkan Paket 1
+  { id: 'paket_1_urun',    label: 'P1 Ürün',        default: false, width: 'w-32' },
+  { id: 'paket_1_7boy',    label: 'P1 7B Adet',     default: false, width: 'w-20' },
+  { id: 'paket_1_5boy',    label: 'P1 5B Adet',     default: false, width: 'w-20' },
+  { id: 'paket_1_7top',    label: 'P1 7B Top.',     default: false, width: 'w-20', computed: true },
+  { id: 'paket_1_5top',    label: 'P1 5B Top.',     default: false, width: 'w-20', computed: true },
+  // Çıkan Paket 2
+  { id: 'paket_2_urun',    label: 'P2 Ürün',        default: false, width: 'w-32' },
+  { id: 'paket_2_7boy',    label: 'P2 7B Adet',     default: false, width: 'w-20' },
+  { id: 'paket_2_5boy',    label: 'P2 5B Adet',     default: false, width: 'w-20' },
+  { id: 'paket_2_7top',    label: 'P2 7B Top.',     default: false, width: 'w-20', computed: true },
+  { id: 'paket_2_5top',    label: 'P2 5B Top.',     default: false, width: 'w-20', computed: true },
+  // Çıkan Paket 3
+  { id: 'paket_3_urun',    label: 'P3 Ürün',        default: false, width: 'w-32' },
+  { id: 'paket_3_7boy',    label: 'P3 7B Adet',     default: false, width: 'w-20' },
+  { id: 'paket_3_5boy',    label: 'P3 5B Adet',     default: false, width: 'w-20' },
+  { id: 'paket_3_7top',    label: 'P3 7B Top.',     default: false, width: 'w-20', computed: true },
+  { id: 'paket_3_5top',    label: 'P3 5B Top.',     default: false, width: 'w-20', computed: true },
+  // Çıkan Paket 4
+  { id: 'paket_4_urun',    label: 'P4 Ürün',        default: false, width: 'w-32' },
+  { id: 'paket_4_7boy',    label: 'P4 7B Adet',     default: false, width: 'w-20' },
+  { id: 'paket_4_5boy',    label: 'P4 5B Adet',     default: false, width: 'w-20' },
+  { id: 'paket_4_7top',    label: 'P4 7B Top.',     default: false, width: 'w-20', computed: true },
+  { id: 'paket_4_5top',    label: 'P4 5B Top.',     default: false, width: 'w-20', computed: true },
+  // Çıkan Paket 5
+  { id: 'paket_5_urun',    label: 'P5 Ürün',        default: false, width: 'w-32' },
+  { id: 'paket_5_7boy',    label: 'P5 7B Adet',     default: false, width: 'w-20' },
+  { id: 'paket_5_5boy',    label: 'P5 5B Adet',     default: false, width: 'w-20' },
+  { id: 'paket_5_7top',    label: 'P5 7B Top.',     default: false, width: 'w-20', computed: true },
+  { id: 'paket_5_5top',    label: 'P5 5B Top.',     default: false, width: 'w-20', computed: true },
+  // Toplam paket
   { id: 'toplam_7_boy',    label: '7 Boy Top.',     default: false, width: 'w-20' },
   { id: 'toplam_5_boy',    label: '5 Boy Top.',     default: false, width: 'w-20' },
+  { id: 'genel_toplam',    label: 'Genel Top.',     default: false, width: 'w-20', computed: true },
+  // Arıza/Not/Kaydeden
   { id: 'breakdown_1',     label: 'Arıza 1',        default: false, width: 'w-32' },
   { id: 'breakdown_2',     label: 'Arıza 2',        default: false, width: 'w-32' },
   { id: 'breakdown_3',     label: 'Arıza 3',        default: false, width: 'w-32' },
@@ -103,7 +141,72 @@ const fmtHour = (val) => {
   return `${h}.${String(m).padStart(2, '0')}`;
 };
 
+// JSON string'i veya obje formundaki cikan_paket'i ayrıştır
+const parsePaket = (record, n) => {
+  const raw = record[`cikan_paket_${n}`];
+  if (!raw) return null;
+  try {
+    return typeof raw === 'string' ? JSON.parse(raw) : raw;
+  } catch {
+    return null;
+  }
+};
+
 const cellValue = (record, colId) => {
+  // Çıkan paket sütunları (paket_N_xxx)
+  const paketMatch = colId.match(/^paket_(\d)_(urun|7boy|5boy|7top|5top)$/);
+  if (paketMatch) {
+    const n = paketMatch[1];
+    const part = paketMatch[2];
+    const p = parsePaket(record, n);
+    if (!p) return '-';
+    if (part === 'urun') return p.urun_adi || '-';
+    if (part === '7boy') return fmtNum(p.paket_7_boy);
+    if (part === '5boy') return fmtNum(p.paket_5_boy);
+    if (part === '7top') {
+      const adet = parseInt(p.paket_7_boy) || 0;
+      const birim = parseInt(p.birim_7_boy) || 0;
+      return adet * birim ? fmtNum(adet * birim) : '-';
+    }
+    if (part === '5top') {
+      const adet = parseInt(p.paket_5_boy) || 0;
+      const birim = parseInt(p.birim_5_boy) || 0;
+      return adet * birim ? fmtNum(adet * birim) : '-';
+    }
+  }
+
+  // Hesaplanan sütunlar
+  if (colId === 'net_palet') {
+    const p = parseFloat(record.pallet_count) || 0;
+    const w = parseFloat(record.waste) || 0;
+    return fmtNum(p - w);
+  }
+  if (colId === 'harcanan_cimento') {
+    const m = parseFloat(record.mix_count) || 0;
+    const c = parseFloat(record.cement_in_mix) || 0;
+    return fmtNum(m * c);
+  }
+  if (colId === 'cimento_fark') {
+    const harcanan = (parseFloat(record.mix_count) || 0) * (parseFloat(record.cement_in_mix) || 0);
+    const mk = parseFloat(record.machine_cement) || 0;
+    return fmtNum(harcanan - mk);
+  }
+  if (colId === 'adet_basi_cimt') {
+    const harcanan = (parseFloat(record.mix_count) || 0) * (parseFloat(record.cement_in_mix) || 0);
+    const q = parseFloat(record.quantity) || 0;
+    return q > 0 ? fmtNum(harcanan / q) : '-';
+  }
+  if (colId === 'kayip_zaman') {
+    const req = parseFloat(record.required_hours) || 0;
+    const wrk = parseFloat(record.worked_hours) || 0;
+    return fmtHour(req - wrk);
+  }
+  if (colId === 'genel_toplam') {
+    const t7 = parseFloat(record.toplam_7_boy) || 0;
+    const t5 = parseFloat(record.toplam_5_boy) || 0;
+    return fmtNum(t7 + t5);
+  }
+
   const v = record[colId];
   switch (colId) {
     case 'production_date':
