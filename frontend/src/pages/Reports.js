@@ -334,30 +334,48 @@ const Reports = () => {
               </div>
             </div>
 
-            {/* Operatör bazlı */}
+            {/* Operatör bazlı - Vardiya Toplamları */}
             {monthlyData.by_operator && monthlyData.by_operator.length > 0 && (
-              <div className="bg-slate-900/40 rounded-lg p-4 border border-slate-800 mt-4">
-                <h3 className="text-sm font-semibold text-white mb-3">Operatör Bazlı Toplamlar</h3>
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-slate-700 text-slate-400 text-xs">
-                      <th className="text-left py-2">Operatör</th>
-                      <th className="text-right py-2">Adet</th>
-                      <th className="text-right py-2">Net Palet</th>
-                      <th className="text-right py-2">Kayıt</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {monthlyData.by_operator.map((o, idx) => (
-                      <tr key={idx} className="border-b border-slate-800/50">
-                        <td className="py-2 text-white">{o.operator_name}</td>
-                        <td className="py-2 text-right font-mono text-orange-400">{fmtTR(o.quantity)}</td>
-                        <td className="py-2 text-right font-mono text-purple-400">{fmtTR(o.net_pallets)}</td>
-                        <td className="py-2 text-right text-slate-400">{o.records}</td>
+              <div className="bg-slate-900/40 rounded-lg p-4 border border-slate-800 mt-4" data-testid="operator-table">
+                <h3 className="text-sm font-semibold text-white mb-3">Çalışan Vardiya Toplamları</h3>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-slate-700 text-slate-400 text-xs">
+                        <th className="text-left py-2 px-2">Operatör</th>
+                        <th className="text-right py-2 px-2">Kayıt</th>
+                        <th className="text-right py-2 px-2">
+                          <span className="inline-flex items-center gap-1 text-yellow-400">
+                            <Sun className="w-3 h-3" /> Gündüz V.
+                          </span>
+                        </th>
+                        <th className="text-right py-2 px-2">
+                          <span className="inline-flex items-center gap-1 text-blue-400">
+                            <Moon className="w-3 h-3" /> Gece V.
+                          </span>
+                        </th>
+                        <th className="text-right py-2 px-2 text-yellow-400">Gündüz Adet</th>
+                        <th className="text-right py-2 px-2 text-blue-400">Gece Adet</th>
+                        <th className="text-right py-2 px-2">Toplam Adet</th>
+                        <th className="text-right py-2 px-2">Net Palet</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {monthlyData.by_operator.map((o, idx) => (
+                        <tr key={idx} className="border-b border-slate-800/50">
+                          <td className="py-2 px-2 text-white">{o.operator_name}</td>
+                          <td className="py-2 px-2 text-right font-mono text-cyan-400 font-semibold">{o.records}</td>
+                          <td className="py-2 px-2 text-right font-mono text-yellow-400">{o.gunduz_count || 0}</td>
+                          <td className="py-2 px-2 text-right font-mono text-blue-400">{o.gece_count || 0}</td>
+                          <td className="py-2 px-2 text-right font-mono text-yellow-300">{fmtTR(o.gunduz_quantity || 0)}</td>
+                          <td className="py-2 px-2 text-right font-mono text-blue-300">{fmtTR(o.gece_quantity || 0)}</td>
+                          <td className="py-2 px-2 text-right font-mono text-orange-400 font-semibold">{fmtTR(o.quantity)}</td>
+                          <td className="py-2 px-2 text-right font-mono text-purple-400">{fmtTR(o.net_pallets)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             )}
           </>

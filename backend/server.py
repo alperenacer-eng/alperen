@@ -3272,10 +3272,25 @@ async def get_monthly_report(year: int, month: int, module: Optional[str] = None
         # operatör bazlı
         op = r.get("operator_name") or "-"
         if op not in by_operator:
-            by_operator[op] = {"operator_name": op, "quantity": 0, "net_pallets": 0, "records": 0}
+            by_operator[op] = {
+                "operator_name": op,
+                "quantity": 0,
+                "net_pallets": 0,
+                "records": 0,
+                "gunduz_count": 0,
+                "gece_count": 0,
+                "gunduz_quantity": 0,
+                "gece_quantity": 0,
+            }
         by_operator[op]["quantity"] += qty
         by_operator[op]["net_pallets"] += net_pal
         by_operator[op]["records"] += 1
+        if shift == "gunduz":
+            by_operator[op]["gunduz_count"] += 1
+            by_operator[op]["gunduz_quantity"] += qty
+        elif shift == "gece":
+            by_operator[op]["gece_count"] += 1
+            by_operator[op]["gece_quantity"] += qty
 
     return {
         "year": year,
