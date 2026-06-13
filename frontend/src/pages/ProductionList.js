@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import axios from 'axios';
 import { useAuth } from '@/context/AuthContext';
 import { useModule } from '@/context/ModuleContext';
@@ -22,11 +22,15 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Search, Trash2, Edit, Plus, Settings2, RotateCcw } from 'lucide-react';
+import { Search, Trash2, Edit, Plus, Settings2, RotateCcw, FileSpreadsheet, FileText, GripVertical } from 'lucide-react';
 import { format } from 'date-fns';
+import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL + '/api';
 const STORAGE_KEY = 'bims_kayit_visible_columns';
+const ORDER_KEY = 'bims_kayit_column_order';
 
 // Sütun tanımları — id, başlık, varsayılan görünür
 const COLUMNS = [
@@ -100,19 +104,35 @@ const defaultVisible = () => {
   return obj;
 };
 
+const defaultOrder = () => COLUMNS.map(c => c.id);
+
 const loadVisible = () => {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return defaultVisible();
     const parsed = JSON.parse(raw);
     const result = defaultVisible();
-    // Kayıtlı tercihleri uygula (yeni sütunlar varsayılan değerini korur)
     COLUMNS.forEach(c => {
       if (typeof parsed[c.id] === 'boolean') result[c.id] = parsed[c.id];
     });
     return result;
   } catch {
     return defaultVisible();
+  }
+};
+
+const loadOrder = () => {
+  try {
+    const raw = localStorage.getItem(ORDER_KEY);
+    if (!raw) return defaultOrder();
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return defaultOrder();
+    const valid = parsed.filter(id => COLUMNS.find(c => c.id === id));
+    // Yeni eklenen sütunlar (henüz kaydedilmemiş) sona eklenir
+    const missing = COLUMNS.filter(c => !valid.includes(c.id)).map(c => c.id);
+    return [...valid, ...missing];
+  } catch {
+    return defaultOrder();
   }
 };
 
@@ -240,6 +260,9 @@ const ProductionList = () => {
   const [loading, setLoading] = useState(true);
   const [deleteId, setDeleteId] = useState(null);
   const [visibleCols, setVisibleCols] = useState(loadVisible);
+  const [columnOrder, setColumnOrder] = useState(loadOrder);
+  const dragColId = useRef(null);
+  const dragOverColId = useRef(null);
 
   useEffect(() => {
     if (!currentModule) {
@@ -261,6 +284,14 @@ const ProductionList = () => {
       // ignore
     }
   }, [visibleCols]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(ORDER_KEY, JSON.stringify(columnOrder));
+    } catch {
+      // ignore
+    }
+  }, [columnOrder]);
 
   const fetchRecords = async () => {
     try {
@@ -307,6 +338,7 @@ const ProductionList = () => {
 
   const resetColumns = () => {
     setVisibleCols(defaultVisible());
+    setColumnOrder(defaultOrder());
     toast.success('Sütunlar varsayılana sıfırlandı');
   };
 
@@ -316,8 +348,102 @@ const ProductionList = () => {
     setVisibleCols(all);
   };
 
-  const visibleColList = COLUMNS.filter(c => visibleCols[c.id]);
+  // Sürükle-bırak ile sütun sıralama (HTML5 native)
+  const handleDragStart = (colId) => (e) => {
+    dragColId.current = colId;
+    e.dataTransfer.effectAllowed = 'move';
+    try { e.dataTransfer.setData('text/plain', colId); } catch { /* ignore */ }
+  };
+  const handleDragOver = (colId) => (e) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    dragOverColId.current = colId;
+  };
+  const handleDrop = (targetColId) => (e) => {
+    e.preventDefault();
+    const sourceId = dragColId.current;
+    dragColId.current = null;
+    dragOverColId.current = null;
+    if (!sourceId || sourceId === targetColId) return;
+    setColumnOrder(prev => {
+      const next = prev.filter(id => id !== sourceId);
+      const targetIdx = next.indexOf(targetColId);
+      if (targetIdx === -1) return prev;
+      next.splice(targetIdx, 0, sourceId);
+      return next;
+    });
+    toast.success('Sütun sırası güncellendi');
+  };
+  const handleDragEnd = () => {
+    dragColId.current = null;
+    dragOverColId.current = null;
+  };
+
+  // Sıralı + görünür sütun listesi
+  const orderedColumns = useMemo(() => {
+    return columnOrder
+      .map(id => COLUMNS.find(c => c.id === id))
+      .filter(Boolean);
+  }, [columnOrder]);
+
+  const visibleColList = orderedColumns.filter(c => visibleCols[c.id]);
   const visibleCount = visibleColList.length;
+
+  // Excel'e aktar
+  const exportToExcel = () => {
+    if (filteredRecords.length === 0) {
+      toast.error('Aktarılacak veri yok');
+      return;
+    }
+    const headers = visibleColList.map(c => c.label);
+    const rows = filteredRecords.map(rec =>
+      visibleColList.map(c => {
+        const val = cellValue(rec, c.id);
+        return val === '-' ? '' : val;
+      })
+    );
+    const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+    // Sütun genişlikleri
+    ws['!cols'] = visibleColList.map(c => ({ wch: Math.max(c.label.length, 12) }));
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Bims Kayitlar');
+    const fname = `bims_kayitlar_${format(new Date(), 'yyyyMMdd_HHmm')}.xlsx`;
+    XLSX.writeFile(wb, fname);
+    toast.success('Excel dosyası indirildi');
+  };
+
+  // PDF'e aktar
+  const exportToPDF = () => {
+    if (filteredRecords.length === 0) {
+      toast.error('Aktarılacak veri yok');
+      return;
+    }
+    const orientation = visibleCount > 8 ? 'landscape' : 'portrait';
+    const doc = new jsPDF({ orientation, unit: 'pt', format: 'a4' });
+    doc.setFontSize(14);
+    doc.text('Bims Üretim Kayıtları', 40, 30);
+    doc.setFontSize(9);
+    doc.text(`Tarih: ${format(new Date(), 'dd.MM.yyyy HH:mm')} • ${filteredRecords.length} kayıt`, 40, 46);
+    const headers = visibleColList.map(c => c.label);
+    const rows = filteredRecords.map(rec =>
+      visibleColList.map(c => {
+        const val = cellValue(rec, c.id);
+        return val === '-' ? '' : String(val);
+      })
+    );
+    autoTable(doc, {
+      head: [headers],
+      body: rows,
+      startY: 60,
+      styles: { fontSize: 7, cellPadding: 3, overflow: 'linebreak' },
+      headStyles: { fillColor: [249, 115, 22], textColor: 255, fontStyle: 'bold' },
+      alternateRowStyles: { fillColor: [248, 250, 252] },
+      margin: { left: 20, right: 20 }
+    });
+    const fname = `bims_kayitlar_${format(new Date(), 'yyyyMMdd_HHmm')}.pdf`;
+    doc.save(fname);
+    toast.success('PDF dosyası indirildi');
+  };
 
   if (loading) {
     return (
@@ -408,8 +534,9 @@ const ProductionList = () => {
                       </Button>
                     </div>
                   </div>
+                  <p className="text-xs text-slate-500 px-1 pb-1">💡 Tabloda sütun başlıklarını sürükleyerek sıralamayı değiştirebilirsiniz.</p>
                   <div className="grid grid-cols-1 gap-1">
-                    {COLUMNS.map(col => (
+                    {orderedColumns.map(col => (
                       <label
                         key={col.id}
                         className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-slate-800 cursor-pointer text-sm"
@@ -427,6 +554,26 @@ const ProductionList = () => {
                 </div>
               </PopoverContent>
             </Popover>
+
+            <Button
+              variant="outline"
+              onClick={exportToExcel}
+              className="border-green-500/40 text-green-400 hover:bg-green-500/10 h-10"
+              data-testid="export-excel-btn"
+            >
+              <FileSpreadsheet className="w-4 h-4 mr-2" />
+              Excel
+            </Button>
+
+            <Button
+              variant="outline"
+              onClick={exportToPDF}
+              className="border-red-500/40 text-red-400 hover:bg-red-500/10 h-10"
+              data-testid="export-pdf-btn"
+            >
+              <FileText className="w-4 h-4 mr-2" />
+              PDF
+            </Button>
           </div>
         </div>
       </div>
@@ -440,9 +587,19 @@ const ProductionList = () => {
                 {visibleColList.map(col => (
                   <th
                     key={col.id}
-                    className={`px-3 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider whitespace-nowrap ${col.width}`}
+                    draggable
+                    onDragStart={handleDragStart(col.id)}
+                    onDragOver={handleDragOver(col.id)}
+                    onDrop={handleDrop(col.id)}
+                    onDragEnd={handleDragEnd}
+                    title="Sürükleyerek taşıyın"
+                    data-testid={`col-header-${col.id}`}
+                    className={`px-3 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider whitespace-nowrap ${col.width} cursor-move select-none hover:bg-slate-800 transition-colors`}
                   >
-                    {col.label}
+                    <div className="flex items-center gap-1">
+                      <GripVertical className="w-3 h-3 text-slate-600 group-hover:text-slate-400" />
+                      {col.label}
+                    </div>
                   </th>
                 ))}
                 <th className="px-3 py-3 text-right text-xs font-semibold text-slate-400 uppercase tracking-wider whitespace-nowrap w-24">
