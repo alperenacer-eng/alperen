@@ -302,6 +302,17 @@ const Reports = () => {
                         </tr>
                       ))}
                     </tbody>
+                    <tfoot>
+                      <tr className="border-t-2 border-cyan-500/40 bg-slate-800/40">
+                        <td className="py-2 text-white font-bold">GENEL TOPLAM</td>
+                        <td className="py-2 text-right font-mono text-orange-400 font-bold">
+                          {fmtTR(monthlyData.by_product.reduce((s, p) => s + (p.quantity || 0), 0))}
+                        </td>
+                        <td className="py-2 text-right font-mono text-purple-400 font-bold">
+                          {fmtTR(monthlyData.by_product.reduce((s, p) => s + (p.net_pallets || 0), 0))}
+                        </td>
+                      </tr>
+                    </tfoot>
                   </table>
                 ) : (
                   <p className="text-slate-500 text-sm">Veri yok</p>
@@ -331,6 +342,17 @@ const Reports = () => {
                         </tr>
                       ))}
                     </tbody>
+                    <tfoot>
+                      <tr className="border-t-2 border-cyan-500/40 bg-slate-800/40">
+                        <td className="py-2 text-white font-bold">GENEL TOPLAM</td>
+                        <td className="py-2 text-right font-mono text-orange-400 font-bold">
+                          {fmtTR(monthlyData.by_department.reduce((s, d) => s + (d.quantity || 0), 0))}
+                        </td>
+                        <td className="py-2 text-right font-mono text-purple-400 font-bold">
+                          {fmtTR(monthlyData.by_department.reduce((s, d) => s + (d.net_pallets || 0), 0))}
+                        </td>
+                      </tr>
+                    </tfoot>
                   </table>
                 ) : (
                   <p className="text-slate-500 text-sm">Veri yok</p>
@@ -376,6 +398,29 @@ const Reports = () => {
                         </tr>
                       ))}
                     </tbody>
+                    <tfoot>
+                      <tr className="border-t-2 border-cyan-500/40 bg-slate-800/40">
+                        <td className="py-2 px-2 text-white font-bold">GENEL TOPLAM</td>
+                        <td className="py-2 px-2 text-right font-mono text-yellow-400 font-bold">
+                          {monthlyData.by_operator.reduce((s, o) => s + (o.gunduz_count || 0), 0)}
+                        </td>
+                        <td className="py-2 px-2 text-right font-mono text-blue-400 font-bold">
+                          {monthlyData.by_operator.reduce((s, o) => s + (o.gece_count || 0), 0)}
+                        </td>
+                        <td className="py-2 px-2 text-right font-mono text-yellow-300 font-bold">
+                          {fmtTR(monthlyData.by_operator.reduce((s, o) => s + (o.gunduz_quantity || 0), 0))}
+                        </td>
+                        <td className="py-2 px-2 text-right font-mono text-blue-300 font-bold">
+                          {fmtTR(monthlyData.by_operator.reduce((s, o) => s + (o.gece_quantity || 0), 0))}
+                        </td>
+                        <td className="py-2 px-2 text-right font-mono text-orange-400 font-bold">
+                          {fmtTR(monthlyData.by_operator.reduce((s, o) => s + (o.quantity || 0), 0))}
+                        </td>
+                        <td className="py-2 px-2 text-right font-mono text-purple-400 font-bold">
+                          {fmtTR(monthlyData.by_operator.reduce((s, o) => s + (o.net_pallets || 0), 0))}
+                        </td>
+                      </tr>
+                    </tfoot>
                   </table>
                 </div>
               </div>
