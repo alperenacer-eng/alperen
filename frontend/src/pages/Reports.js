@@ -238,7 +238,7 @@ const Reports = () => {
         ) : monthlyData && monthlyData.totals ? (
           <>
             <p className="text-cyan-400 text-sm mb-4 font-medium">
-              {AY_ADLARI[selectedMonth-1]} {selectedYear} • {fmtTR(monthlyData.totals.total_records)} kayıt
+              {AY_ADLARI[selectedMonth-1]} {selectedYear}
             </p>
 
             {/* Toplam Kartları */}
@@ -291,7 +291,6 @@ const Reports = () => {
                         <th className="text-left py-2">Ürün</th>
                         <th className="text-right py-2">Adet</th>
                         <th className="text-right py-2">Net Palet</th>
-                        <th className="text-right py-2">Kayıt</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -300,7 +299,6 @@ const Reports = () => {
                           <td className="py-2 text-white">{p.product_name}</td>
                           <td className="py-2 text-right font-mono text-orange-400">{fmtTR(p.quantity)}</td>
                           <td className="py-2 text-right font-mono text-purple-400">{fmtTR(p.net_pallets)}</td>
-                          <td className="py-2 text-right text-slate-400">{p.records}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -322,7 +320,6 @@ const Reports = () => {
                         <th className="text-left py-2">İşletme</th>
                         <th className="text-right py-2">Adet</th>
                         <th className="text-right py-2">Net Palet</th>
-                        <th className="text-right py-2">Kayıt</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -331,7 +328,6 @@ const Reports = () => {
                           <td className="py-2 text-white">{d.department_name}</td>
                           <td className="py-2 text-right font-mono text-orange-400">{fmtTR(d.quantity)}</td>
                           <td className="py-2 text-right font-mono text-purple-400">{fmtTR(d.net_pallets)}</td>
-                          <td className="py-2 text-right text-slate-400">{d.records}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -351,7 +347,6 @@ const Reports = () => {
                     <thead>
                       <tr className="border-b border-slate-700 text-slate-400 text-xs">
                         <th className="text-left py-2 px-2">Operatör</th>
-                        <th className="text-right py-2 px-2">Kayıt</th>
                         <th className="text-right py-2 px-2">
                           <span className="inline-flex items-center gap-1 text-yellow-400">
                             <Sun className="w-3 h-3" /> Gündüz V.
@@ -372,7 +367,6 @@ const Reports = () => {
                       {monthlyData.by_operator.map((o, idx) => (
                         <tr key={idx} className="border-b border-slate-800/50">
                           <td className="py-2 px-2 text-white">{o.operator_name}</td>
-                          <td className="py-2 px-2 text-right font-mono text-cyan-400 font-semibold">{o.records}</td>
                           <td className="py-2 px-2 text-right font-mono text-yellow-400">{o.gunduz_count || 0}</td>
                           <td className="py-2 px-2 text-right font-mono text-blue-400">{o.gece_count || 0}</td>
                           <td className="py-2 px-2 text-right font-mono text-yellow-300">{fmtTR(o.gunduz_quantity || 0)}</td>
