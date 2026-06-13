@@ -242,7 +242,7 @@ const Reports = () => {
             </p>
 
             {/* Toplam Kartları */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-5">
               <div className="bg-slate-900/60 rounded-lg p-4 border border-slate-800">
                 <p className="text-xs text-slate-400 mb-1">Toplam Üretim</p>
                 <p className="text-2xl font-bold font-mono text-orange-400">{fmtTR(monthlyData.totals.total_quantity)}</p>
@@ -258,6 +258,18 @@ const Reports = () => {
               <div className="bg-slate-900/60 rounded-lg p-4 border border-slate-800">
                 <p className="text-xs text-slate-400 mb-1">Net Palet</p>
                 <p className="text-2xl font-bold font-mono text-purple-400">{fmtTR(monthlyData.totals.total_net_pallets)}</p>
+              </div>
+              <div className="bg-slate-900/60 rounded-lg p-4 border border-cyan-500/30 bg-cyan-500/5">
+                <p className="text-xs text-slate-400 mb-1">Çalışılan Vardiya</p>
+                <p className="text-2xl font-bold font-mono text-cyan-400">{fmtTR(monthlyData.totals.total_records)}</p>
+              </div>
+              <div className="bg-slate-900/60 rounded-lg p-4 border border-emerald-500/30 bg-emerald-500/5">
+                <p className="text-xs text-slate-400 mb-1">Vardiya Başı Palet</p>
+                <p className="text-2xl font-bold font-mono text-emerald-400">
+                  {monthlyData.totals.total_records > 0
+                    ? (monthlyData.totals.total_net_pallets / monthlyData.totals.total_records).toLocaleString('tr-TR', { maximumFractionDigits: 2 })
+                    : '0'}
+                </p>
               </div>
               <div className="bg-slate-900/60 rounded-lg p-4 border border-slate-800">
                 <p className="text-xs text-slate-400 mb-1">Üretilen Palet</p>
