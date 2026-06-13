@@ -3302,6 +3302,123 @@ async def get_monthly_report(year: int, month: int, module: Optional[str] = None
         "by_operator": sorted(by_operator.values(), key=lambda x: x["quantity"], reverse=True),
     }
 
+@api_router.get("/reports/daily-detailed")
+async def get_daily_detailed_report(days: int = 7, module: Optional[str] = None,
+                                     current_user: dict = Depends(get_current_user)):
+    """Son N gün için günlük detaylı kayıt listesi + günlük toplamlar + genel toplam."""
+    now = datetime.now(timezone.utc)
+    start_date = (now - timedelta(days=days)).strftime('%Y-%m-%d')
+
+    db = await get_db()
+    query = "SELECT * FROM production_records WHERE 1=1"
+    params = []
+    if module:
+        query += " AND module = ?"
+        params.append(module)
+    async with db.execute(query, params) as cursor:
+        rows = await cursor.fetchall()
+    await db.close()
+
+    records = rows_to_list(rows)
+    by_day = {}
+    grand = {
+        "total_days": 0,
+        "gunduz_quantity": 0,
+        "gece_quantity": 0,
+        "total_quantity": 0,
+        "gunduz_net_pallets": 0,
+        "gece_net_pallets": 0,
+        "total_net_pallets": 0,
+    }
+
+    for r in records:
+        dkey = r.get("production_date") or (r.get("created_at") or "")[:10]
+        if not dkey or dkey < start_date:
+            continue
+
+        qty = r.get("quantity", 0) or 0
+        pal = r.get("pallet_count", 0) or 0
+        waste = r.get("waste", 0) or 0
+        net_pal = max(pal - waste, 0)
+        shift = r.get("shift_type", "")
+
+        if dkey not in by_day:
+            by_day[dkey] = {
+                "date": dkey,
+                "records": [],
+                "totals": {
+                    "gunduz_quantity": 0, "gece_quantity": 0, "total_quantity": 0,
+                    "gunduz_net_pallets": 0, "gece_net_pallets": 0, "total_net_pallets": 0
+                }
+            }
+        by_day[dkey]["records"].append({
+            "department_name": r.get("department_name") or "-",
+            "product_name": r.get("product_name") or "-",
+            "shift_type": shift,
+            "quantity": qty,
+            "net_pallets": net_pal,
+        })
+        by_day[dkey]["totals"]["total_quantity"] += qty
+        by_day[dkey]["totals"]["total_net_pallets"] += net_pal
+        if shift == "gunduz":
+            by_day[dkey]["totals"]["gunduz_quantity"] += qty
+            by_day[dkey]["totals"]["gunduz_net_pallets"] += net_pal
+        elif shift == "gece":
+            by_day[dkey]["totals"]["gece_quantity"] += qty
+            by_day[dkey]["totals"]["gece_net_pallets"] += net_pal
+
+        grand["total_quantity"] += qty
+        grand["total_net_pallets"] += net_pal
+        if shift == "gunduz":
+            grand["gunduz_quantity"] += qty
+            grand["gunduz_net_pallets"] += net_pal
+        elif shift == "gece":
+            grand["gece_quantity"] += qty
+            grand["gece_net_pallets"] += net_pal
+
+    grand["total_days"] = len(by_day)
+    data = sorted(by_day.values(), key=lambda x: x["date"], reverse=True)
+    return {"data": data, "grand_totals": grand}
+
+@api_router.get("/reports/today-details")
+async def get_today_details(module: Optional[str] = None, current_user: dict = Depends(get_current_user)):
+    """Bugünün üretim kayıtlarının özeti."""
+    today = datetime.now(timezone.utc).strftime('%Y-%m-%d')
+    db = await get_db()
+    query = "SELECT * FROM production_records WHERE production_date = ?"
+    params = [today]
+    if module:
+        query += " AND module = ?"
+        params.append(module)
+    async with db.execute(query, params) as cursor:
+        rows = await cursor.fetchall()
+    await db.close()
+
+    records = rows_to_list(rows)
+    totals = {"gunduz_quantity": 0, "gece_quantity": 0, "total_quantity": 0,
+              "total_net_pallets": 0, "record_count": len(records)}
+    detail = []
+    for r in records:
+        qty = r.get("quantity", 0) or 0
+        pal = r.get("pallet_count", 0) or 0
+        waste = r.get("waste", 0) or 0
+        net_pal = max(pal - waste, 0)
+        shift = r.get("shift_type", "")
+        totals["total_quantity"] += qty
+        totals["total_net_pallets"] += net_pal
+        if shift == "gunduz":
+            totals["gunduz_quantity"] += qty
+        elif shift == "gece":
+            totals["gece_quantity"] += qty
+        detail.append({
+            "department_name": r.get("department_name") or "-",
+            "product_name": r.get("product_name") or "-",
+            "shift_type": shift,
+            "quantity": qty,
+            "net_pallets": net_pal,
+        })
+    return {"date": today, "totals": totals, "records": detail}
+
 # ============ Çimento Giriş API'leri ============
 
 class CimentoGirisCreate(BaseModel):

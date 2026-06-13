@@ -83,7 +83,7 @@ const Reports = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [dailyRes, statsRes, todayRes, detailedRes] = await Promise.all([
+      const results = await Promise.allSettled([
         axios.get(`${API_URL}/reports/daily?days=${period}&module=${currentModule.id}`, {
           headers: { Authorization: `Bearer ${token}` }
         }),
@@ -98,10 +98,18 @@ const Reports = () => {
         })
       ]);
 
-      setDailyData(dailyRes.data.data);
-      setStats(statsRes.data);
-      setTodayDetails(todayRes.data);
-      setDailyDetailed(detailedRes.data);
+      const [dailyRes, statsRes, todayRes, detailedRes] = results;
+      if (dailyRes.status === 'fulfilled') setDailyData(dailyRes.value.data.data);
+      if (statsRes.status === 'fulfilled') setStats(statsRes.value.data);
+      if (todayRes.status === 'fulfilled') setTodayDetails(todayRes.value.data);
+      if (detailedRes.status === 'fulfilled') setDailyDetailed(detailedRes.value.data);
+
+      const failed = results.filter(r => r.status === 'rejected').length;
+      if (failed === results.length) {
+        toast.error('Raporlar yüklenemedi');
+      } else if (failed > 0) {
+        console.warn(`${failed} rapor isteği başarısız oldu`);
+      }
     } catch (error) {
       toast.error('Raporlar yüklenemedi');
     } finally {
