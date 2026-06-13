@@ -3159,6 +3159,134 @@ async def get_daily_report(days: int = 7, module: Optional[str] = None, current_
     
     return {"data": sorted(daily_data.values(), key=lambda x: x["date"])}
 
+@api_router.get("/reports/monthly")
+async def get_monthly_report(year: int, month: int, module: Optional[str] = None,
+                              current_user: dict = Depends(get_current_user)):
+    """Yıl + Ay bazlı üretim toplamı (Bims raporları için)."""
+    if month < 1 or month > 12:
+        raise HTTPException(status_code=400, detail="Geçersiz ay")
+    if year < 2000 or year > 2100:
+        raise HTTPException(status_code=400, detail="Geçersiz yıl")
+
+    start_date = f"{year:04d}-{month:02d}-01"
+    # ay sonu
+    if month == 12:
+        next_y, next_m = year + 1, 1
+    else:
+        next_y, next_m = year, month + 1
+    end_date = f"{next_y:04d}-{next_m:02d}-01"
+
+    db = await get_db()
+    query = "SELECT * FROM production_records WHERE 1=1"
+    params = []
+    if module:
+        query += " AND module = ?"
+        params.append(module)
+    async with db.execute(query, params) as cursor:
+        rows = await cursor.fetchall()
+    await db.close()
+
+    records = rows_to_list(rows)
+    # filtre ve agregasyon
+    totals = {
+        "total_quantity": 0,
+        "gunduz_quantity": 0,
+        "gece_quantity": 0,
+        "total_net_pallets": 0,
+        "gunduz_net_pallets": 0,
+        "gece_net_pallets": 0,
+        "total_records": 0,
+        "total_pallets": 0,
+        "total_waste": 0,
+        "total_cement_used": 0,
+        "total_machine_cement": 0,
+        "total_7_boy": 0,
+        "total_5_boy": 0,
+    }
+    daily_map = {}
+    by_product = {}
+    by_department = {}
+    by_operator = {}
+
+    for r in records:
+        dkey = r.get("production_date") or (r.get("created_at") or "")[:10]
+        if not dkey or dkey < start_date or dkey >= end_date:
+            continue
+
+        qty = r.get("quantity", 0) or 0
+        pal = r.get("pallet_count", 0) or 0
+        waste = r.get("waste", 0) or 0
+        net_pal = max(pal - waste, 0)
+        shift = r.get("shift_type", "")
+        mix = r.get("mix_count", 0) or 0
+        cmix = r.get("cement_in_mix", 0) or 0
+        harcanan = mix * cmix
+        mk = r.get("machine_cement", 0) or 0
+        t7 = r.get("toplam_7_boy", 0) or 0
+        t5 = r.get("toplam_5_boy", 0) or 0
+
+        totals["total_quantity"] += qty
+        totals["total_records"] += 1
+        totals["total_pallets"] += pal
+        totals["total_waste"] += waste
+        totals["total_net_pallets"] += net_pal
+        totals["total_cement_used"] += harcanan
+        totals["total_machine_cement"] += mk
+        totals["total_7_boy"] += t7
+        totals["total_5_boy"] += t5
+        if shift == "gunduz":
+            totals["gunduz_quantity"] += qty
+            totals["gunduz_net_pallets"] += net_pal
+        elif shift == "gece":
+            totals["gece_quantity"] += qty
+            totals["gece_net_pallets"] += net_pal
+
+        # günlük detay
+        if dkey not in daily_map:
+            daily_map[dkey] = {"date": dkey, "quantity": 0, "net_pallets": 0,
+                               "gunduz_quantity": 0, "gece_quantity": 0, "records": 0}
+        daily_map[dkey]["quantity"] += qty
+        daily_map[dkey]["net_pallets"] += net_pal
+        daily_map[dkey]["records"] += 1
+        if shift == "gunduz":
+            daily_map[dkey]["gunduz_quantity"] += qty
+        elif shift == "gece":
+            daily_map[dkey]["gece_quantity"] += qty
+
+        # ürün bazlı
+        pname = r.get("product_name") or "-"
+        if pname not in by_product:
+            by_product[pname] = {"product_name": pname, "quantity": 0, "net_pallets": 0, "records": 0}
+        by_product[pname]["quantity"] += qty
+        by_product[pname]["net_pallets"] += net_pal
+        by_product[pname]["records"] += 1
+
+        # işletme bazlı
+        dep = r.get("department_name") or "-"
+        if dep not in by_department:
+            by_department[dep] = {"department_name": dep, "quantity": 0, "net_pallets": 0, "records": 0}
+        by_department[dep]["quantity"] += qty
+        by_department[dep]["net_pallets"] += net_pal
+        by_department[dep]["records"] += 1
+
+        # operatör bazlı
+        op = r.get("operator_name") or "-"
+        if op not in by_operator:
+            by_operator[op] = {"operator_name": op, "quantity": 0, "net_pallets": 0, "records": 0}
+        by_operator[op]["quantity"] += qty
+        by_operator[op]["net_pallets"] += net_pal
+        by_operator[op]["records"] += 1
+
+    return {
+        "year": year,
+        "month": month,
+        "totals": totals,
+        "daily": sorted(daily_map.values(), key=lambda x: x["date"]),
+        "by_product": sorted(by_product.values(), key=lambda x: x["quantity"], reverse=True),
+        "by_department": sorted(by_department.values(), key=lambda x: x["quantity"], reverse=True),
+        "by_operator": sorted(by_operator.values(), key=lambda x: x["quantity"], reverse=True),
+    }
+
 # ============ Çimento Giriş API'leri ============
 
 class CimentoGirisCreate(BaseModel):

@@ -6,11 +6,14 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Button } from '@/components/ui/button';
-import { Calendar, TrendingUp, Download, FileText, Sun, Moon, Factory, Package, ChevronDown, ChevronUp } from 'lucide-react';
+import { Calendar, TrendingUp, Download, FileText, Sun, Moon, Factory, Package, ChevronDown, ChevronUp, CalendarDays } from 'lucide-react';
 import { format } from 'date-fns';
 import { tr } from 'date-fns/locale';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL + '/api';
+
+const AY_ADLARI = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
+const fmtTR = (n) => (Number(n) || 0).toLocaleString('tr-TR');
 
 const Reports = () => {
   const { token } = useAuth();
@@ -24,6 +27,13 @@ const Reports = () => {
   const [period, setPeriod] = useState(7);
   const [expandedDays, setExpandedDays] = useState({});
 
+  // Yıl/Ay seçimi state
+  const now = new Date();
+  const [selectedYear, setSelectedYear] = useState(now.getFullYear());
+  const [selectedMonth, setSelectedMonth] = useState(now.getMonth() + 1);
+  const [monthlyData, setMonthlyData] = useState(null);
+  const [monthlyLoading, setMonthlyLoading] = useState(false);
+
   useEffect(() => {
     if (!currentModule) {
       navigate('/');
@@ -34,7 +44,41 @@ const Reports = () => {
       return;
     }
     fetchData();
+    fetchMonthly(selectedYear, selectedMonth);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [period, currentModule]);
+
+  const fetchMonthly = async (year, month) => {
+    setMonthlyLoading(true);
+    try {
+      const res = await axios.get(`${API_URL}/reports/monthly?year=${year}&month=${month}&module=${currentModule.id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setMonthlyData(res.data);
+    } catch (error) {
+      toast.error('Aylık rapor yüklenemedi');
+      setMonthlyData(null);
+    } finally {
+      setMonthlyLoading(false);
+    }
+  };
+
+  const handleYearChange = (y) => {
+    setSelectedYear(y);
+    fetchMonthly(y, selectedMonth);
+  };
+
+  const handleMonthChange = (m) => {
+    setSelectedMonth(m);
+    fetchMonthly(selectedYear, m);
+  };
+
+  const yearOptions = (() => {
+    const cy = now.getFullYear();
+    const arr = [];
+    for (let y = cy + 1; y >= cy - 5; y--) arr.push(y);
+    return arr;
+  })();
 
   const fetchData = async () => {
     setLoading(true);
@@ -141,6 +185,185 @@ const Reports = () => {
             </Button>
           ))}
         </div>
+      </div>
+
+      {/* YIL / AY FİLTRESİ - Aylık Üretim Toplamları */}
+      <div className="glass-effect rounded-xl p-6 border border-cyan-500/30 bg-cyan-500/5 mb-8" data-testid="monthly-panel">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-5">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-cyan-400/20 border border-cyan-400/30 rounded-lg flex items-center justify-center">
+              <CalendarDays className="w-5 h-5 text-cyan-400" />
+            </div>
+            <div>
+              <h2 className="text-xl font-semibold text-white">Aylık Üretim Toplamları</h2>
+              <p className="text-sm text-slate-400">Yıl ve ay seçin, dönem üretim toplamı otomatik gelir</p>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <label className="text-sm text-slate-400">Yıl:</label>
+            <select
+              value={selectedYear}
+              onChange={(e) => handleYearChange(parseInt(e.target.value))}
+              data-testid="year-select"
+              className="bg-slate-900 border border-slate-700 text-white rounded-md px-3 py-2 h-10 focus:outline-none focus:border-cyan-500"
+            >
+              {yearOptions.map(y => (
+                <option key={y} value={y}>{y}</option>
+              ))}
+            </select>
+            <label className="text-sm text-slate-400 ml-2">Ay:</label>
+            <select
+              value={selectedMonth}
+              onChange={(e) => handleMonthChange(parseInt(e.target.value))}
+              data-testid="month-select"
+              className="bg-slate-900 border border-slate-700 text-white rounded-md px-3 py-2 h-10 focus:outline-none focus:border-cyan-500"
+            >
+              {AY_ADLARI.map((ad, i) => (
+                <option key={i+1} value={i+1}>{ad}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {monthlyLoading ? (
+          <div className="text-center py-8 text-slate-400">Yükleniyor...</div>
+        ) : monthlyData && monthlyData.totals ? (
+          <>
+            <p className="text-cyan-400 text-sm mb-4 font-medium">
+              {AY_ADLARI[selectedMonth-1]} {selectedYear} • {fmtTR(monthlyData.totals.total_records)} kayıt
+            </p>
+
+            {/* Toplam Kartları */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+              <div className="bg-slate-900/60 rounded-lg p-4 border border-slate-800">
+                <p className="text-xs text-slate-400 mb-1">Toplam Üretim</p>
+                <p className="text-2xl font-bold font-mono text-orange-400">{fmtTR(monthlyData.totals.total_quantity)}</p>
+              </div>
+              <div className="bg-slate-900/60 rounded-lg p-4 border border-slate-800">
+                <p className="text-xs text-slate-400 mb-1 flex items-center gap-1"><Sun className="w-3 h-3" /> Gündüz</p>
+                <p className="text-2xl font-bold font-mono text-yellow-400">{fmtTR(monthlyData.totals.gunduz_quantity)}</p>
+              </div>
+              <div className="bg-slate-900/60 rounded-lg p-4 border border-slate-800">
+                <p className="text-xs text-slate-400 mb-1 flex items-center gap-1"><Moon className="w-3 h-3" /> Gece</p>
+                <p className="text-2xl font-bold font-mono text-blue-400">{fmtTR(monthlyData.totals.gece_quantity)}</p>
+              </div>
+              <div className="bg-slate-900/60 rounded-lg p-4 border border-slate-800">
+                <p className="text-xs text-slate-400 mb-1">Net Palet</p>
+                <p className="text-2xl font-bold font-mono text-purple-400">{fmtTR(monthlyData.totals.total_net_pallets)}</p>
+              </div>
+              <div className="bg-slate-900/60 rounded-lg p-4 border border-slate-800">
+                <p className="text-xs text-slate-400 mb-1">Üretilen Palet</p>
+                <p className="text-lg font-bold font-mono text-green-400">{fmtTR(monthlyData.totals.total_pallets)}</p>
+              </div>
+              <div className="bg-slate-900/60 rounded-lg p-4 border border-slate-800">
+                <p className="text-xs text-slate-400 mb-1">Fire</p>
+                <p className="text-lg font-bold font-mono text-red-400">{fmtTR(monthlyData.totals.total_waste)}</p>
+              </div>
+              <div className="bg-slate-900/60 rounded-lg p-4 border border-slate-800">
+                <p className="text-xs text-slate-400 mb-1">Harcanan Çimento</p>
+                <p className="text-lg font-bold font-mono text-amber-400">{fmtTR(monthlyData.totals.total_cement_used)}</p>
+              </div>
+              <div className="bg-slate-900/60 rounded-lg p-4 border border-slate-800">
+                <p className="text-xs text-slate-400 mb-1">Mak. Çimento</p>
+                <p className="text-lg font-bold font-mono text-amber-300">{fmtTR(monthlyData.totals.total_machine_cement)}</p>
+              </div>
+            </div>
+
+            {/* Ürün Bazlı + İşletme Bazlı */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <div className="bg-slate-900/40 rounded-lg p-4 border border-slate-800">
+                <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
+                  <Package className="w-4 h-4 text-orange-400" />
+                  Ürün Bazlı Toplamlar
+                </h3>
+                {monthlyData.by_product && monthlyData.by_product.length > 0 ? (
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-slate-700 text-slate-400 text-xs">
+                        <th className="text-left py-2">Ürün</th>
+                        <th className="text-right py-2">Adet</th>
+                        <th className="text-right py-2">Net Palet</th>
+                        <th className="text-right py-2">Kayıt</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {monthlyData.by_product.map((p, idx) => (
+                        <tr key={idx} className="border-b border-slate-800/50">
+                          <td className="py-2 text-white">{p.product_name}</td>
+                          <td className="py-2 text-right font-mono text-orange-400">{fmtTR(p.quantity)}</td>
+                          <td className="py-2 text-right font-mono text-purple-400">{fmtTR(p.net_pallets)}</td>
+                          <td className="py-2 text-right text-slate-400">{p.records}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                ) : (
+                  <p className="text-slate-500 text-sm">Veri yok</p>
+                )}
+              </div>
+
+              <div className="bg-slate-900/40 rounded-lg p-4 border border-slate-800">
+                <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
+                  <Factory className="w-4 h-4 text-cyan-400" />
+                  İşletme Bazlı Toplamlar
+                </h3>
+                {monthlyData.by_department && monthlyData.by_department.length > 0 ? (
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-slate-700 text-slate-400 text-xs">
+                        <th className="text-left py-2">İşletme</th>
+                        <th className="text-right py-2">Adet</th>
+                        <th className="text-right py-2">Net Palet</th>
+                        <th className="text-right py-2">Kayıt</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {monthlyData.by_department.map((d, idx) => (
+                        <tr key={idx} className="border-b border-slate-800/50">
+                          <td className="py-2 text-white">{d.department_name}</td>
+                          <td className="py-2 text-right font-mono text-orange-400">{fmtTR(d.quantity)}</td>
+                          <td className="py-2 text-right font-mono text-purple-400">{fmtTR(d.net_pallets)}</td>
+                          <td className="py-2 text-right text-slate-400">{d.records}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                ) : (
+                  <p className="text-slate-500 text-sm">Veri yok</p>
+                )}
+              </div>
+            </div>
+
+            {/* Operatör bazlı */}
+            {monthlyData.by_operator && monthlyData.by_operator.length > 0 && (
+              <div className="bg-slate-900/40 rounded-lg p-4 border border-slate-800 mt-4">
+                <h3 className="text-sm font-semibold text-white mb-3">Operatör Bazlı Toplamlar</h3>
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-slate-700 text-slate-400 text-xs">
+                      <th className="text-left py-2">Operatör</th>
+                      <th className="text-right py-2">Adet</th>
+                      <th className="text-right py-2">Net Palet</th>
+                      <th className="text-right py-2">Kayıt</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {monthlyData.by_operator.map((o, idx) => (
+                      <tr key={idx} className="border-b border-slate-800/50">
+                        <td className="py-2 text-white">{o.operator_name}</td>
+                        <td className="py-2 text-right font-mono text-orange-400">{fmtTR(o.quantity)}</td>
+                        <td className="py-2 text-right font-mono text-purple-400">{fmtTR(o.net_pallets)}</td>
+                        <td className="py-2 text-right text-slate-400">{o.records}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="text-center py-8 text-slate-500">Bu dönem için veri bulunmuyor</div>
+        )}
       </div>
 
       {/* Summary Cards */}
