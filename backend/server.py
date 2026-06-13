@@ -5071,6 +5071,103 @@ async def delete_motorin_tedarikci(id: str, current_user: dict = Depends(get_cur
     await db.close()
     return {"message": "Tedarikçi silindi"}
 
+# Boşaltım Tesisleri
+class BosaltimTesisCreate(BaseModel):
+    name: str
+    adres: str = ""
+    notlar: str = ""
+
+@api_router.post("/bosaltim-tesisleri")
+async def create_bosaltim_tesisi(input: BosaltimTesisCreate, current_user: dict = Depends(get_current_user)):
+    db = await get_db()
+    tesis_id = generate_id()
+    created_at = datetime.now(timezone.utc).isoformat()
+    await db.execute(
+        "INSERT INTO bosaltim_tesisleri (id, name, adres, notlar, created_at) VALUES (?, ?, ?, ?, ?)",
+        (tesis_id, input.name, input.adres, input.notlar, created_at)
+    )
+    await db.commit()
+    await db.close()
+    return {"id": tesis_id, "name": input.name, "adres": input.adres, "notlar": input.notlar, "created_at": created_at}
+
+@api_router.get("/bosaltim-tesisleri")
+async def get_bosaltim_tesisleri(current_user: dict = Depends(get_current_user)):
+    db = await get_db()
+    async with db.execute("SELECT * FROM bosaltim_tesisleri ORDER BY name") as cursor:
+        rows = await cursor.fetchall()
+    await db.close()
+    return rows_to_list(rows)
+
+@api_router.put("/bosaltim-tesisleri/{id}")
+async def update_bosaltim_tesisi(id: str, input: BosaltimTesisCreate, current_user: dict = Depends(get_current_user)):
+    db = await get_db()
+    updated_at = datetime.now(timezone.utc).isoformat()
+    await db.execute(
+        "UPDATE bosaltim_tesisleri SET name=?, adres=?, notlar=?, updated_at=? WHERE id=?",
+        (input.name, input.adres, input.notlar, updated_at, id)
+    )
+    await db.commit()
+    async with db.execute("SELECT * FROM bosaltim_tesisleri WHERE id = ?", (id,)) as cursor:
+        row = await cursor.fetchone()
+    await db.close()
+    return row_to_dict(row)
+
+@api_router.delete("/bosaltim-tesisleri/{id}")
+async def delete_bosaltim_tesisi(id: str, current_user: dict = Depends(get_current_user)):
+    db = await get_db()
+    await db.execute("DELETE FROM bosaltim_tesisleri WHERE id = ?", (id,))
+    await db.commit()
+    await db.close()
+    return {"message": "Tesis silindi"}
+
+# Akaryakıt Markaları
+class AkaryakitMarkaCreate(BaseModel):
+    name: str
+    notlar: str = ""
+
+@api_router.post("/akaryakit-markalari")
+async def create_akaryakit_marka(input: AkaryakitMarkaCreate, current_user: dict = Depends(get_current_user)):
+    db = await get_db()
+    marka_id = generate_id()
+    created_at = datetime.now(timezone.utc).isoformat()
+    await db.execute(
+        "INSERT INTO akaryakit_markalari (id, name, notlar, created_at) VALUES (?, ?, ?, ?)",
+        (marka_id, input.name, input.notlar, created_at)
+    )
+    await db.commit()
+    await db.close()
+    return {"id": marka_id, "name": input.name, "notlar": input.notlar, "created_at": created_at}
+
+@api_router.get("/akaryakit-markalari")
+async def get_akaryakit_markalari(current_user: dict = Depends(get_current_user)):
+    db = await get_db()
+    async with db.execute("SELECT * FROM akaryakit_markalari ORDER BY name") as cursor:
+        rows = await cursor.fetchall()
+    await db.close()
+    return rows_to_list(rows)
+
+@api_router.put("/akaryakit-markalari/{id}")
+async def update_akaryakit_marka(id: str, input: AkaryakitMarkaCreate, current_user: dict = Depends(get_current_user)):
+    db = await get_db()
+    updated_at = datetime.now(timezone.utc).isoformat()
+    await db.execute(
+        "UPDATE akaryakit_markalari SET name=?, notlar=?, updated_at=? WHERE id=?",
+        (input.name, input.notlar, updated_at, id)
+    )
+    await db.commit()
+    async with db.execute("SELECT * FROM akaryakit_markalari WHERE id = ?", (id,)) as cursor:
+        row = await cursor.fetchone()
+    await db.close()
+    return row_to_dict(row)
+
+@api_router.delete("/akaryakit-markalari/{id}")
+async def delete_akaryakit_marka(id: str, current_user: dict = Depends(get_current_user)):
+    db = await get_db()
+    await db.execute("DELETE FROM akaryakit_markalari WHERE id = ?", (id,))
+    await db.commit()
+    await db.close()
+    return {"message": "Marka silindi"}
+
 # Motorin Alım
 class MotorinAlimCreate(BaseModel):
     tarih: str
