@@ -263,6 +263,47 @@ const ProductionList = () => {
   const [columnOrder, setColumnOrder] = useState(loadOrder);
   const dragColId = useRef(null);
   const dragOverColId = useRef(null);
+  const topScrollRef = useRef(null);
+  const bottomScrollRef = useRef(null);
+  const tableRef = useRef(null);
+  const [tableWidth, setTableWidth] = useState(0);
+  const syncingFrom = useRef(null); // 'top' | 'bottom' | null
+
+  // Tablo genişliği değiştikçe üst scrollbar'ın iç div genişliğini güncelle
+  useEffect(() => {
+    const updateWidth = () => {
+      if (tableRef.current) {
+        setTableWidth(tableRef.current.scrollWidth);
+      }
+    };
+    updateWidth();
+    // Görünür sütun listesi değişince yeniden hesapla
+    const t = setTimeout(updateWidth, 50);
+    window.addEventListener('resize', updateWidth);
+    return () => {
+      clearTimeout(t);
+      window.removeEventListener('resize', updateWidth);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  });
+
+  const handleTopScroll = () => {
+    if (syncingFrom.current === 'bottom') return;
+    syncingFrom.current = 'top';
+    if (bottomScrollRef.current && topScrollRef.current) {
+      bottomScrollRef.current.scrollLeft = topScrollRef.current.scrollLeft;
+    }
+    requestAnimationFrame(() => { syncingFrom.current = null; });
+  };
+
+  const handleBottomScroll = () => {
+    if (syncingFrom.current === 'top') return;
+    syncingFrom.current = 'bottom';
+    if (topScrollRef.current && bottomScrollRef.current) {
+      topScrollRef.current.scrollLeft = bottomScrollRef.current.scrollLeft;
+    }
+    requestAnimationFrame(() => { syncingFrom.current = null; });
+  };
 
   useEffect(() => {
     if (!currentModule) {
@@ -580,8 +621,22 @@ const ProductionList = () => {
 
       {/* Tablo */}
       <div className="hidden md:block glass-effect rounded-xl border border-slate-800 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm" data-testid="records-table">
+        {/* ÜST SCROLLBAR — tablo ile senkron */}
+        <div
+          ref={topScrollRef}
+          onScroll={handleTopScroll}
+          className="overflow-x-auto overflow-y-hidden border-b border-slate-800 bg-slate-900/50"
+          data-testid="top-scrollbar"
+          style={{ height: 14 }}
+        >
+          <div style={{ width: tableWidth || '100%', height: 1 }} />
+        </div>
+        <div
+          ref={bottomScrollRef}
+          onScroll={handleBottomScroll}
+          className="overflow-x-auto"
+        >
+          <table ref={tableRef} className="w-full text-sm" data-testid="records-table">
             <thead className="bg-slate-900/70 border-b border-slate-800 sticky top-0">
               <tr>
                 {visibleColList.map(col => (
