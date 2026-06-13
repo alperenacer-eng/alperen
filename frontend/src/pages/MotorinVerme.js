@@ -79,7 +79,13 @@ const parseTarih = (val) => {
 const parseSayi = (val) => {
   if (val === null || val === undefined || val === '') return 0;
   if (typeof val === 'number') return val;
-  const s = String(val).trim().replace(/\./g, '').replace(',', '.');
+  const s = String(val).trim();
+  // Turkish format: '1.234,56' (comma is decimal). Strip thousands dots only when comma is present.
+  if (s.includes(',')) {
+    const n = parseFloat(s.replace(/\./g, '').replace(',', '.'));
+    return isNaN(n) ? 0 : n;
+  }
+  // Otherwise dot is the decimal separator (e.g. '250.5') or pure integer.
   const n = parseFloat(s);
   return isNaN(n) ? 0 : n;
 };
@@ -178,7 +184,7 @@ const MotorinVerme = () => {
 
   const fetchPersoneller = async () => {
     try {
-      const res = await axios.get(`${API_URL}/personel`, authHeaders);
+      const res = await axios.get(`${API_URL}/personeller`, authHeaders);
       setPersoneller(res.data);
     } catch (error) {
       console.log('Personeller yüklenemedi');
