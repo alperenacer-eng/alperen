@@ -500,6 +500,14 @@ const ProductionEntry = () => {
       errors.required_hours = 'Saat formatı hatalı! HH.MM (örn: 8.00 = 8 saat)';
     }
 
+    // Kullanılan Şerit sadece rakam olabilir
+    if (formData.strip_used !== '' && formData.strip_used !== null && formData.strip_used !== undefined) {
+      const s = String(formData.strip_used).trim();
+      if (s !== '' && !/^\d+([.,]\d+)?$/.test(s)) {
+        errors.strip_used = 'Kullanılan Şerit sadece rakam olmalı (örn: 3 veya 3.5)';
+      }
+    }
+
     setValidationErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -797,11 +805,18 @@ const ProductionEntry = () => {
           <div>
             <h2 className="text-xl font-semibold text-white mb-4 pb-2 border-b border-slate-700">🎞️ Şerit Bilgisi</h2>
             <div className="space-y-2">
-              <Label>Kullanılan Şerit *</Label>
+              <Label>Kullanılan Şerit * <span className="text-xs text-slate-500 font-normal">(sadece rakam)</span></Label>
               <Input
+                type="text"
+                inputMode="decimal"
                 value={formData.strip_used}
-                onChange={(e) => handleChange('strip_used', e.target.value)}
-                placeholder="Şerit tipi/numarası"
+                onChange={(e) => {
+                  // Sadece rakam ve tek bir nokta/virgül kabul et
+                  const v = e.target.value.replace(/[^\d.,]/g, '').replace(/([.,].*)[.,]/g, '$1');
+                  handleChange('strip_used', v);
+                }}
+                placeholder="Örn: 3 veya 3.5"
+                data-testid="strip-used-input"
                 className={`h-12 bg-slate-950 border-slate-800 text-white ${validationErrors.strip_used ? 'border-red-500' : ''}`}
               />
               <FieldError field="strip_used" />
