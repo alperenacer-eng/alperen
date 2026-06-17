@@ -22,7 +22,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Search, Trash2, Edit, Plus, Settings2, RotateCcw, FileSpreadsheet, FileText, GripVertical } from 'lucide-react';
+import { Search, Trash2, Edit, Plus, Settings2, RotateCcw, FileSpreadsheet, FileText, GripVertical, Filter, X, Calendar } from 'lucide-react';
 import { format } from 'date-fns';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
@@ -261,6 +261,9 @@ const ProductionList = () => {
   const [deleteId, setDeleteId] = useState(null);
   const [visibleCols, setVisibleCols] = useState(loadVisible);
   const [columnOrder, setColumnOrder] = useState(loadOrder);
+  const [columnFilters, setColumnFilters] = useState({}); // { colId: 'arama' }
+  const [dateStart, setDateStart] = useState('');
+  const [dateEnd, setDateEnd] = useState('');
   const dragColId = useRef(null);
   const dragOverColId = useRef(null);
   const topScrollRef = useRef(null);
@@ -348,16 +351,38 @@ const ProductionList = () => {
   };
 
   const filteredRecords = useMemo(() => {
-    if (!searchQuery) return records;
-    const q = searchQuery.toLowerCase();
-    return records.filter(r =>
-      (r.product_name || '').toLowerCase().includes(q) ||
-      (r.user_name || '').toLowerCase().includes(q) ||
-      (r.operator_name || '').toLowerCase().includes(q) ||
-      (r.department_name || '').toLowerCase().includes(q) ||
-      (r.mold_no || '').toLowerCase().includes(q)
-    );
-  }, [records, searchQuery]);
+    const q = searchQuery ? searchQuery.toLowerCase() : '';
+    const activeColFilters = Object.entries(columnFilters).filter(([, v]) => v && String(v).trim() !== '');
+
+    return records.filter(r => {
+      // Genel arama
+      if (q) {
+        const matchesSearch =
+          (r.product_name || '').toLowerCase().includes(q) ||
+          (r.user_name || '').toLowerCase().includes(q) ||
+          (r.operator_name || '').toLowerCase().includes(q) ||
+          (r.department_name || '').toLowerCase().includes(q) ||
+          (r.mold_no || '').toLowerCase().includes(q);
+        if (!matchesSearch) return false;
+      }
+
+      // Tarih aralığı filtresi
+      if (dateStart || dateEnd) {
+        const d = (r.production_date || r.created_at || '').substring(0, 10);
+        if (!d) return false;
+        if (dateStart && d < dateStart) return false;
+        if (dateEnd && d > dateEnd) return false;
+      }
+
+      // Sütun bazlı filtreler
+      for (const [colId, val] of activeColFilters) {
+        const cell = String(cellValue(r, colId) ?? '').toLowerCase();
+        if (!cell.includes(String(val).toLowerCase())) return false;
+      }
+
+      return true;
+    });
+  }, [records, searchQuery, dateStart, dateEnd, columnFilters]);
 
   const handleDelete = async () => {
     try {
@@ -526,6 +551,45 @@ const ProductionList = () => {
               />
             </div>
 
+            {/* Tarih aralığı filtreleri */}
+            <div className="flex items-center gap-2">
+              <div className="relative">
+                <Calendar className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500 pointer-events-none" />
+                <Input
+                  type="date"
+                  value={dateStart}
+                  onChange={(e) => setDateStart(e.target.value)}
+                  data-testid="date-start-input"
+                  title="Başlangıç tarihi"
+                  className="pl-8 h-10 w-[150px] bg-slate-950/50 border-slate-800 text-white text-xs"
+                />
+              </div>
+              <span className="text-slate-500 text-sm">→</span>
+              <div className="relative">
+                <Calendar className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500 pointer-events-none" />
+                <Input
+                  type="date"
+                  value={dateEnd}
+                  onChange={(e) => setDateEnd(e.target.value)}
+                  data-testid="date-end-input"
+                  title="Bitiş tarihi"
+                  className="pl-8 h-10 w-[150px] bg-slate-950/50 border-slate-800 text-white text-xs"
+                />
+              </div>
+              {(dateStart || dateEnd || Object.values(columnFilters).some(v => v && String(v).trim() !== '')) && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => { setDateStart(''); setDateEnd(''); setColumnFilters({}); }}
+                  data-testid="clear-filters-btn"
+                  title="Filtreleri temizle"
+                  className="h-10 text-slate-400 hover:text-white hover:bg-slate-800"
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              )}
+            </div>
+
             <div className="flex items-center gap-2 text-sm text-slate-400 px-2">
               <span className="font-mono text-orange-400">{filteredRecords.length}</span>
               <span>/ {records.length} kayıt</span>
@@ -660,6 +724,21 @@ const ProductionList = () => {
                 <th className="px-3 py-3 text-right text-xs font-semibold text-slate-400 uppercase tracking-wider whitespace-nowrap w-24">
                   İşlemler
                 </th>
+              </tr>
+              {/* Sütun bazlı filtre satırı */}
+              <tr className="bg-slate-900/40 border-t border-slate-800">
+                {visibleColList.map(col => (
+                  <th key={`filter-${col.id}`} className="px-2 py-1.5">
+                    <Input
+                      value={columnFilters[col.id] || ''}
+                      onChange={(e) => setColumnFilters(prev => ({ ...prev, [col.id]: e.target.value }))}
+                      placeholder="Filtre..."
+                      data-testid={`col-filter-${col.id}`}
+                      className="h-7 text-xs bg-slate-950/60 border-slate-800 text-white placeholder:text-slate-600 font-normal normal-case tracking-normal"
+                    />
+                  </th>
+                ))}
+                <th className="px-2 py-1.5"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800">

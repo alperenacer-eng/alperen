@@ -86,3 +86,17 @@ SQLite: `/app/backend/data/database.db` (mevcut veriler korundu)
 ## Next Action Items
 - Kullanıcı manuel yedek butonunu UI'da test edip dönüş yapacak
 - Diğer modüllerde benzer Excel desteği isteniyorsa eklenebilir
+
+### Bu Oturum (Şubat 2026) - Kayıtlar Filtreleme & BIMS Rapor Geliştirmesi
+1. **BIMS Üretim Raporu — Ürün Bazlı (RESOLVED)**:
+   - `/api/reports/monthly` endpoint'ine yeni alanlar eklendi: `net_palet`, `shift_breakdown` (vardiya), `strip_used`, `mix_count`, `cement_used` (harcanan), `machine_cement`
+   - `Reports.js` UI'da yeni sütunlar gösteriliyor
+   - **Excel'e Aktar butonu** (`xlsx` kütüphanesi) eklendi
+
+2. **Kayıtlar Sayfası — Tablo Filtreleme (RESOLVED — Şub 2026)**:
+   - `ProductionList.js`'e tarih aralığı filtresi (başlangıç → bitiş) eklendi
+   - Tablo başlığının altına **sütun bazlı filtre satırı** eklendi (her görünür sütun için ayrı arama kutusu)
+   - Hesaplanan sütunlar (Net Palet, Harcanan Çimt., vb.) da filtrelenebilir — `cellValue()` üzerinden eşleşme
+   - Filtreleri tek tıkla temizleme butonu (X ikonu)
+   - Genel arama, tarih aralığı ve sütun filtreleri **birlikte** çalışıyor (AND mantığı)
+   - Manuel olarak doğrulandı: operatör/vardiya/ürün/tarih aralığı filtreleri doğru sonuç veriyor
