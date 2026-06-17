@@ -20,6 +20,15 @@ import jwt
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
+# GitHub auto-sync — pushes every data change to the configured GitHub repo
+from github_sync import (
+    resolve_table_from_path,
+    schedule_sync,
+    push_all_tables,
+    get_stats as github_sync_stats,
+    is_configured as github_sync_is_configured,
+)
+
 # Data klasörü - Docker volume için
 DATA_DIR = ROOT_DIR / "data"
 DATA_DIR.mkdir(exist_ok=True)
@@ -2951,6 +2960,50 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+# ============ GitHub Auto-Sync Middleware ============
+@app.middleware("http")
+async def github_sync_middleware(request, call_next):
+    """
+    After any successful POST/PUT/PATCH/DELETE on /api/* routes,
+    schedule a (debounced) GitHub push of the affected table + full DB.
+    Errors are swallowed so they never break the API response.
+    """
+    response = await call_next(request)
+    try:
+        if (
+            github_sync_is_configured()
+            and request.method in ("POST", "PUT", "PATCH", "DELETE")
+            and 200 <= response.status_code < 300
+        ):
+            table = resolve_table_from_path(request.url.path)
+            # Schedule sync — always also pushes full DB even if table is None
+            schedule_sync(table)
+    except Exception:
+        # Never let sync logic affect the user response
+        logging.getLogger("github_sync").exception("middleware error")
+    return response
+
+
+# ============ GitHub Sync Admin Endpoints ============
+@api_router.get("/github-sync/status")
+async def github_sync_status():
+    """Show current GitHub sync configuration and statistics."""
+    return {
+        "configured": github_sync_is_configured(),
+        "repo": os.environ.get("GITHUB_REPO", ""),
+        "branch": os.environ.get("GITHUB_BRANCH", "main"),
+        "enabled": os.environ.get("GITHUB_SYNC_ENABLED", "true"),
+        "stats": github_sync_stats(),
+    }
+
+
+@api_router.post("/github-sync/push-all")
+async def github_sync_push_all():
+    """Manually push all tables + full database to GitHub (admin only)."""
+    result = await push_all_tables()
+    return result
 
 logging.basicConfig(
     level=logging.INFO,
