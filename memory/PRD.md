@@ -100,3 +100,9 @@ SQLite: `/app/backend/data/database.db` (mevcut veriler korundu)
    - Filtreleri tek tıkla temizleme butonu (X ikonu)
    - Genel arama, tarih aralığı ve sütun filtreleri **birlikte** çalışıyor (AND mantığı)
    - Manuel olarak doğrulandı: operatör/vardiya/ürün/tarih aralığı filtreleri doğru sonuç veriyor
+
+3. **Kayıtlı Filtreler & Tüm Sütunlar Dışa Aktarım (RESOLVED — Şub 2026)**:
+   - "Dışa aktarımda tüm sütunlar (55) — filtreler korunur" toggle eklendi → Excel/PDF tüm sütunlarla çıkıyor, filtreler uygulanıyor
+   - "Kayıtlı Filtreler" popover'ı eklendi: aktif filtre kombinasyonunu (arama + tarih aralığı + tüm sütun filtreleri) isimle kaydet → tek tıkla yükle → sil
+   - localStorage'da `bims_kayit_filter_presets` anahtarıyla saklanıyor
+   - Manuel doğrulama: kaydet/yükle/temizle/sil senaryoları test edildi ve çalışıyor

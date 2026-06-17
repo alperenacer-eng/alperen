@@ -22,7 +22,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Search, Trash2, Edit, Plus, Settings2, RotateCcw, FileSpreadsheet, FileText, GripVertical, Filter, X, Calendar } from 'lucide-react';
+import { Search, Trash2, Edit, Plus, Settings2, RotateCcw, FileSpreadsheet, FileText, GripVertical, Filter, X, Calendar, Bookmark, Save } from 'lucide-react';
 import { format } from 'date-fns';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
@@ -31,6 +31,7 @@ import autoTable from 'jspdf-autotable';
 const API_URL = process.env.REACT_APP_BACKEND_URL + '/api';
 const STORAGE_KEY = 'bims_kayit_visible_columns';
 const ORDER_KEY = 'bims_kayit_column_order';
+const PRESETS_KEY = 'bims_kayit_filter_presets';
 
 // Sütun tanımları — id, başlık, varsayılan görünür
 const COLUMNS = [
@@ -264,6 +265,16 @@ const ProductionList = () => {
   const [columnFilters, setColumnFilters] = useState({}); // { colId: 'arama' }
   const [dateStart, setDateStart] = useState('');
   const [dateEnd, setDateEnd] = useState('');
+  const [exportAllCols, setExportAllCols] = useState(false); // false: sadece görünür, true: tüm sütunlar
+  const [presets, setPresets] = useState(() => {
+    try {
+      const raw = localStorage.getItem(PRESETS_KEY);
+      return raw ? JSON.parse(raw) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [presetName, setPresetName] = useState('');
   const dragColId = useRef(null);
   const dragOverColId = useRef(null);
   const topScrollRef = useRef(null);
@@ -336,6 +347,46 @@ const ProductionList = () => {
       // ignore
     }
   }, [columnOrder]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(PRESETS_KEY, JSON.stringify(presets));
+    } catch {
+      // ignore
+    }
+  }, [presets]);
+
+  const savePreset = () => {
+    const name = (presetName || '').trim();
+    if (!name) {
+      toast.error('Önce filtre adı yazın');
+      return;
+    }
+    const hasAnyFilter = dateStart || dateEnd || Object.values(columnFilters).some(v => v && String(v).trim() !== '') || searchQuery;
+    if (!hasAnyFilter) {
+      toast.error('Kaydedilecek aktif filtre yok');
+      return;
+    }
+    setPresets(prev => {
+      const filtered = prev.filter(p => p.name !== name);
+      return [...filtered, { name, searchQuery, dateStart, dateEnd, columnFilters: { ...columnFilters } }];
+    });
+    setPresetName('');
+    toast.success(`"${name}" filtresi kaydedildi`);
+  };
+
+  const loadPreset = (preset) => {
+    setSearchQuery(preset.searchQuery || '');
+    setDateStart(preset.dateStart || '');
+    setDateEnd(preset.dateEnd || '');
+    setColumnFilters(preset.columnFilters || {});
+    toast.success(`"${preset.name}" yüklendi`);
+  };
+
+  const deletePreset = (name) => {
+    setPresets(prev => prev.filter(p => p.name !== name));
+    toast.success(`"${name}" silindi`);
+  };
 
   const fetchRecords = async () => {
     try {
@@ -455,27 +506,37 @@ const ProductionList = () => {
   const visibleColList = orderedColumns.filter(c => visibleCols[c.id]);
   const visibleCount = visibleColList.length;
 
+  // Dışa aktarmada kullanılacak sütun listesi (görünür sıralama korunur, gerekirse tüm sütunlar)
+  const getExportCols = () => {
+    if (exportAllCols) {
+      return columnOrder
+        .map(id => COLUMNS.find(c => c.id === id))
+        .filter(Boolean);
+    }
+    return visibleColList;
+  };
+
   // Excel'e aktar
   const exportToExcel = () => {
     if (filteredRecords.length === 0) {
       toast.error('Aktarılacak veri yok');
       return;
     }
-    const headers = visibleColList.map(c => c.label);
+    const cols = getExportCols();
+    const headers = cols.map(c => c.label);
     const rows = filteredRecords.map(rec =>
-      visibleColList.map(c => {
+      cols.map(c => {
         const val = cellValue(rec, c.id);
         return val === '-' ? '' : val;
       })
     );
     const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
-    // Sütun genişlikleri
-    ws['!cols'] = visibleColList.map(c => ({ wch: Math.max(c.label.length, 12) }));
+    ws['!cols'] = cols.map(c => ({ wch: Math.max(c.label.length, 12) }));
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Bims Kayitlar');
-    const fname = `bims_kayitlar_${format(new Date(), 'yyyyMMdd_HHmm')}.xlsx`;
+    const fname = `bims_kayitlar_${exportAllCols ? 'tum_sutunlar_' : ''}${format(new Date(), 'yyyyMMdd_HHmm')}.xlsx`;
     XLSX.writeFile(wb, fname);
-    toast.success('Excel dosyası indirildi');
+    toast.success(`Excel indirildi (${cols.length} sütun, ${filteredRecords.length} kayıt)`);
   };
 
   // PDF'e aktar
@@ -484,15 +545,16 @@ const ProductionList = () => {
       toast.error('Aktarılacak veri yok');
       return;
     }
-    const orientation = visibleCount > 8 ? 'landscape' : 'portrait';
+    const cols = getExportCols();
+    const orientation = cols.length > 8 ? 'landscape' : 'portrait';
     const doc = new jsPDF({ orientation, unit: 'pt', format: 'a4' });
     doc.setFontSize(14);
     doc.text('Bims Üretim Kayıtları', 40, 30);
     doc.setFontSize(9);
-    doc.text(`Tarih: ${format(new Date(), 'dd.MM.yyyy HH:mm')} • ${filteredRecords.length} kayıt`, 40, 46);
-    const headers = visibleColList.map(c => c.label);
+    doc.text(`Tarih: ${format(new Date(), 'dd.MM.yyyy HH:mm')} • ${filteredRecords.length} kayıt • ${cols.length} sütun`, 40, 46);
+    const headers = cols.map(c => c.label);
     const rows = filteredRecords.map(rec =>
-      visibleColList.map(c => {
+      cols.map(c => {
         const val = cellValue(rec, c.id);
         return val === '-' ? '' : String(val);
       })
@@ -506,9 +568,9 @@ const ProductionList = () => {
       alternateRowStyles: { fillColor: [248, 250, 252] },
       margin: { left: 20, right: 20 }
     });
-    const fname = `bims_kayitlar_${format(new Date(), 'yyyyMMdd_HHmm')}.pdf`;
+    const fname = `bims_kayitlar_${exportAllCols ? 'tum_sutunlar_' : ''}${format(new Date(), 'yyyyMMdd_HHmm')}.pdf`;
     doc.save(fname);
-    toast.success('PDF dosyası indirildi');
+    toast.success(`PDF indirildi (${cols.length} sütun, ${filteredRecords.length} kayıt)`);
   };
 
   if (loading) {
@@ -679,6 +741,110 @@ const ProductionList = () => {
               <FileText className="w-4 h-4 mr-2" />
               PDF
             </Button>
+          </div>
+
+          {/* İhracat & Kayıtlı Filtreler Satırı */}
+          <div className="flex flex-wrap items-center gap-3 mt-3 pt-3 border-t border-slate-800">
+            <label
+              className="flex items-center gap-2 text-xs text-slate-300 cursor-pointer select-none"
+              data-testid="export-all-cols-toggle"
+            >
+              <Checkbox
+                checked={exportAllCols}
+                onCheckedChange={(v) => setExportAllCols(!!v)}
+                className="border-slate-600 data-[state=checked]:bg-orange-500 data-[state=checked]:border-orange-500"
+              />
+              <span>Dışa aktarımda <span className="text-orange-400 font-semibold">tüm sütunlar</span> ({COLUMNS.length}) — filtreler korunur</span>
+            </label>
+
+            <div className="flex-1" />
+
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="border-slate-700 text-slate-300 hover:bg-slate-800 h-9"
+                  data-testid="presets-btn"
+                >
+                  <Bookmark className="w-4 h-4 mr-2" />
+                  Kayıtlı Filtreler
+                  {presets.length > 0 && (
+                    <span className="ml-2 px-1.5 py-0.5 rounded-full bg-orange-500/20 text-orange-400 text-[10px] font-bold">{presets.length}</span>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent
+                align="end"
+                className="w-96 bg-slate-900 border-slate-700 text-white max-h-[70vh] overflow-y-auto"
+                data-testid="presets-popover"
+              >
+                <div className="space-y-3">
+                  <div className="border-b border-slate-700 pb-2">
+                    <span className="font-semibold text-sm">Kayıtlı Filtreler</span>
+                    <p className="text-xs text-slate-500 mt-1">Aktif filtre kombinasyonunu isimle kaydedip sonra tek tıkla yükleyin.</p>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <Input
+                      value={presetName}
+                      onChange={(e) => setPresetName(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') savePreset(); }}
+                      placeholder="Filtre adı (örn. Gece Vardiyası Ocak)"
+                      data-testid="preset-name-input"
+                      className="h-9 text-xs bg-slate-950/50 border-slate-800 text-white"
+                    />
+                    <Button
+                      size="sm"
+                      onClick={savePreset}
+                      data-testid="save-preset-btn"
+                      className="bg-orange-500 hover:bg-orange-600 text-white h-9 shrink-0"
+                    >
+                      <Save className="w-3.5 h-3.5 mr-1" />
+                      Kaydet
+                    </Button>
+                  </div>
+
+                  {presets.length === 0 ? (
+                    <div className="text-center text-xs text-slate-500 py-4">Henüz kayıtlı filtre yok</div>
+                  ) : (
+                    <div className="space-y-1 max-h-64 overflow-y-auto">
+                      {presets.map(p => {
+                        const active = Object.values(p.columnFilters || {}).filter(v => v && String(v).trim() !== '').length;
+                        return (
+                          <div
+                            key={p.name}
+                            className="flex items-center gap-2 px-2 py-2 rounded hover:bg-slate-800 group"
+                            data-testid={`preset-row-${p.name}`}
+                          >
+                            <button
+                              onClick={() => loadPreset(p)}
+                              className="flex-1 text-left text-sm text-slate-200 hover:text-orange-400"
+                              data-testid={`load-preset-${p.name}`}
+                            >
+                              <div className="font-medium">{p.name}</div>
+                              <div className="text-[11px] text-slate-500 font-mono">
+                                {p.dateStart || p.dateEnd ? `📅 ${p.dateStart || '...'} → ${p.dateEnd || '...'} ` : ''}
+                                {p.searchQuery ? `🔍 "${p.searchQuery}" ` : ''}
+                                {active > 0 ? `• ${active} sütun filtresi` : ''}
+                              </div>
+                            </button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => deletePreset(p.name)}
+                              data-testid={`delete-preset-${p.name}`}
+                              className="text-red-400 hover:text-red-300 hover:bg-red-400/10 h-7 w-7 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </Button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </PopoverContent>
+            </Popover>
           </div>
         </div>
       </div>
