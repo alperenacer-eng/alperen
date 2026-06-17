@@ -47,33 +47,47 @@ const MotorinAlim = () => {
     notlar: ''
   });
 
+  // 6 satırlık miktar/ağırlık girişi — her satır: { miktar_kg, kesafet, kantar_kg } → net_litre otomatik
+  const [entries, setEntries] = useState(() =>
+    Array.from({ length: 6 }, () => ({ miktar_kg: '', kesafet: '', kantar_kg: '' }))
+  );
+
+  const updateEntry = (idx, field, value) => {
+    setEntries(prev => prev.map((row, i) => i === idx ? { ...row, [field]: value } : row));
+  };
+
+  // Her satır için net litre hesaplama: kg / kesafet
+  const computeNetLitre = (row) => {
+    const kg = parseFloat(row.miktar_kg) || 0;
+    const k = parseFloat(row.kesafet) || 0;
+    if (kg > 0 && k > 0) return kg / k;
+    return 0;
+  };
+
+  // 6 satırın toplamları
+  const totals = entries.reduce((acc, row) => {
+    acc.miktar_kg += parseFloat(row.miktar_kg) || 0;
+    acc.kantar_kg += parseFloat(row.kantar_kg) || 0;
+    acc.net_litre += computeNetLitre(row);
+    return acc;
+  }, { miktar_kg: 0, kantar_kg: 0, net_litre: 0 });
+
   useEffect(() => {
     fetchTedarikciler();
     fetchTesisler();
     fetchMarkalar();
   }, []);
 
+  // Otomatik toplam tutar hesaplama (Net Litre × Birim Fiyat)
   useEffect(() => {
-    // Otomatik toplam hesaplama
-    const miktar = parseFloat(formData.miktar_litre) || 0;
+    const miktar = totals.net_litre || 0;
     const birim = parseFloat(formData.birim_fiyat) || 0;
     setFormData(prev => ({
       ...prev,
       toplam_tutar: (miktar * birim).toFixed(2)
     }));
-  }, [formData.miktar_litre, formData.birim_fiyat]);
-
-  useEffect(() => {
-    // Kesafet ile kg hesaplama
-    const litre = parseFloat(formData.miktar_litre) || 0;
-    const kesafet = parseFloat(formData.kesafet) || 0;
-    if (litre > 0 && kesafet > 0) {
-      setFormData(prev => ({
-        ...prev,
-        miktar_kg: (litre * kesafet).toFixed(2)
-      }));
-    }
-  }, [formData.miktar_litre, formData.kesafet]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [totals.net_litre, formData.birim_fiyat]);
 
   const fetchTedarikciler = async () => {
     try {
@@ -180,12 +194,18 @@ const MotorinAlim = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
+    // 6 satırdan en az birini doldurmuş olmalı
+    const filledEntries = entries.filter(r => parseFloat(r.miktar_kg) > 0 && parseFloat(r.kesafet) > 0);
+    if (filledEntries.length === 0) {
+      toast.error('En az bir Miktar/Ağırlık satırı doldurun (KG + Kesafet)');
+      return;
+    }
+
     // Tüm zorunlu alanları kontrol et
     if (!formData.tarih || !formData.tedarikci_adi || !formData.akaryakit_markasi ||
-        !formData.cekici_plaka || !formData.dorse_plaka || !formData.sofor_adi || 
-        !formData.sofor_soyadi || !formData.miktar_litre || !formData.miktar_kg || 
-        !formData.kesafet || !formData.kantar_kg || !formData.birim_fiyat || 
+        !formData.cekici_plaka || !formData.dorse_plaka || !formData.sofor_adi ||
+        !formData.sofor_soyadi || !formData.birim_fiyat ||
         !formData.teslim_alan || !formData.bosaltim_tesisi) {
       toast.error('Tüm alanları doldurunuz! (* ile işaretli alanlar zorunludur)');
       return;
@@ -193,20 +213,37 @@ const MotorinAlim = () => {
 
     setLoading(true);
     try {
+      // Satır detaylarını notlar'a ekle (backend şeması değiştirilmeden)
+      const entriesText = entries
+        .map((r, i) => {
+          const netL = computeNetLitre(r);
+          if (parseFloat(r.miktar_kg) > 0 || parseFloat(r.kantar_kg) > 0) {
+            return `[${i + 1}] KG: ${r.miktar_kg || '-'} | Kesafet: ${r.kesafet || '-'} | Net L: ${netL ? netL.toFixed(2) : '-'} | Kantar KG: ${r.kantar_kg || '-'}`;
+          }
+          return null;
+        })
+        .filter(Boolean)
+        .join('\n');
+
+      const combinedNotes = [formData.notlar, '--- Miktar/Ağırlık Detayları (6 Satır) ---', entriesText]
+        .filter(s => s && s.trim())
+        .join('\n');
+
       const submitData = {
         ...formData,
-        miktar_litre: parseFloat(formData.miktar_litre) || 0,
-        miktar_kg: parseFloat(formData.miktar_kg) || 0,
-        kesafet: parseFloat(formData.kesafet) || 0,
-        kantar_kg: parseFloat(formData.kantar_kg) || 0,
+        miktar_litre: totals.net_litre || 0,
+        miktar_kg: totals.miktar_kg || 0,
+        kesafet: totals.net_litre > 0 ? totals.miktar_kg / totals.net_litre : 0,
+        kantar_kg: totals.kantar_kg || 0,
         birim_fiyat: parseFloat(formData.birim_fiyat) || 0,
-        toplam_tutar: parseFloat(formData.toplam_tutar) || 0
+        toplam_tutar: (totals.net_litre || 0) * (parseFloat(formData.birim_fiyat) || 0),
+        notlar: combinedNotes
       };
 
       await axios.post(`${API_URL}/motorin-alimlar`, submitData, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      
+
       toast.success('Motorin alım kaydı oluşturuldu');
       navigate('/motorin-liste');
     } catch (error) {
@@ -414,67 +451,130 @@ const MotorinAlim = () => {
           </div>
         </div>
 
-        {/* Miktar ve Ağırlık Bilgileri */}
+        {/* Miktar ve Ağırlık Bilgileri — 6 Satır */}
         <div className="glass-effect rounded-xl border border-slate-800 p-6">
           <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
             <Scale className="w-5 h-5 text-amber-400" />
-            Miktar ve Ağırlık Bilgileri
+            Miktar ve Ağırlık Bilgileri (6 Giriş)
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            {/* Miktar Litre */}
-            <div>
-              <Label className="text-slate-300">Miktar (Litre) *</Label>
-              <Input
-                type="number"
-                step="0.01"
-                value={formData.miktar_litre}
-                onChange={(e) => setFormData({ ...formData, miktar_litre: e.target.value })}
-                className="bg-slate-800 border-slate-700 text-white mt-1"
-                placeholder="Örn: 10000"
-                required
-              />
-            </div>
 
-            {/* Kesafet */}
-            <div>
-              <Label className="text-slate-300">Kesafet (kg/L) *</Label>
-              <Input
-                type="number"
-                step="0.001"
-                value={formData.kesafet}
-                onChange={(e) => setFormData({ ...formData, kesafet: e.target.value })}
-                className="bg-slate-800 border-slate-700 text-white mt-1"
-                placeholder="Örn: 0.835"
-                required
-              />
-            </div>
+          {/* Başlık satırı */}
+          <div className="hidden md:grid grid-cols-12 gap-3 mb-2 text-xs text-slate-400 uppercase tracking-wider font-semibold px-1">
+            <div className="col-span-1">#</div>
+            <div className="col-span-3">Miktar (KG) *</div>
+            <div className="col-span-2">Kesafet (kg/L)</div>
+            <div className="col-span-3">Net Litre (otomatik)</div>
+            <div className="col-span-3">Kantar (KG)</div>
+          </div>
 
-            {/* Miktar KG (Hesaplanmış) */}
-            <div>
-              <Label className="text-slate-300">Miktar KG *</Label>
-              <Input
-                type="number"
-                step="0.01"
-                value={formData.miktar_kg}
-                onChange={(e) => setFormData({ ...formData, miktar_kg: e.target.value })}
-                className="bg-slate-800 border-slate-700 text-white mt-1 bg-slate-700/50"
-                placeholder="Otomatik hesaplanır"
-                required
-              />
-            </div>
+          <div className="space-y-2" data-testid="entries-list">
+            {entries.map((row, idx) => {
+              const netLitre = computeNetLitre(row);
+              return (
+                <div
+                  key={idx}
+                  className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center bg-slate-900/40 rounded-lg p-2 border border-slate-800"
+                  data-testid={`entry-row-${idx}`}
+                >
+                  <div className="md:col-span-1 text-amber-400 font-bold text-center text-sm">
+                    <span className="md:hidden text-slate-400 text-xs mr-2">Sıra:</span>{idx + 1}
+                  </div>
+                  <div className="md:col-span-3">
+                    <Label className="md:hidden text-slate-300 text-xs">Miktar (KG)</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={row.miktar_kg}
+                      onChange={(e) => updateEntry(idx, 'miktar_kg', e.target.value)}
+                      className="bg-slate-800 border-slate-700 text-white h-9"
+                      placeholder="Örn: 8350"
+                      data-testid={`entry-miktar-kg-${idx}`}
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <Label className="md:hidden text-slate-300 text-xs">Kesafet</Label>
+                    <Input
+                      type="number"
+                      step="0.001"
+                      value={row.kesafet}
+                      onChange={(e) => updateEntry(idx, 'kesafet', e.target.value)}
+                      className="bg-slate-800 border-slate-700 text-white h-9"
+                      placeholder="0.835"
+                      data-testid={`entry-kesafet-${idx}`}
+                    />
+                  </div>
+                  <div className="md:col-span-3">
+                    <Label className="md:hidden text-slate-300 text-xs">Net Litre</Label>
+                    <Input
+                      type="text"
+                      value={netLitre > 0 ? netLitre.toFixed(2) : ''}
+                      readOnly
+                      className="bg-slate-950/60 border-slate-800 text-amber-400 font-mono h-9"
+                      placeholder="Otomatik"
+                      data-testid={`entry-net-litre-${idx}`}
+                    />
+                  </div>
+                  <div className="md:col-span-3">
+                    <Label className="md:hidden text-slate-300 text-xs">Kantar KG</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={row.kantar_kg}
+                      onChange={(e) => updateEntry(idx, 'kantar_kg', e.target.value)}
+                      className="bg-slate-800 border-slate-700 text-white h-9"
+                      placeholder="Kantar ölçümü"
+                      data-testid={`entry-kantar-kg-${idx}`}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
 
-            {/* Kantar KG */}
-            <div>
-              <Label className="text-slate-300">Kantar KG *</Label>
-              <Input
-                type="number"
-                step="0.01"
-                value={formData.kantar_kg}
-                onChange={(e) => setFormData({ ...formData, kantar_kg: e.target.value })}
-                className="bg-slate-800 border-slate-700 text-white mt-1"
-                placeholder="Kantar ölçümü"
-                required
-              />
+          {/* Toplamlar */}
+          <div className="mt-4 pt-4 border-t-2 border-amber-500/40">
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center bg-amber-500/10 rounded-lg p-3" data-testid="entries-totals">
+              <div className="md:col-span-1 text-amber-400 font-bold text-center text-sm uppercase">Σ</div>
+              <div className="md:col-span-3">
+                <Label className="text-amber-300 text-xs uppercase tracking-wider">Toplam KG</Label>
+                <Input
+                  type="text"
+                  value={totals.miktar_kg > 0 ? totals.miktar_kg.toLocaleString('tr-TR', { maximumFractionDigits: 2 }) : '0'}
+                  readOnly
+                  className="bg-slate-950/60 border-amber-500/30 text-amber-300 font-mono font-bold text-base h-10"
+                  data-testid="total-miktar-kg"
+                />
+              </div>
+              <div className="md:col-span-2">
+                <Label className="text-amber-300 text-xs uppercase tracking-wider">Ort. Kesafet</Label>
+                <Input
+                  type="text"
+                  value={totals.net_litre > 0 ? (totals.miktar_kg / totals.net_litre).toFixed(4) : '-'}
+                  readOnly
+                  className="bg-slate-950/60 border-amber-500/30 text-amber-300 font-mono h-10"
+                  data-testid="total-avg-kesafet"
+                />
+              </div>
+              <div className="md:col-span-3">
+                <Label className="text-amber-300 text-xs uppercase tracking-wider">Toplam Net Litre</Label>
+                <Input
+                  type="text"
+                  value={totals.net_litre > 0 ? totals.net_litre.toLocaleString('tr-TR', { maximumFractionDigits: 2 }) : '0'}
+                  readOnly
+                  className="bg-slate-950/60 border-amber-500/30 text-amber-300 font-mono font-bold text-base h-10"
+                  data-testid="total-net-litre"
+                />
+              </div>
+              <div className="md:col-span-3">
+                <Label className="text-amber-300 text-xs uppercase tracking-wider">Toplam Kantar KG</Label>
+                <Input
+                  type="text"
+                  value={totals.kantar_kg > 0 ? totals.kantar_kg.toLocaleString('tr-TR', { maximumFractionDigits: 2 }) : '0'}
+                  readOnly
+                  className="bg-slate-950/60 border-amber-500/30 text-amber-300 font-mono font-bold text-base h-10"
+                  data-testid="total-kantar-kg"
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -583,26 +683,24 @@ const MotorinAlim = () => {
         </div>
 
         {/* Özet Kartı */}
-        {formData.miktar_litre && formData.birim_fiyat && (
+        {totals.net_litre > 0 && formData.birim_fiyat && (
           <div className="p-6 bg-green-500/10 border border-green-500/30 rounded-xl">
-            <h3 className="text-green-400 font-semibold mb-4 text-lg">📊 Alım Özeti</h3>
+            <h3 className="text-green-400 font-semibold mb-4 text-lg">📊 Alım Özeti (6 Satır Toplamı)</h3>
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-center">
               <div className="bg-slate-800/50 rounded-lg p-3">
-                <p className="text-2xl font-bold text-white">{parseFloat(formData.miktar_litre).toLocaleString('tr-TR')}</p>
-                <p className="text-xs text-slate-400">Litre</p>
+                <p className="text-2xl font-bold text-white">{totals.net_litre.toLocaleString('tr-TR', { maximumFractionDigits: 2 })}</p>
+                <p className="text-xs text-slate-400">Net Litre</p>
               </div>
-              {formData.miktar_kg && (
-                <div className="bg-slate-800/50 rounded-lg p-3">
-                  <p className="text-2xl font-bold text-white">{parseFloat(formData.miktar_kg).toLocaleString('tr-TR')}</p>
-                  <p className="text-xs text-slate-400">KG</p>
-                </div>
-              )}
+              <div className="bg-slate-800/50 rounded-lg p-3">
+                <p className="text-2xl font-bold text-white">{totals.miktar_kg.toLocaleString('tr-TR', { maximumFractionDigits: 2 })}</p>
+                <p className="text-xs text-slate-400">KG</p>
+              </div>
               <div className="bg-slate-800/50 rounded-lg p-3">
                 <p className="text-2xl font-bold text-white">₺{parseFloat(formData.birim_fiyat).toFixed(2)}</p>
                 <p className="text-xs text-slate-400">Birim Fiyat</p>
               </div>
               <div className="bg-slate-800/50 rounded-lg p-3">
-                <p className="text-2xl font-bold text-green-400">₺{parseFloat(formData.toplam_tutar).toLocaleString('tr-TR')}</p>
+                <p className="text-2xl font-bold text-green-400">₺{(totals.net_litre * (parseFloat(formData.birim_fiyat) || 0)).toLocaleString('tr-TR', { maximumFractionDigits: 2 })}</p>
                 <p className="text-xs text-slate-400">Toplam Tutar</p>
               </div>
               {formData.cekici_plaka && (
