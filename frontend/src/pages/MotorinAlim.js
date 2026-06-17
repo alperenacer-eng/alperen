@@ -47,9 +47,9 @@ const MotorinAlim = () => {
     notlar: ''
   });
 
-  // 6 satırlık miktar/ağırlık girişi — her satır: { miktar_kg, kesafet, kantar_kg } → net_litre otomatik
+  // 6 satırlık miktar/ağırlık girişi — her satır: { miktar_kg, kesafet, net_litre_giris, kantar_kg } → net_litre_hesap otomatik
   const [entries, setEntries] = useState(() =>
-    Array.from({ length: 6 }, () => ({ miktar_kg: '', kesafet: '', kantar_kg: '' }))
+    Array.from({ length: 6 }, () => ({ miktar_kg: '', kesafet: '', net_litre_giris: '', kantar_kg: '' }))
   );
 
   const updateEntry = (idx, field, value) => {
@@ -69,8 +69,9 @@ const MotorinAlim = () => {
     acc.miktar_kg += parseFloat(row.miktar_kg) || 0;
     acc.kantar_kg += parseFloat(row.kantar_kg) || 0;
     acc.net_litre += computeNetLitre(row);
+    acc.net_litre_giris += parseFloat(row.net_litre_giris) || 0;
     return acc;
-  }, { miktar_kg: 0, kantar_kg: 0, net_litre: 0 });
+  }, { miktar_kg: 0, kantar_kg: 0, net_litre: 0, net_litre_giris: 0 });
 
   useEffect(() => {
     fetchTedarikciler();
@@ -217,8 +218,8 @@ const MotorinAlim = () => {
       const entriesText = entries
         .map((r, i) => {
           const netL = computeNetLitre(r);
-          if (parseFloat(r.miktar_kg) > 0 || parseFloat(r.kantar_kg) > 0) {
-            return `[${i + 1}] KG: ${r.miktar_kg || '-'} | Kesafet: ${r.kesafet || '-'} | Net L: ${netL ? netL.toFixed(2) : '-'} | Kantar KG: ${r.kantar_kg || '-'}`;
+          if (parseFloat(r.miktar_kg) > 0 || parseFloat(r.kantar_kg) > 0 || parseFloat(r.net_litre_giris) > 0) {
+            return `[${i + 1}] KG: ${r.miktar_kg || '-'} | Net L (Giriş): ${r.net_litre_giris || '-'} | Kesafet: ${r.kesafet || '-'} | Net L (Hesap): ${netL ? netL.toFixed(2) : '-'} | Kantar KG: ${r.kantar_kg || '-'}`;
           }
           return null;
         })
@@ -459,12 +460,13 @@ const MotorinAlim = () => {
           </h2>
 
           {/* Başlık satırı */}
-          <div className="hidden md:grid grid-cols-12 gap-3 mb-2 text-xs text-slate-400 uppercase tracking-wider font-semibold px-1">
-            <div className="col-span-1">#</div>
-            <div className="col-span-3">Miktar (KG) *</div>
-            <div className="col-span-2">Kesafet (kg/L)</div>
-            <div className="col-span-3">Net Litre (otomatik)</div>
-            <div className="col-span-3">Kantar (KG)</div>
+          <div className="hidden md:grid gap-2 mb-2 text-xs text-slate-400 uppercase tracking-wider font-semibold px-1" style={{ gridTemplateColumns: '40px repeat(5, minmax(0, 1fr))' }}>
+            <div>#</div>
+            <div>Miktar (KG) *</div>
+            <div>Net Litre (Giriş)</div>
+            <div>Kesafet (kg/L)</div>
+            <div>Net Litre (Hesap)</div>
+            <div>Kantar (KG)</div>
           </div>
 
           <div className="space-y-2" data-testid="entries-list">
@@ -473,13 +475,13 @@ const MotorinAlim = () => {
               return (
                 <div
                   key={idx}
-                  className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center bg-slate-900/40 rounded-lg p-2 border border-slate-800"
+                  className="grid grid-cols-1 gap-2 items-center bg-slate-900/40 rounded-lg p-2 border border-slate-800 md:[grid-template-columns:40px_repeat(5,minmax(0,1fr))]"
                   data-testid={`entry-row-${idx}`}
                 >
-                  <div className="md:col-span-1 text-amber-400 font-bold text-center text-sm">
+                  <div className="text-amber-400 font-bold text-center text-sm">
                     <span className="md:hidden text-slate-400 text-xs mr-2">Sıra:</span>{idx + 1}
                   </div>
-                  <div className="md:col-span-3">
+                  <div>
                     <Label className="md:hidden text-slate-300 text-xs">Miktar (KG)</Label>
                     <Input
                       type="number"
@@ -491,7 +493,19 @@ const MotorinAlim = () => {
                       data-testid={`entry-miktar-kg-${idx}`}
                     />
                   </div>
-                  <div className="md:col-span-2">
+                  <div>
+                    <Label className="md:hidden text-slate-300 text-xs">Net Litre (Giriş)</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={row.net_litre_giris}
+                      onChange={(e) => updateEntry(idx, 'net_litre_giris', e.target.value)}
+                      className="bg-slate-800 border-slate-700 text-white h-9"
+                      placeholder="Manuel L"
+                      data-testid={`entry-net-litre-giris-${idx}`}
+                    />
+                  </div>
+                  <div>
                     <Label className="md:hidden text-slate-300 text-xs">Kesafet</Label>
                     <Input
                       type="number"
@@ -503,8 +517,8 @@ const MotorinAlim = () => {
                       data-testid={`entry-kesafet-${idx}`}
                     />
                   </div>
-                  <div className="md:col-span-3">
-                    <Label className="md:hidden text-slate-300 text-xs">Net Litre</Label>
+                  <div>
+                    <Label className="md:hidden text-slate-300 text-xs">Net Litre (Hesap)</Label>
                     <Input
                       type="text"
                       value={netLitre > 0 ? netLitre.toFixed(2) : ''}
@@ -514,7 +528,7 @@ const MotorinAlim = () => {
                       data-testid={`entry-net-litre-${idx}`}
                     />
                   </div>
-                  <div className="md:col-span-3">
+                  <div>
                     <Label className="md:hidden text-slate-300 text-xs">Kantar KG</Label>
                     <Input
                       type="number"
@@ -522,7 +536,7 @@ const MotorinAlim = () => {
                       value={row.kantar_kg}
                       onChange={(e) => updateEntry(idx, 'kantar_kg', e.target.value)}
                       className="bg-slate-800 border-slate-700 text-white h-9"
-                      placeholder="Kantar ölçümü"
+                      placeholder="Kantar"
                       data-testid={`entry-kantar-kg-${idx}`}
                     />
                   </div>
@@ -533,19 +547,32 @@ const MotorinAlim = () => {
 
           {/* Toplamlar */}
           <div className="mt-4 pt-4 border-t-2 border-amber-500/40">
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center bg-amber-500/10 rounded-lg p-3" data-testid="entries-totals">
-              <div className="md:col-span-1 text-amber-400 font-bold text-center text-sm uppercase">Σ</div>
-              <div className="md:col-span-3">
+            <div
+              className="grid grid-cols-1 gap-2 items-end bg-amber-500/10 rounded-lg p-3 md:[grid-template-columns:40px_repeat(5,minmax(0,1fr))]"
+              data-testid="entries-totals"
+            >
+              <div className="text-amber-400 font-bold text-center text-sm uppercase">Σ</div>
+              <div>
                 <Label className="text-amber-300 text-xs uppercase tracking-wider">Toplam KG</Label>
                 <Input
                   type="text"
                   value={totals.miktar_kg > 0 ? totals.miktar_kg.toLocaleString('tr-TR', { maximumFractionDigits: 2 }) : '0'}
                   readOnly
-                  className="bg-slate-950/60 border-amber-500/30 text-amber-300 font-mono font-bold text-base h-10"
+                  className="bg-slate-950/60 border-amber-500/30 text-amber-300 font-mono font-bold h-10"
                   data-testid="total-miktar-kg"
                 />
               </div>
-              <div className="md:col-span-2">
+              <div>
+                <Label className="text-amber-300 text-xs uppercase tracking-wider">Toplam Net L (Giriş)</Label>
+                <Input
+                  type="text"
+                  value={totals.net_litre_giris > 0 ? totals.net_litre_giris.toLocaleString('tr-TR', { maximumFractionDigits: 2 }) : '0'}
+                  readOnly
+                  className="bg-slate-950/60 border-amber-500/30 text-amber-300 font-mono font-bold h-10"
+                  data-testid="total-net-litre-giris"
+                />
+              </div>
+              <div>
                 <Label className="text-amber-300 text-xs uppercase tracking-wider">Ort. Kesafet</Label>
                 <Input
                   type="text"
@@ -555,23 +582,23 @@ const MotorinAlim = () => {
                   data-testid="total-avg-kesafet"
                 />
               </div>
-              <div className="md:col-span-3">
-                <Label className="text-amber-300 text-xs uppercase tracking-wider">Toplam Net Litre</Label>
+              <div>
+                <Label className="text-amber-300 text-xs uppercase tracking-wider">Toplam Net L (Hesap)</Label>
                 <Input
                   type="text"
                   value={totals.net_litre > 0 ? totals.net_litre.toLocaleString('tr-TR', { maximumFractionDigits: 2 }) : '0'}
                   readOnly
-                  className="bg-slate-950/60 border-amber-500/30 text-amber-300 font-mono font-bold text-base h-10"
+                  className="bg-slate-950/60 border-amber-500/30 text-amber-300 font-mono font-bold h-10"
                   data-testid="total-net-litre"
                 />
               </div>
-              <div className="md:col-span-3">
+              <div>
                 <Label className="text-amber-300 text-xs uppercase tracking-wider">Toplam Kantar KG</Label>
                 <Input
                   type="text"
                   value={totals.kantar_kg > 0 ? totals.kantar_kg.toLocaleString('tr-TR', { maximumFractionDigits: 2 }) : '0'}
                   readOnly
-                  className="bg-slate-950/60 border-amber-500/30 text-amber-300 font-mono font-bold text-base h-10"
+                  className="bg-slate-950/60 border-amber-500/30 text-amber-300 font-mono font-bold h-10"
                   data-testid="total-kantar-kg"
                 />
               </div>
