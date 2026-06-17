@@ -52,8 +52,9 @@ const MotorinAlim = () => {
     Array.from({ length: 6 }, () => ({ miktar_kg: '', kesafet: '', net_litre_giris: '' }))
   );
 
-  // Kullanıcının manuel girdiği toplam kantar (kg)
+  // Kullanıcının manuel girdiği toplam kantar (kg) + ona ait kesafet
   const [toplamKantarKg, setToplamKantarKg] = useState('');
+  const [kantarKesafet, setKantarKesafet] = useState('');
 
   // Fiyat: KDV dahil toplam tutar (manuel) + KDV oranı (%)
   const [toplamKdvDahil, setToplamKdvDahil] = useState('');
@@ -82,9 +83,10 @@ const MotorinAlim = () => {
   // Ortalama kesafet (ağırlıklı): toplam_kg / toplam_hesap_litre
   const avgKesafet = totals.net_litre > 0 ? totals.miktar_kg / totals.net_litre : 0;
 
-  // Kantar KG'yi kesafete bölerek litreye çevir (fiziksel olarak doğru çevirim)
+  // Kantar KG'yi MANUEL girilen kesafete bölerek litreye çevir (fiziksel olarak doğru çevirim)
   const kantarKgNum = parseFloat(toplamKantarKg) || 0;
-  const kantarLitre = (kantarKgNum > 0 && avgKesafet > 0) ? kantarKgNum / avgKesafet : 0;
+  const kantarKesafetNum = parseFloat(kantarKesafet) || 0;
+  const kantarLitre = (kantarKgNum > 0 && kantarKesafetNum > 0) ? kantarKgNum / kantarKesafetNum : 0;
 
   // Fark: Kantar Litre - Toplam Net Litre (Giriş)
   const fark = kantarLitre > 0 && totals.net_litre_giris > 0 ? kantarLitre - totals.net_litre_giris : 0;
@@ -242,7 +244,7 @@ const MotorinAlim = () => {
         .join('\n');
 
       const kantarSatiri = kantarKgNum > 0
-        ? `\n--- Kantar ---\nToplam Kantar KG: ${kantarKgNum} | Kantar Litre: ${kantarLitre.toFixed(2)} | Fark: ${(fark >= 0 ? '+' : '-')}${Math.abs(fark).toFixed(2)} L (${fark < 0 ? 'EKSİK' : fark > 0 ? 'FAZLA' : 'EŞİT'})`
+        ? `\n--- Kantar ---\nToplam Kantar KG: ${kantarKgNum} | Kantar Kesafeti: ${kantarKesafetNum} | Kantar Litre: ${kantarLitre.toFixed(2)} | Fark: ${(fark >= 0 ? '+' : '-')}${Math.abs(fark).toFixed(2)} L (${fark < 0 ? 'EKSİK' : fark > 0 ? 'FAZLA' : 'EŞİT'})`
         : '';
 
       const fiyatSatiri = toplamKdvDahilNum > 0
@@ -604,8 +606,8 @@ const MotorinAlim = () => {
               </div>
             </div>
 
-            {/* Kantar girişi + Litre çevrimi + Fark */}
-            <div className="mt-3 grid grid-cols-1 md:grid-cols-3 gap-3 bg-blue-500/10 border border-blue-500/30 rounded-lg p-3" data-testid="kantar-section">
+            {/* Kantar girişi + Kesafet + Litre çevrimi + Fark */}
+            <div className="mt-3 grid grid-cols-1 md:grid-cols-4 gap-3 bg-blue-500/10 border border-blue-500/30 rounded-lg p-3" data-testid="kantar-section">
               <div>
                 <Label className="text-blue-300 text-xs uppercase tracking-wider">Toplam Kantar KG (Manuel) *</Label>
                 <Input
@@ -619,7 +621,19 @@ const MotorinAlim = () => {
                 />
               </div>
               <div>
-                <Label className="text-blue-300 text-xs uppercase tracking-wider">Kantar Litre (Kantar KG / Kesafet)</Label>
+                <Label className="text-blue-300 text-xs uppercase tracking-wider">Kantar Kesafeti</Label>
+                <Input
+                  type="number"
+                  step="0.001"
+                  value={kantarKesafet}
+                  onChange={(e) => setKantarKesafet(e.target.value)}
+                  className="bg-slate-800 border-blue-500/40 text-white font-mono h-10 mt-1"
+                  placeholder="Örn: 0.835"
+                  data-testid="manual-kantar-kesafet"
+                />
+              </div>
+              <div>
+                <Label className="text-blue-300 text-xs uppercase tracking-wider">Kantar Litre (KG / Kesafet)</Label>
                 <Input
                   type="text"
                   value={kantarLitre > 0 ? kantarLitre.toLocaleString('tr-TR', { maximumFractionDigits: 2 }) : '0'}
@@ -630,7 +644,7 @@ const MotorinAlim = () => {
               </div>
               <div>
                 <Label className={`text-xs uppercase tracking-wider ${fark < 0 ? 'text-red-400' : fark > 0 ? 'text-green-400' : 'text-slate-400'}`}>
-                  Fark (Kantar L − Giriş L)
+                  Fark (Kantar L − 6 Giriş L)
                 </Label>
                 <div className="flex items-center gap-2 mt-1">
                   <Input
