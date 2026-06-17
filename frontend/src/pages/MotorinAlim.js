@@ -55,6 +55,10 @@ const MotorinAlim = () => {
   // Kullanıcının manuel girdiği toplam kantar (kg)
   const [toplamKantarKg, setToplamKantarKg] = useState('');
 
+  // Fiyat: KDV dahil toplam tutar (manuel) + KDV oranı (%)
+  const [toplamKdvDahil, setToplamKdvDahil] = useState('');
+  const [kdvOrani, setKdvOrani] = useState('20');
+
   const updateEntry = (idx, field, value) => {
     setEntries(prev => prev.map((row, i) => i === idx ? { ...row, [field]: value } : row));
   };
@@ -85,22 +89,21 @@ const MotorinAlim = () => {
   // Fark: Kantar Litre - Toplam Net Litre (Giriş)
   const fark = kantarLitre > 0 && totals.net_litre_giris > 0 ? kantarLitre - totals.net_litre_giris : 0;
 
+  // Fiyat hesapları
+  const toplamLitre = totals.net_litre_giris; // Giriş toplamı esas alınır
+  const toplamKdvDahilNum = parseFloat(toplamKdvDahil) || 0;
+  const kdvOraniNum = parseFloat(kdvOrani) || 0;
+  const kdvDahilBirim = toplamLitre > 0 && toplamKdvDahilNum > 0 ? toplamKdvDahilNum / toplamLitre : 0;
+  const kdvHaricBirim = kdvDahilBirim > 0 ? kdvDahilBirim / (1 + kdvOraniNum / 100) : 0;
+  const kdvTutar = toplamKdvDahilNum > 0 ? toplamKdvDahilNum - (toplamKdvDahilNum / (1 + kdvOraniNum / 100)) : 0;
+
   useEffect(() => {
     fetchTedarikciler();
     fetchTesisler();
     fetchMarkalar();
   }, []);
 
-  // Otomatik toplam tutar hesaplama (Net Litre × Birim Fiyat)
-  useEffect(() => {
-    const miktar = totals.net_litre || 0;
-    const birim = parseFloat(formData.birim_fiyat) || 0;
-    setFormData(prev => ({
-      ...prev,
-      toplam_tutar: (miktar * birim).toFixed(2)
-    }));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [totals.net_litre, formData.birim_fiyat]);
+  // Toplam tutar otomatik hesaplama artık manuel — kaldırıldı
 
   const fetchTedarikciler = async () => {
     try {
@@ -218,7 +221,7 @@ const MotorinAlim = () => {
     // Tüm zorunlu alanları kontrol et
     if (!formData.tarih || !formData.tedarikci_adi || !formData.akaryakit_markasi ||
         !formData.cekici_plaka || !formData.dorse_plaka || !formData.sofor_adi ||
-        !formData.sofor_soyadi || !formData.birim_fiyat ||
+        !formData.sofor_soyadi || !toplamKdvDahil ||
         !formData.teslim_alan || !formData.bosaltim_tesisi) {
       toast.error('Tüm alanları doldurunuz! (* ile işaretli alanlar zorunludur)');
       return;
@@ -242,7 +245,11 @@ const MotorinAlim = () => {
         ? `\n--- Kantar ---\nToplam Kantar KG: ${kantarKgNum} | Kantar Litre: ${kantarLitre.toFixed(2)} | Fark: ${(fark >= 0 ? '+' : '-')}${Math.abs(fark).toFixed(2)} L (${fark < 0 ? 'EKSİK' : fark > 0 ? 'FAZLA' : 'EŞİT'})`
         : '';
 
-      const combinedNotes = [formData.notlar, '--- Miktar/Ağırlık Detayları (6 Satır) ---', entriesText + kantarSatiri]
+      const fiyatSatiri = toplamKdvDahilNum > 0
+        ? `\n--- Fiyat ---\nToplam Litre: ${toplamLitre.toFixed(2)} | KDV Dahil Toplam: ₺${toplamKdvDahilNum.toFixed(2)} | KDV Oranı: %${kdvOraniNum} | KDV Dahil Birim: ₺${kdvDahilBirim.toFixed(4)}/L | KDV Hariç Birim: ₺${kdvHaricBirim.toFixed(4)}/L | KDV Tutarı: ₺${kdvTutar.toFixed(2)}`
+        : '';
+
+      const combinedNotes = [formData.notlar, '--- Miktar/Ağırlık Detayları (6 Satır) ---', entriesText + kantarSatiri + fiyatSatiri]
         .filter(s => s && s.trim())
         .join('\n');
 
@@ -252,8 +259,8 @@ const MotorinAlim = () => {
         miktar_kg: totals.miktar_kg || 0,
         kesafet: avgKesafet || 0,
         kantar_kg: kantarKgNum || 0,
-        birim_fiyat: parseFloat(formData.birim_fiyat) || 0,
-        toplam_tutar: (totals.net_litre || 0) * (parseFloat(formData.birim_fiyat) || 0),
+        birim_fiyat: kdvHaricBirim || 0, // KDV Hariç birim fiyat kaydedilir
+        toplam_tutar: toplamKdvDahilNum || 0, // KDV Dahil toplam tutar
         notlar: combinedNotes
       };
 
@@ -660,35 +667,84 @@ const MotorinAlim = () => {
           <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
             💰 Fiyat Bilgileri
           </h2>
+          {/* Birinci satır: Toplam Litre + Toplam KDV Dahil Tutar + KDV Oranı */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Birim Fiyat */}
             <div>
-              <Label className="text-slate-300">Birim Fiyat (₺/Litre) *</Label>
+              <Label className="text-slate-300">Toplam Litre</Label>
               <Input
-                type="number"
-                step="0.01"
-                value={formData.birim_fiyat}
-                onChange={(e) => setFormData({ ...formData, birim_fiyat: e.target.value })}
-                className="bg-slate-800 border-slate-700 text-white mt-1"
-                placeholder="Örn: 42.50"
-                required
-              />
-            </div>
-
-            {/* Toplam Tutar */}
-            <div>
-              <Label className="text-slate-300">Toplam Tutar (₺)</Label>
-              <Input
-                type="number"
-                step="0.01"
-                value={formData.toplam_tutar}
-                onChange={(e) => setFormData({ ...formData, toplam_tutar: e.target.value })}
-                className="bg-slate-800 border-slate-700 text-white mt-1 font-semibold text-green-400"
+                type="text"
+                value={toplamLitre > 0 ? toplamLitre.toLocaleString('tr-TR', { maximumFractionDigits: 2 }) : '0'}
                 readOnly
+                className="bg-slate-950/60 border-slate-800 text-amber-300 font-mono font-bold mt-1"
+                data-testid="fiyat-toplam-litre"
               />
             </div>
+            <div>
+              <Label className="text-slate-300">Toplam KDV Dahil Tutar (₺) *</Label>
+              <Input
+                type="number"
+                step="0.01"
+                value={toplamKdvDahil}
+                onChange={(e) => setToplamKdvDahil(e.target.value)}
+                className="bg-slate-800 border-slate-700 text-white mt-1"
+                placeholder="Örn: 1.260.000"
+                required
+                data-testid="fiyat-kdv-dahil-toplam"
+              />
+            </div>
+            <div>
+              <Label className="text-slate-300">KDV Oranı (%)</Label>
+              <Input
+                type="number"
+                step="1"
+                value={kdvOrani}
+                onChange={(e) => setKdvOrani(e.target.value)}
+                className="bg-slate-800 border-slate-700 text-white mt-1"
+                placeholder="20"
+                data-testid="fiyat-kdv-orani"
+              />
+            </div>
+          </div>
 
-            {/* Ödeme Durumu */}
+          {/* İkinci satır: KDV Dahil Birim Fiyat + KDV Hariç Birim Fiyat + KDV Tutarı */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+            <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-3">
+              <Label className="text-green-300 text-xs uppercase tracking-wider">KDV Dahil Birim Fiyat</Label>
+              <Input
+                type="text"
+                value={kdvDahilBirim > 0 ? '₺' + kdvDahilBirim.toLocaleString('tr-TR', { minimumFractionDigits: 4, maximumFractionDigits: 4 }) : '-'}
+                readOnly
+                className="bg-slate-950/60 border-green-500/30 text-green-400 font-mono font-bold text-base mt-1"
+                data-testid="fiyat-kdv-dahil-birim"
+              />
+              <p className="text-[10px] text-slate-500 mt-1">Toplam Tutar ÷ Toplam Litre</p>
+            </div>
+            <div className="bg-cyan-500/10 border border-cyan-500/30 rounded-lg p-3">
+              <Label className="text-cyan-300 text-xs uppercase tracking-wider">KDV Hariç Birim Fiyat</Label>
+              <Input
+                type="text"
+                value={kdvHaricBirim > 0 ? '₺' + kdvHaricBirim.toLocaleString('tr-TR', { minimumFractionDigits: 4, maximumFractionDigits: 4 }) : '-'}
+                readOnly
+                className="bg-slate-950/60 border-cyan-500/30 text-cyan-400 font-mono font-bold text-base mt-1"
+                data-testid="fiyat-kdv-haric-birim"
+              />
+              <p className="text-[10px] text-slate-500 mt-1">KDV Dahil ÷ (1 + KDV/100)</p>
+            </div>
+            <div className="bg-orange-500/10 border border-orange-500/30 rounded-lg p-3">
+              <Label className="text-orange-300 text-xs uppercase tracking-wider">Toplam KDV Tutarı</Label>
+              <Input
+                type="text"
+                value={kdvTutar > 0 ? '₺' + kdvTutar.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '-'}
+                readOnly
+                className="bg-slate-950/60 border-orange-500/30 text-orange-400 font-mono font-bold text-base mt-1"
+                data-testid="fiyat-kdv-tutar"
+              />
+              <p className="text-[10px] text-slate-500 mt-1">KDV Dahil − KDV Hariç</p>
+            </div>
+          </div>
+
+          {/* Üçüncü satır: Ödeme Durumu */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
             <div>
               <Label className="text-slate-300">Ödeme Durumu</Label>
               <select
@@ -759,32 +815,30 @@ const MotorinAlim = () => {
         </div>
 
         {/* Özet Kartı */}
-        {totals.net_litre > 0 && formData.birim_fiyat && (
+        {totals.net_litre_giris > 0 && toplamKdvDahilNum > 0 && (
           <div className="p-6 bg-green-500/10 border border-green-500/30 rounded-xl">
-            <h3 className="text-green-400 font-semibold mb-4 text-lg">📊 Alım Özeti (6 Satır Toplamı)</h3>
+            <h3 className="text-green-400 font-semibold mb-4 text-lg">📊 Alım Özeti</h3>
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-center">
               <div className="bg-slate-800/50 rounded-lg p-3">
-                <p className="text-2xl font-bold text-white">{totals.net_litre.toLocaleString('tr-TR', { maximumFractionDigits: 2 })}</p>
-                <p className="text-xs text-slate-400">Net Litre</p>
+                <p className="text-2xl font-bold text-white">{totals.net_litre_giris.toLocaleString('tr-TR', { maximumFractionDigits: 2 })}</p>
+                <p className="text-xs text-slate-400">Toplam Litre</p>
               </div>
               <div className="bg-slate-800/50 rounded-lg p-3">
                 <p className="text-2xl font-bold text-white">{totals.miktar_kg.toLocaleString('tr-TR', { maximumFractionDigits: 2 })}</p>
-                <p className="text-xs text-slate-400">KG</p>
+                <p className="text-xs text-slate-400">Toplam KG</p>
               </div>
               <div className="bg-slate-800/50 rounded-lg p-3">
-                <p className="text-2xl font-bold text-white">₺{parseFloat(formData.birim_fiyat).toFixed(2)}</p>
-                <p className="text-xs text-slate-400">Birim Fiyat</p>
+                <p className="text-xl font-bold text-cyan-400">₺{kdvHaricBirim.toFixed(4)}</p>
+                <p className="text-xs text-slate-400">KDV Hariç Birim</p>
               </div>
               <div className="bg-slate-800/50 rounded-lg p-3">
-                <p className="text-2xl font-bold text-green-400">₺{(totals.net_litre * (parseFloat(formData.birim_fiyat) || 0)).toLocaleString('tr-TR', { maximumFractionDigits: 2 })}</p>
-                <p className="text-xs text-slate-400">Toplam Tutar</p>
+                <p className="text-xl font-bold text-green-400">₺{kdvDahilBirim.toFixed(4)}</p>
+                <p className="text-xs text-slate-400">KDV Dahil Birim</p>
               </div>
-              {formData.cekici_plaka && (
-                <div className="bg-slate-800/50 rounded-lg p-3">
-                  <p className="text-lg font-bold text-blue-400">{formData.cekici_plaka}</p>
-                  <p className="text-xs text-slate-400">Çekici</p>
-                </div>
-              )}
+              <div className="bg-slate-800/50 rounded-lg p-3">
+                <p className="text-2xl font-bold text-green-400">₺{toplamKdvDahilNum.toLocaleString('tr-TR', { maximumFractionDigits: 2 })}</p>
+                <p className="text-xs text-slate-400">Toplam KDV Dahil</p>
+              </div>
             </div>
           </div>
         )}
