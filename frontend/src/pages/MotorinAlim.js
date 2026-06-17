@@ -462,8 +462,8 @@ const MotorinAlim = () => {
           {/* Başlık satırı */}
           <div className="hidden md:grid gap-2 mb-2 text-xs text-slate-400 uppercase tracking-wider font-semibold px-1" style={{ gridTemplateColumns: '40px repeat(5, minmax(0, 1fr))' }}>
             <div>#</div>
-            <div>Miktar (KG) *</div>
             <div>Net Litre (Giriş)</div>
+            <div>Miktar (KG) *</div>
             <div>Kesafet (kg/L)</div>
             <div>Net Litre (Hesap)</div>
             <div>Kantar (KG)</div>
@@ -482,18 +482,6 @@ const MotorinAlim = () => {
                     <span className="md:hidden text-slate-400 text-xs mr-2">Sıra:</span>{idx + 1}
                   </div>
                   <div>
-                    <Label className="md:hidden text-slate-300 text-xs">Miktar (KG)</Label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      value={row.miktar_kg}
-                      onChange={(e) => updateEntry(idx, 'miktar_kg', e.target.value)}
-                      className="bg-slate-800 border-slate-700 text-white h-9"
-                      placeholder="Örn: 8350"
-                      data-testid={`entry-miktar-kg-${idx}`}
-                    />
-                  </div>
-                  <div>
                     <Label className="md:hidden text-slate-300 text-xs">Net Litre (Giriş)</Label>
                     <Input
                       type="number"
@@ -503,6 +491,18 @@ const MotorinAlim = () => {
                       className="bg-slate-800 border-slate-700 text-white h-9"
                       placeholder="Manuel L"
                       data-testid={`entry-net-litre-giris-${idx}`}
+                    />
+                  </div>
+                  <div>
+                    <Label className="md:hidden text-slate-300 text-xs">Miktar (KG)</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={row.miktar_kg}
+                      onChange={(e) => updateEntry(idx, 'miktar_kg', e.target.value)}
+                      className="bg-slate-800 border-slate-700 text-white h-9"
+                      placeholder="Örn: 8350"
+                      data-testid={`entry-miktar-kg-${idx}`}
                     />
                   </div>
                   <div>
@@ -553,16 +553,6 @@ const MotorinAlim = () => {
             >
               <div className="text-amber-400 font-bold text-center text-sm uppercase">Σ</div>
               <div>
-                <Label className="text-amber-300 text-xs uppercase tracking-wider">Toplam KG</Label>
-                <Input
-                  type="text"
-                  value={totals.miktar_kg > 0 ? totals.miktar_kg.toLocaleString('tr-TR', { maximumFractionDigits: 2 }) : '0'}
-                  readOnly
-                  className="bg-slate-950/60 border-amber-500/30 text-amber-300 font-mono font-bold h-10"
-                  data-testid="total-miktar-kg"
-                />
-              </div>
-              <div>
                 <Label className="text-amber-300 text-xs uppercase tracking-wider">Toplam Net L (Giriş)</Label>
                 <Input
                   type="text"
@@ -570,6 +560,16 @@ const MotorinAlim = () => {
                   readOnly
                   className="bg-slate-950/60 border-amber-500/30 text-amber-300 font-mono font-bold h-10"
                   data-testid="total-net-litre-giris"
+                />
+              </div>
+              <div>
+                <Label className="text-amber-300 text-xs uppercase tracking-wider">Toplam KG</Label>
+                <Input
+                  type="text"
+                  value={totals.miktar_kg > 0 ? totals.miktar_kg.toLocaleString('tr-TR', { maximumFractionDigits: 2 }) : '0'}
+                  readOnly
+                  className="bg-slate-950/60 border-amber-500/30 text-amber-300 font-mono font-bold h-10"
+                  data-testid="total-miktar-kg"
                 />
               </div>
               <div>
