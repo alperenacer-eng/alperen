@@ -17,7 +17,8 @@ import {
   Calendar,
   Fuel,
   X,
-  Save
+  Save,
+  PlayCircle
 } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL + '/api';
@@ -46,12 +47,29 @@ const MotorinListe = () => {
   const [araclar, setAraclar] = useState([]);
   const [saving, setSaving] = useState(false);
 
+  // Açılış State
+  const [acilisList, setAcilisList] = useState([]);
+  const [showAcilisModal, setShowAcilisModal] = useState(false);
+  const [editingAcilis, setEditingAcilis] = useState(null);
+  const [acilisForm, setAcilisForm] = useState({
+    tarih: new Date().toISOString().split('T')[0],
+    bosaltim_tesisi: '',
+    acilis_litre: '',
+    kdv_haric_birim: '',
+    kdv_dahil_birim: '',
+    kdv_orani: '20',
+    toplam_kdv_dahil: '',
+    notlar: ''
+  });
+
   useEffect(() => {
     fetchData();
     fetchTedarikciler();
     fetchTesisler();
     fetchMarkalar();
     fetchAraclar();
+    fetchAcilis();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dateFilter]);
 
   const fetchData = async () => {
@@ -128,6 +146,125 @@ const MotorinListe = () => {
       setAraclar(res.data);
     } catch (error) {
       console.log('Araçlar yüklenemedi');
+    }
+  };
+
+  // ========== Açılış ==========
+  const fetchAcilis = async () => {
+    try {
+      const res = await axios.get(`${API_URL}/motorin-acilis`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setAcilisList(res.data);
+    } catch (error) {
+      console.log('Açılış kayıtları yüklenemedi');
+    }
+  };
+
+  const openAcilisModal = (acilis = null) => {
+    if (acilis) {
+      setEditingAcilis(acilis);
+      setAcilisForm({
+        tarih: acilis.tarih || new Date().toISOString().split('T')[0],
+        bosaltim_tesisi: acilis.bosaltim_tesisi || '',
+        acilis_litre: acilis.acilis_litre?.toString() || '',
+        kdv_haric_birim: acilis.kdv_haric_birim?.toString() || '',
+        kdv_dahil_birim: acilis.kdv_dahil_birim?.toString() || '',
+        kdv_orani: acilis.kdv_orani?.toString() || '20',
+        toplam_kdv_dahil: acilis.toplam_kdv_dahil?.toString() || '',
+        notlar: acilis.notlar || ''
+      });
+    } else {
+      setEditingAcilis(null);
+      setAcilisForm({
+        tarih: new Date().toISOString().split('T')[0],
+        bosaltim_tesisi: '',
+        acilis_litre: '',
+        kdv_haric_birim: '',
+        kdv_dahil_birim: '',
+        kdv_orani: '20',
+        toplam_kdv_dahil: '',
+        notlar: ''
+      });
+    }
+    setShowAcilisModal(true);
+  };
+
+  // KDV Dahil ↔ KDV Hariç otomatik senkron
+  const handleAcilisKdvDahilChange = (val) => {
+    const dahil = parseFloat(val) || 0;
+    const oran = parseFloat(acilisForm.kdv_orani) || 0;
+    const haric = oran > 0 ? (dahil / (1 + oran / 100)) : dahil;
+    setAcilisForm(prev => ({
+      ...prev,
+      kdv_dahil_birim: val,
+      kdv_haric_birim: haric > 0 ? haric.toFixed(4) : ''
+    }));
+  };
+
+  const handleAcilisKdvHaricChange = (val) => {
+    const haric = parseFloat(val) || 0;
+    const oran = parseFloat(acilisForm.kdv_orani) || 0;
+    const dahil = haric * (1 + oran / 100);
+    setAcilisForm(prev => ({
+      ...prev,
+      kdv_haric_birim: val,
+      kdv_dahil_birim: dahil > 0 ? dahil.toFixed(4) : ''
+    }));
+  };
+
+  const handleAcilisSubmit = async () => {
+    const litre = parseFloat(acilisForm.acilis_litre) || 0;
+    if (!acilisForm.tarih || !acilisForm.bosaltim_tesisi || litre <= 0) {
+      toast.error('Tarih, Tesis ve Açılış Litre zorunlu');
+      return;
+    }
+    const kdvDahil = parseFloat(acilisForm.kdv_dahil_birim) || 0;
+    const payload = {
+      tarih: acilisForm.tarih,
+      bosaltim_tesisi: acilisForm.bosaltim_tesisi,
+      acilis_litre: litre,
+      kdv_haric_birim: parseFloat(acilisForm.kdv_haric_birim) || 0,
+      kdv_dahil_birim: kdvDahil,
+      kdv_orani: parseFloat(acilisForm.kdv_orani) || 0,
+      toplam_kdv_dahil: litre * kdvDahil,
+      notlar: acilisForm.notlar || ''
+    };
+    setSaving(true);
+    try {
+      if (editingAcilis) {
+        await axios.put(`${API_URL}/motorin-acilis/${editingAcilis.id}`, payload, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        toast.success('Açılış güncellendi');
+      } else {
+        await axios.post(`${API_URL}/motorin-acilis`, payload, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        toast.success('Açılış kaydı eklendi');
+      }
+      setShowAcilisModal(false);
+      setEditingAcilis(null);
+      fetchAcilis();
+      fetchData();
+    } catch (error) {
+      toast.error('Kaydedilemedi');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDeleteAcilis = async (id) => {
+    if (!window.confirm('Bu açılış kaydını silmek istediğinize emin misiniz?')) return;
+    try {
+      await axios.delete(`${API_URL}/motorin-acilis/${id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      toast.success('Açılış silindi');
+      fetchAcilis();
+      fetchData();
+    } catch (error) {
+      toast.error('Silinemedi');
     }
   };
 
@@ -310,7 +447,15 @@ const MotorinListe = () => {
           <h1 className="text-2xl md:text-3xl font-bold text-white">Motorin Kayıtları</h1>
           <p className="text-slate-400">Alım ve verme kayıtlarını yönetin</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
+          <Button
+            onClick={() => openAcilisModal()}
+            className="bg-amber-600 hover:bg-amber-700"
+            data-testid="acilis-add-btn"
+          >
+            <PlayCircle className="w-4 h-4 mr-2" />
+            Açılış Ekle
+          </Button>
           <Button
             onClick={() => navigate('/motorin-alim')}
             className="bg-green-600 hover:bg-green-700"
@@ -338,6 +483,61 @@ const MotorinListe = () => {
           <p className="text-2xl font-bold text-white">{formatNumber(stok.mevcut_stok)} <span className="text-sm text-slate-400">Litre</span></p>
         </div>
       </div>
+
+      {/* Açılış Kayıtları */}
+      {acilisList.length > 0 && (
+        <div className="glass-effect rounded-xl border border-amber-500/30 p-4 mb-6" data-testid="acilis-list-section">
+          <div className="flex items-center gap-2 mb-3">
+            <PlayCircle className="w-5 h-5 text-amber-400" />
+            <h3 className="text-white font-semibold">Açılış Kayıtları ({acilisList.length})</h3>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="border-b border-slate-800 text-xs text-slate-400 uppercase">
+                <tr>
+                  <th className="text-left px-3 py-2">Tarih</th>
+                  <th className="text-left px-3 py-2">Tesis</th>
+                  <th className="text-right px-3 py-2">Litre</th>
+                  <th className="text-right px-3 py-2">KDV Hariç Birim</th>
+                  <th className="text-right px-3 py-2">KDV Dahil Birim</th>
+                  <th className="text-right px-3 py-2">Toplam KDV Dahil</th>
+                  <th className="text-right px-3 py-2">İşlem</th>
+                </tr>
+              </thead>
+              <tbody>
+                {acilisList.map((a) => (
+                  <tr key={a.id} className="border-b border-slate-800/50 hover:bg-slate-800/30" data-testid={`acilis-row-${a.id}`}>
+                    <td className="px-3 py-2 text-slate-300 font-mono text-xs">{a.tarih}</td>
+                    <td className="px-3 py-2 text-slate-200">{a.bosaltim_tesisi || '-'}</td>
+                    <td className="px-3 py-2 text-right text-amber-300 font-mono">{formatNumber(a.acilis_litre)}</td>
+                    <td className="px-3 py-2 text-right text-cyan-400 font-mono">₺{Number(a.kdv_haric_birim || 0).toFixed(4)}</td>
+                    <td className="px-3 py-2 text-right text-green-400 font-mono">₺{Number(a.kdv_dahil_birim || 0).toFixed(4)}</td>
+                    <td className="px-3 py-2 text-right text-green-300 font-mono font-bold">{formatCurrency(a.toplam_kdv_dahil || 0)}</td>
+                    <td className="px-3 py-2 text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        <button
+                          onClick={() => openAcilisModal(a)}
+                          className="text-blue-400 hover:bg-blue-400/10 p-1 rounded"
+                          data-testid={`acilis-edit-${a.id}`}
+                        >
+                          <Edit className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteAcilis(a.id)}
+                          className="text-red-400 hover:bg-red-400/10 p-1 rounded"
+                          data-testid={`acilis-delete-${a.id}`}
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {/* Tabs */}
       <div className="flex gap-2 mb-6">
@@ -985,6 +1185,162 @@ const MotorinListe = () => {
               >
                 <Save className="w-4 h-4 mr-2" />
                 {saving ? 'Kaydediliyor...' : 'Güncelle'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Açılış Modal */}
+      {showAcilisModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" data-testid="acilis-modal">
+          <div className="bg-slate-900 border border-amber-500/30 rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between p-4 border-b border-slate-800">
+              <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                <PlayCircle className="w-5 h-5 text-amber-400" />
+                {editingAcilis ? 'Açılış Düzenle' : 'Yeni Açılış Kaydı'}
+              </h3>
+              <button
+                onClick={() => { setShowAcilisModal(false); setEditingAcilis(null); }}
+                className="text-slate-400 hover:text-white"
+                data-testid="acilis-modal-close"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-4 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-slate-300">Tarih *</Label>
+                  <Input
+                    type="date"
+                    value={acilisForm.tarih}
+                    onChange={(e) => setAcilisForm({ ...acilisForm, tarih: e.target.value })}
+                    className="bg-slate-800 border-slate-700 text-white mt-1"
+                    data-testid="acilis-tarih"
+                  />
+                </div>
+                <div>
+                  <Label className="text-slate-300">Boşaltım Tesisi *</Label>
+                  <select
+                    value={acilisForm.bosaltim_tesisi}
+                    onChange={(e) => setAcilisForm({ ...acilisForm, bosaltim_tesisi: e.target.value })}
+                    className="w-full bg-slate-800 border border-slate-700 text-white rounded-md px-3 py-2 mt-1"
+                    data-testid="acilis-tesis"
+                  >
+                    <option value="">Tesis Seçin</option>
+                    {tesisler.map(t => (
+                      <option key={t.id} value={t.name}>{t.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-slate-300">Açılış Litre *</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={acilisForm.acilis_litre}
+                    onChange={(e) => setAcilisForm({ ...acilisForm, acilis_litre: e.target.value })}
+                    className="bg-slate-800 border-slate-700 text-white mt-1 font-mono"
+                    placeholder="Örn: 5000"
+                    data-testid="acilis-litre"
+                  />
+                </div>
+                <div>
+                  <Label className="text-slate-300">KDV Oranı (%)</Label>
+                  <Input
+                    type="number"
+                    step="1"
+                    value={acilisForm.kdv_orani}
+                    onChange={(e) => {
+                      const newOran = e.target.value;
+                      const haric = parseFloat(acilisForm.kdv_haric_birim) || 0;
+                      const newDahil = haric * (1 + (parseFloat(newOran) || 0) / 100);
+                      setAcilisForm({
+                        ...acilisForm,
+                        kdv_orani: newOran,
+                        kdv_dahil_birim: newDahil > 0 ? newDahil.toFixed(4) : acilisForm.kdv_dahil_birim
+                      });
+                    }}
+                    className="bg-slate-800 border-slate-700 text-white mt-1"
+                    placeholder="20"
+                    data-testid="acilis-kdv-orani"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-cyan-300">KDV Hariç Birim Fiyat (₺/L)</Label>
+                  <Input
+                    type="number"
+                    step="0.0001"
+                    value={acilisForm.kdv_haric_birim}
+                    onChange={(e) => handleAcilisKdvHaricChange(e.target.value)}
+                    className="bg-slate-800 border-cyan-500/40 text-cyan-300 mt-1 font-mono"
+                    placeholder="Örn: 34.98"
+                    data-testid="acilis-kdv-haric"
+                  />
+                  <p className="text-[10px] text-slate-500 mt-1">KDV Dahil otomatik güncellenir</p>
+                </div>
+                <div>
+                  <Label className="text-green-300">KDV Dahil Birim Fiyat (₺/L)</Label>
+                  <Input
+                    type="number"
+                    step="0.0001"
+                    value={acilisForm.kdv_dahil_birim}
+                    onChange={(e) => handleAcilisKdvDahilChange(e.target.value)}
+                    className="bg-slate-800 border-green-500/40 text-green-300 mt-1 font-mono"
+                    placeholder="Örn: 41.98"
+                    data-testid="acilis-kdv-dahil"
+                  />
+                  <p className="text-[10px] text-slate-500 mt-1">KDV Hariç otomatik güncellenir</p>
+                </div>
+              </div>
+
+              {/* Özet */}
+              {parseFloat(acilisForm.acilis_litre) > 0 && parseFloat(acilisForm.kdv_dahil_birim) > 0 && (
+                <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3 text-sm">
+                  <div className="text-amber-300 text-xs uppercase tracking-wider mb-1">Toplam KDV Dahil Tutar</div>
+                  <div className="text-2xl font-bold text-amber-400 font-mono" data-testid="acilis-toplam">
+                    {formatCurrency((parseFloat(acilisForm.acilis_litre) || 0) * (parseFloat(acilisForm.kdv_dahil_birim) || 0))}
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <Label className="text-slate-300">Notlar</Label>
+                <textarea
+                  value={acilisForm.notlar}
+                  onChange={(e) => setAcilisForm({ ...acilisForm, notlar: e.target.value })}
+                  className="w-full bg-slate-800 border border-slate-700 text-white rounded-md px-3 py-2 mt-1 min-h-[60px]"
+                  placeholder="Ek notlar..."
+                  data-testid="acilis-notlar"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-2 p-4 border-t border-slate-800">
+              <Button
+                variant="outline"
+                onClick={() => { setShowAcilisModal(false); setEditingAcilis(null); }}
+                className="border-slate-700 text-slate-300 hover:bg-slate-800"
+                data-testid="acilis-cancel"
+              >
+                İptal
+              </Button>
+              <Button
+                onClick={handleAcilisSubmit}
+                disabled={saving}
+                className="bg-amber-600 hover:bg-amber-700 flex-1"
+                data-testid="acilis-save"
+              >
+                <Save className="w-4 h-4 mr-2" />
+                {saving ? 'Kaydediliyor...' : (editingAcilis ? 'Güncelle' : 'Kaydet')}
               </Button>
             </div>
           </div>

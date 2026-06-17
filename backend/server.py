@@ -883,6 +883,25 @@ async def init_db():
             )
         ''')
         
+        # Motorin Açılış (Opening balance) table
+        await db.execute('''
+            CREATE TABLE IF NOT EXISTS motorin_acilis (
+                id TEXT PRIMARY KEY,
+                tarih TEXT NOT NULL,
+                bosaltim_tesisi TEXT DEFAULT '',
+                acilis_litre REAL NOT NULL DEFAULT 0,
+                kdv_haric_birim REAL DEFAULT 0,
+                kdv_dahil_birim REAL DEFAULT 0,
+                kdv_orani REAL DEFAULT 20,
+                toplam_kdv_dahil REAL DEFAULT 0,
+                notlar TEXT DEFAULT '',
+                created_at TEXT NOT NULL,
+                created_by TEXT NOT NULL,
+                created_by_name TEXT NOT NULL,
+                updated_at TEXT
+            )
+        ''')
+        
         # Motorin Verme table
         await db.execute('''
             CREATE TABLE IF NOT EXISTS motorin_verme (
@@ -5557,7 +5576,15 @@ async def update_motorin_stok_sqlite():
         row = await cursor.fetchone()
         toplam_verme = row[0] or 0
     
-    mevcut_stok = toplam_alim - toplam_verme
+    # Açılış stokları
+    try:
+        async with db.execute("SELECT SUM(acilis_litre) FROM motorin_acilis") as cursor:
+            row = await cursor.fetchone()
+            toplam_acilis = row[0] or 0
+    except Exception:
+        toplam_acilis = 0
+    
+    mevcut_stok = toplam_acilis + toplam_alim - toplam_verme
     updated_at = datetime.now(timezone.utc).isoformat()
     
     async with db.execute("SELECT COUNT(*) FROM motorin_stok") as cursor:
@@ -5669,6 +5696,81 @@ async def delete_motorin_alim(id: str, current_user: dict = Depends(get_current_
     await db.close()
     await update_motorin_stok_sqlite()
     return {"message": "Alım kaydı silindi"}
+
+# ============================
+# Motorin Açılış (Opening Balance)
+# ============================
+class MotorinAcilisCreate(BaseModel):
+    tarih: str
+    bosaltim_tesisi: str = ""
+    acilis_litre: float = 0
+    kdv_haric_birim: float = 0
+    kdv_dahil_birim: float = 0
+    kdv_orani: float = 20
+    toplam_kdv_dahil: float = 0
+    notlar: str = ""
+
+@api_router.post("/motorin-acilis")
+async def create_motorin_acilis(input: MotorinAcilisCreate, current_user: dict = Depends(get_current_user)):
+    db = await get_db()
+    acilis_id = generate_id()
+    created_at = datetime.now(timezone.utc).isoformat()
+    await db.execute(
+        """INSERT INTO motorin_acilis (id, tarih, bosaltim_tesisi, acilis_litre, kdv_haric_birim,
+           kdv_dahil_birim, kdv_orani, toplam_kdv_dahil, notlar, created_at, created_by, created_by_name)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        (acilis_id, input.tarih, input.bosaltim_tesisi, input.acilis_litre, input.kdv_haric_birim,
+         input.kdv_dahil_birim, input.kdv_orani, input.toplam_kdv_dahil, input.notlar,
+         created_at, current_user['id'], current_user['name'])
+    )
+    await db.commit()
+    async with db.execute("SELECT * FROM motorin_acilis WHERE id = ?", (acilis_id,)) as cursor:
+        row = await cursor.fetchone()
+    await db.close()
+    await update_motorin_stok_sqlite()
+    return row_to_dict(row)
+
+@api_router.get("/motorin-acilis")
+async def get_motorin_acilis_list(bosaltim_tesisi: str = None, current_user: dict = Depends(get_current_user)):
+    db = await get_db()
+    query = "SELECT * FROM motorin_acilis WHERE 1=1"
+    params = []
+    if bosaltim_tesisi:
+        query += " AND bosaltim_tesisi = ?"
+        params.append(bosaltim_tesisi)
+    query += " ORDER BY tarih DESC"
+    async with db.execute(query, params) as cursor:
+        rows = await cursor.fetchall()
+    await db.close()
+    return rows_to_list(rows)
+
+@api_router.put("/motorin-acilis/{id}")
+async def update_motorin_acilis(id: str, input: MotorinAcilisCreate, current_user: dict = Depends(get_current_user)):
+    db = await get_db()
+    updated_at = datetime.now(timezone.utc).isoformat()
+    await db.execute(
+        """UPDATE motorin_acilis SET tarih=?, bosaltim_tesisi=?, acilis_litre=?, kdv_haric_birim=?,
+           kdv_dahil_birim=?, kdv_orani=?, toplam_kdv_dahil=?, notlar=?, updated_at=?
+           WHERE id=?""",
+        (input.tarih, input.bosaltim_tesisi, input.acilis_litre, input.kdv_haric_birim,
+         input.kdv_dahil_birim, input.kdv_orani, input.toplam_kdv_dahil, input.notlar,
+         updated_at, id)
+    )
+    await db.commit()
+    async with db.execute("SELECT * FROM motorin_acilis WHERE id = ?", (id,)) as cursor:
+        row = await cursor.fetchone()
+    await db.close()
+    await update_motorin_stok_sqlite()
+    return row_to_dict(row)
+
+@api_router.delete("/motorin-acilis/{id}")
+async def delete_motorin_acilis(id: str, current_user: dict = Depends(get_current_user)):
+    db = await get_db()
+    await db.execute("DELETE FROM motorin_acilis WHERE id = ?", (id,))
+    await db.commit()
+    await db.close()
+    await update_motorin_stok_sqlite()
+    return {"message": "Açılış kaydı silindi"}
 
 # Motorin Verme
 class MotorinVermeCreate(BaseModel):
