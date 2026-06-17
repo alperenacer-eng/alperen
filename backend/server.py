@@ -3312,10 +3312,29 @@ async def get_monthly_report(year: int, month: int, module: Optional[str] = None
         # ürün bazlı
         pname = r.get("product_name") or "-"
         if pname not in by_product:
-            by_product[pname] = {"product_name": pname, "quantity": 0, "net_pallets": 0, "records": 0}
+            by_product[pname] = {
+                "product_name": pname,
+                "quantity": 0,
+                "net_pallets": 0,
+                "records": 0,
+                "strip_used": 0,
+                "mix_count": 0,
+                "cement_used": 0,
+                "machine_cement": 0,
+            }
         by_product[pname]["quantity"] += qty
         by_product[pname]["net_pallets"] += net_pal
         by_product[pname]["records"] += 1
+        by_product[pname]["mix_count"] += mix
+        by_product[pname]["cement_used"] += harcanan
+        by_product[pname]["machine_cement"] += mk
+        # strip_used TEXT olabilir, float'a çevir
+        try:
+            su = r.get("strip_used")
+            if su is not None and str(su).strip() != "":
+                by_product[pname]["strip_used"] += float(str(su).replace(",", "."))
+        except (ValueError, TypeError):
+            pass
 
         # işletme bazlı
         dep = r.get("department_name") or "-"

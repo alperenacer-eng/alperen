@@ -6,9 +6,10 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Button } from '@/components/ui/button';
-import { Calendar, TrendingUp, Download, FileText, Sun, Moon, Factory, Package, ChevronDown, ChevronUp, CalendarDays } from 'lucide-react';
+import { Calendar, TrendingUp, Download, FileText, Sun, Moon, Factory, Package, ChevronDown, ChevronUp, CalendarDays, FileSpreadsheet } from 'lucide-react';
 import { format } from 'date-fns';
 import { tr } from 'date-fns/locale';
+import * as XLSX from 'xlsx';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL + '/api';
 
@@ -149,6 +150,57 @@ const Reports = () => {
     link.download = `uretim-raporu-detayli-${format(new Date(), 'yyyy-MM-dd')}.csv`;
     link.click();
     toast.success('Detaylı rapor indirildi');
+  };
+
+  // Ürün bazlı raporu Excel'e aktar
+  const exportProductReportToExcel = () => {
+    if (!monthlyData || !monthlyData.by_product || monthlyData.by_product.length === 0) {
+      toast.error('Aktarılacak veri yok');
+      return;
+    }
+    const headers = [
+      'Ürün',
+      'Adet',
+      'Net Palet',
+      'Çalışılan Vardiya',
+      'Şerit',
+      'Yapılan Karma',
+      'Harcanan Çimento',
+      'Makina Çimento',
+    ];
+    const rows = monthlyData.by_product.map(p => [
+      p.product_name || '-',
+      Number(p.quantity || 0),
+      Number(p.net_pallets || 0),
+      Number(p.records || 0),
+      Number(p.strip_used || 0),
+      Number(p.mix_count || 0),
+      Number(p.cement_used || 0),
+      Number(p.machine_cement || 0),
+    ]);
+    // Genel toplam satırı
+    const totalsRow = [
+      'GENEL TOPLAM',
+      monthlyData.by_product.reduce((s, p) => s + (p.quantity || 0), 0),
+      monthlyData.by_product.reduce((s, p) => s + (p.net_pallets || 0), 0),
+      monthlyData.by_product.reduce((s, p) => s + (p.records || 0), 0),
+      monthlyData.by_product.reduce((s, p) => s + (p.strip_used || 0), 0),
+      monthlyData.by_product.reduce((s, p) => s + (p.mix_count || 0), 0),
+      monthlyData.by_product.reduce((s, p) => s + (p.cement_used || 0), 0),
+      monthlyData.by_product.reduce((s, p) => s + (p.machine_cement || 0), 0),
+    ];
+
+    const ws = XLSX.utils.aoa_to_sheet([headers, ...rows, totalsRow]);
+    ws['!cols'] = [
+      { wch: 28 }, { wch: 12 }, { wch: 12 }, { wch: 18 },
+      { wch: 10 }, { wch: 16 }, { wch: 18 }, { wch: 18 },
+    ];
+    const wb = XLSX.utils.book_new();
+    const sheetName = `${AY_ADLARI[selectedMonth - 1]} ${selectedYear}`;
+    XLSX.utils.book_append_sheet(wb, ws, sheetName.substring(0, 31));
+    const fname = `uretim-urun-bazli-${selectedYear}-${String(selectedMonth).padStart(2, '0')}.xlsx`;
+    XLSX.writeFile(wb, fname);
+    toast.success('Excel dosyası indirildi');
   };
 
   if (loading) {
@@ -292,40 +344,81 @@ const Reports = () => {
             {/* Ürün Bazlı + İşletme Bazlı */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <div className="bg-slate-900/40 rounded-lg p-4 border border-slate-800">
-                <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
-                  <Package className="w-4 h-4 text-orange-400" />
-                  Ürün Bazlı Toplamlar
-                </h3>
+                <div className="flex items-center justify-between mb-3 gap-2 flex-wrap">
+                  <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+                    <Package className="w-4 h-4 text-orange-400" />
+                    Ürün Bazlı Toplamlar
+                  </h3>
+                  <Button
+                    onClick={exportProductReportToExcel}
+                    data-testid="export-product-excel-button"
+                    size="sm"
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white h-8 px-3 text-xs"
+                    disabled={!monthlyData?.by_product?.length}
+                  >
+                    <FileSpreadsheet className="w-3.5 h-3.5 mr-1.5" />
+                    Excel&apos;e Aktar
+                  </Button>
+                </div>
                 {monthlyData.by_product && monthlyData.by_product.length > 0 ? (
-                  <table className="w-full text-sm">
+                  <div className="overflow-x-auto">
+                  <table className="w-full text-sm" data-testid="product-report-table">
                     <thead>
                       <tr className="border-b border-slate-700 text-slate-400 text-xs">
-                        <th className="text-left py-2">Ürün</th>
-                        <th className="text-right py-2">Adet</th>
-                        <th className="text-right py-2">Net Palet</th>
+                        <th className="text-left py-2 px-2">Ürün</th>
+                        <th className="text-right py-2 px-2">Adet</th>
+                        <th className="text-right py-2 px-2">Net Palet</th>
+                        <th className="text-right py-2 px-2">Çal. Vardiya</th>
+                        <th className="text-right py-2 px-2">Şerit</th>
+                        <th className="text-right py-2 px-2">Karma</th>
+                        <th className="text-right py-2 px-2">Harc. Çimento</th>
+                        <th className="text-right py-2 px-2">Mak. Çimento</th>
                       </tr>
                     </thead>
                     <tbody>
                       {monthlyData.by_product.map((p, idx) => (
                         <tr key={idx} className="border-b border-slate-800/50">
-                          <td className="py-2 text-white">{p.product_name}</td>
-                          <td className="py-2 text-right font-mono text-orange-400">{fmtTR(p.quantity)}</td>
-                          <td className="py-2 text-right font-mono text-purple-400">{fmtTR(p.net_pallets)}</td>
+                          <td className="py-2 px-2 text-white whitespace-nowrap">{p.product_name}</td>
+                          <td className="py-2 px-2 text-right font-mono text-orange-400">{fmtTR(p.quantity)}</td>
+                          <td className="py-2 px-2 text-right font-mono text-purple-400">{fmtTR(p.net_pallets)}</td>
+                          <td className="py-2 px-2 text-right font-mono text-cyan-400">{fmtTR(p.records)}</td>
+                          <td className="py-2 px-2 text-right font-mono text-pink-400">
+                            {Number(p.strip_used || 0).toLocaleString('tr-TR', { maximumFractionDigits: 2 })}
+                          </td>
+                          <td className="py-2 px-2 text-right font-mono text-blue-400">{fmtTR(p.mix_count)}</td>
+                          <td className="py-2 px-2 text-right font-mono text-amber-400">{fmtTR(p.cement_used)}</td>
+                          <td className="py-2 px-2 text-right font-mono text-amber-300">{fmtTR(p.machine_cement)}</td>
                         </tr>
                       ))}
                     </tbody>
                     <tfoot>
                       <tr className="border-t-2 border-cyan-500/40 bg-slate-800/40">
-                        <td className="py-2 text-white font-bold">GENEL TOPLAM</td>
-                        <td className="py-2 text-right font-mono text-orange-400 font-bold">
+                        <td className="py-2 px-2 text-white font-bold">GENEL TOPLAM</td>
+                        <td className="py-2 px-2 text-right font-mono text-orange-400 font-bold">
                           {fmtTR(monthlyData.by_product.reduce((s, p) => s + (p.quantity || 0), 0))}
                         </td>
-                        <td className="py-2 text-right font-mono text-purple-400 font-bold">
+                        <td className="py-2 px-2 text-right font-mono text-purple-400 font-bold">
                           {fmtTR(monthlyData.by_product.reduce((s, p) => s + (p.net_pallets || 0), 0))}
+                        </td>
+                        <td className="py-2 px-2 text-right font-mono text-cyan-400 font-bold">
+                          {fmtTR(monthlyData.by_product.reduce((s, p) => s + (p.records || 0), 0))}
+                        </td>
+                        <td className="py-2 px-2 text-right font-mono text-pink-400 font-bold">
+                          {monthlyData.by_product.reduce((s, p) => s + (p.strip_used || 0), 0).toLocaleString('tr-TR', { maximumFractionDigits: 2 })}
+                        </td>
+                        <td className="py-2 px-2 text-right font-mono text-blue-400 font-bold">
+                          {fmtTR(monthlyData.by_product.reduce((s, p) => s + (p.mix_count || 0), 0))}
+                        </td>
+                        <td className="py-2 px-2 text-right font-mono text-amber-400 font-bold">
+                          {fmtTR(monthlyData.by_product.reduce((s, p) => s + (p.cement_used || 0), 0))}
+                        </td>
+                        <td className="py-2 px-2 text-right font-mono text-amber-300 font-bold">
+                          {fmtTR(monthlyData.by_product.reduce((s, p) => s + (p.machine_cement || 0), 0))}
                         </td>
                       </tr>
                     </tfoot>
                   </table>
+                  </div>
                 ) : (
                   <p className="text-slate-500 text-sm">Veri yok</p>
                 )}
