@@ -47,10 +47,13 @@ const MotorinAlim = () => {
     notlar: ''
   });
 
-  // 6 satırlık miktar/ağırlık girişi — her satır: { miktar_kg, kesafet, net_litre_giris, kantar_kg } → net_litre_hesap otomatik
+  // 6 satırlık miktar/ağırlık girişi — her satır: { miktar_kg, kesafet, net_litre_giris }
   const [entries, setEntries] = useState(() =>
-    Array.from({ length: 6 }, () => ({ miktar_kg: '', kesafet: '', net_litre_giris: '', kantar_kg: '' }))
+    Array.from({ length: 6 }, () => ({ miktar_kg: '', kesafet: '', net_litre_giris: '' }))
   );
+
+  // Kullanıcının manuel girdiği toplam kantar (kg)
+  const [toplamKantarKg, setToplamKantarKg] = useState('');
 
   const updateEntry = (idx, field, value) => {
     setEntries(prev => prev.map((row, i) => i === idx ? { ...row, [field]: value } : row));
@@ -67,11 +70,20 @@ const MotorinAlim = () => {
   // 6 satırın toplamları
   const totals = entries.reduce((acc, row) => {
     acc.miktar_kg += parseFloat(row.miktar_kg) || 0;
-    acc.kantar_kg += parseFloat(row.kantar_kg) || 0;
     acc.net_litre += computeNetLitre(row);
     acc.net_litre_giris += parseFloat(row.net_litre_giris) || 0;
     return acc;
-  }, { miktar_kg: 0, kantar_kg: 0, net_litre: 0, net_litre_giris: 0 });
+  }, { miktar_kg: 0, net_litre: 0, net_litre_giris: 0 });
+
+  // Ortalama kesafet (ağırlıklı): toplam_kg / toplam_hesap_litre
+  const avgKesafet = totals.net_litre > 0 ? totals.miktar_kg / totals.net_litre : 0;
+
+  // Kantar KG'yi kesafete bölerek litreye çevir (fiziksel olarak doğru çevirim)
+  const kantarKgNum = parseFloat(toplamKantarKg) || 0;
+  const kantarLitre = (kantarKgNum > 0 && avgKesafet > 0) ? kantarKgNum / avgKesafet : 0;
+
+  // Fark: Kantar Litre - Toplam Net Litre (Giriş)
+  const fark = kantarLitre > 0 && totals.net_litre_giris > 0 ? kantarLitre - totals.net_litre_giris : 0;
 
   useEffect(() => {
     fetchTedarikciler();
@@ -218,15 +230,19 @@ const MotorinAlim = () => {
       const entriesText = entries
         .map((r, i) => {
           const netL = computeNetLitre(r);
-          if (parseFloat(r.miktar_kg) > 0 || parseFloat(r.kantar_kg) > 0 || parseFloat(r.net_litre_giris) > 0) {
-            return `[${i + 1}] KG: ${r.miktar_kg || '-'} | Net L (Giriş): ${r.net_litre_giris || '-'} | Kesafet: ${r.kesafet || '-'} | Net L (Hesap): ${netL ? netL.toFixed(2) : '-'} | Kantar KG: ${r.kantar_kg || '-'}`;
+          if (parseFloat(r.miktar_kg) > 0 || parseFloat(r.net_litre_giris) > 0) {
+            return `[${i + 1}] Net L (Giriş): ${r.net_litre_giris || '-'} | KG: ${r.miktar_kg || '-'} | Kesafet: ${r.kesafet || '-'} | Net L (Hesap): ${netL ? netL.toFixed(2) : '-'}`;
           }
           return null;
         })
         .filter(Boolean)
         .join('\n');
 
-      const combinedNotes = [formData.notlar, '--- Miktar/Ağırlık Detayları (6 Satır) ---', entriesText]
+      const kantarSatiri = kantarKgNum > 0
+        ? `\n--- Kantar ---\nToplam Kantar KG: ${kantarKgNum} | Kantar Litre: ${kantarLitre.toFixed(2)} | Fark: ${(fark >= 0 ? '+' : '-')}${Math.abs(fark).toFixed(2)} L (${fark < 0 ? 'EKSİK' : fark > 0 ? 'FAZLA' : 'EŞİT'})`
+        : '';
+
+      const combinedNotes = [formData.notlar, '--- Miktar/Ağırlık Detayları (6 Satır) ---', entriesText + kantarSatiri]
         .filter(s => s && s.trim())
         .join('\n');
 
@@ -234,8 +250,8 @@ const MotorinAlim = () => {
         ...formData,
         miktar_litre: totals.net_litre || 0,
         miktar_kg: totals.miktar_kg || 0,
-        kesafet: totals.net_litre > 0 ? totals.miktar_kg / totals.net_litre : 0,
-        kantar_kg: totals.kantar_kg || 0,
+        kesafet: avgKesafet || 0,
+        kantar_kg: kantarKgNum || 0,
         birim_fiyat: parseFloat(formData.birim_fiyat) || 0,
         toplam_tutar: (totals.net_litre || 0) * (parseFloat(formData.birim_fiyat) || 0),
         notlar: combinedNotes
@@ -460,13 +476,12 @@ const MotorinAlim = () => {
           </h2>
 
           {/* Başlık satırı */}
-          <div className="hidden md:grid gap-2 mb-2 text-xs text-slate-400 uppercase tracking-wider font-semibold px-1" style={{ gridTemplateColumns: '40px repeat(5, minmax(0, 1fr))' }}>
+          <div className="hidden md:grid gap-2 mb-2 text-xs text-slate-400 uppercase tracking-wider font-semibold px-1" style={{ gridTemplateColumns: '40px repeat(4, minmax(0, 1fr))' }}>
             <div>#</div>
             <div>Net Litre (Giriş)</div>
             <div>Miktar (KG) *</div>
             <div>Kesafet (kg/L)</div>
             <div>Net Litre (Hesap)</div>
-            <div>Kantar (KG)</div>
           </div>
 
           <div className="space-y-2" data-testid="entries-list">
@@ -475,7 +490,7 @@ const MotorinAlim = () => {
               return (
                 <div
                   key={idx}
-                  className="grid grid-cols-1 gap-2 items-center bg-slate-900/40 rounded-lg p-2 border border-slate-800 md:[grid-template-columns:40px_repeat(5,minmax(0,1fr))]"
+                  className="grid grid-cols-1 gap-2 items-center bg-slate-900/40 rounded-lg p-2 border border-slate-800 md:[grid-template-columns:40px_repeat(4,minmax(0,1fr))]"
                   data-testid={`entry-row-${idx}`}
                 >
                   <div className="text-amber-400 font-bold text-center text-sm">
@@ -528,18 +543,6 @@ const MotorinAlim = () => {
                       data-testid={`entry-net-litre-${idx}`}
                     />
                   </div>
-                  <div>
-                    <Label className="md:hidden text-slate-300 text-xs">Kantar KG</Label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      value={row.kantar_kg}
-                      onChange={(e) => updateEntry(idx, 'kantar_kg', e.target.value)}
-                      className="bg-slate-800 border-slate-700 text-white h-9"
-                      placeholder="Kantar"
-                      data-testid={`entry-kantar-kg-${idx}`}
-                    />
-                  </div>
                 </div>
               );
             })}
@@ -548,7 +551,7 @@ const MotorinAlim = () => {
           {/* Toplamlar */}
           <div className="mt-4 pt-4 border-t-2 border-amber-500/40">
             <div
-              className="grid grid-cols-1 gap-2 items-end bg-amber-500/10 rounded-lg p-3 md:[grid-template-columns:40px_repeat(5,minmax(0,1fr))]"
+              className="grid grid-cols-1 gap-2 items-end bg-amber-500/10 rounded-lg p-3 md:[grid-template-columns:40px_repeat(4,minmax(0,1fr))]"
               data-testid="entries-totals"
             >
               <div className="text-amber-400 font-bold text-center text-sm uppercase">Σ</div>
@@ -576,7 +579,7 @@ const MotorinAlim = () => {
                 <Label className="text-amber-300 text-xs uppercase tracking-wider">Ort. Kesafet</Label>
                 <Input
                   type="text"
-                  value={totals.net_litre > 0 ? (totals.miktar_kg / totals.net_litre).toFixed(4) : '-'}
+                  value={avgKesafet > 0 ? avgKesafet.toFixed(4) : '-'}
                   readOnly
                   className="bg-slate-950/60 border-amber-500/30 text-amber-300 font-mono h-10"
                   data-testid="total-avg-kesafet"
@@ -592,15 +595,61 @@ const MotorinAlim = () => {
                   data-testid="total-net-litre"
                 />
               </div>
+            </div>
+
+            {/* Kantar girişi + Litre çevrimi + Fark */}
+            <div className="mt-3 grid grid-cols-1 md:grid-cols-3 gap-3 bg-blue-500/10 border border-blue-500/30 rounded-lg p-3" data-testid="kantar-section">
               <div>
-                <Label className="text-amber-300 text-xs uppercase tracking-wider">Toplam Kantar KG</Label>
+                <Label className="text-blue-300 text-xs uppercase tracking-wider">Toplam Kantar KG (Manuel) *</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={toplamKantarKg}
+                  onChange={(e) => setToplamKantarKg(e.target.value)}
+                  className="bg-slate-800 border-blue-500/40 text-white font-mono h-10 mt-1"
+                  placeholder="Örn: 25200"
+                  data-testid="manual-kantar-kg"
+                />
+              </div>
+              <div>
+                <Label className="text-blue-300 text-xs uppercase tracking-wider">Kantar Litre (Kantar KG / Kesafet)</Label>
                 <Input
                   type="text"
-                  value={totals.kantar_kg > 0 ? totals.kantar_kg.toLocaleString('tr-TR', { maximumFractionDigits: 2 }) : '0'}
+                  value={kantarLitre > 0 ? kantarLitre.toLocaleString('tr-TR', { maximumFractionDigits: 2 }) : '0'}
                   readOnly
-                  className="bg-slate-950/60 border-amber-500/30 text-amber-300 font-mono font-bold h-10"
-                  data-testid="total-kantar-kg"
+                  className="bg-slate-950/60 border-blue-500/30 text-blue-300 font-mono font-bold h-10 mt-1"
+                  data-testid="kantar-litre"
                 />
+              </div>
+              <div>
+                <Label className={`text-xs uppercase tracking-wider ${fark < 0 ? 'text-red-400' : fark > 0 ? 'text-green-400' : 'text-slate-400'}`}>
+                  Fark (Kantar L − Giriş L)
+                </Label>
+                <div className="flex items-center gap-2 mt-1">
+                  <Input
+                    type="text"
+                    value={
+                      fark === 0
+                        ? '0'
+                        : (fark < 0 ? '-' : '+') + Math.abs(fark).toLocaleString('tr-TR', { maximumFractionDigits: 2 }) + ' L'
+                    }
+                    readOnly
+                    className={`bg-slate-950/60 font-mono font-bold h-10 ${
+                      fark < 0 ? 'border-red-500/40 text-red-400' : fark > 0 ? 'border-green-500/40 text-green-400' : 'border-slate-700 text-slate-400'
+                    }`}
+                    data-testid="fark-litre"
+                  />
+                  {fark !== 0 && (
+                    <span
+                      className={`px-2 py-1 rounded text-xs font-bold uppercase shrink-0 ${
+                        fark < 0 ? 'bg-red-500/20 text-red-400' : 'bg-green-500/20 text-green-400'
+                      }`}
+                      data-testid="fark-durum"
+                    >
+                      {fark < 0 ? 'Eksik' : 'Fazla'}
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
           </div>
