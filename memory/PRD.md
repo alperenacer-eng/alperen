@@ -7,6 +7,18 @@ GitHub'dan getirilen mevcut Acerler BIMS projesinin Puantaj, Personel ve Raporla
 - Backend: FastAPI + SQLite (aiosqlite)
 - Frontend: React 19 + CRACO + Tailwind + Radix UI
 
+## 🌐 Domain & Deployment (KRİTİK — UNUTMA)
+- **Custom Domain (kullanıcı tarafından alındı):** `acerlerbims` (tam uzantı kullanıcı tarafından belirtilmedi — sorulduğunda netleştir)
+- **Emergent Production URL:** `https://acer-engine.emergent.host`
+- **Emergent Preview URL (dev):** `https://acer-engine.preview.emergentagent.com`
+- **GitHub Repo (otomatik yedek hedefi):** `alperenacer-eng/alperen` (branch: `main`)
+- **Deploy durumu:** Production'a deploy edildi (Şub 2026), 50 kredi/ay
+- **Custom domain bağlama:** Emergent'in "Link domain" → Entri akışıyla yapılacak (kullanıcı bağlayacak)
+
+## 🗣️ Kullanıcı Dili
+**TÜRKÇE** — tüm yanıtlar Türkçe olmalı.
+
+
 ## Bu Oturumda Yapılanlar
 
 ### Önceki Oturum (Jan 2026)
