@@ -3000,8 +3000,11 @@ async def github_sync_status():
 
 
 @api_router.post("/github-sync/push-all")
-async def github_sync_push_all():
-    """Manually push all tables + full database to GitHub (admin only)."""
+async def github_sync_push_all(current_user: dict = Depends(get_current_user)):
+    """Manually push all tables + full database to GitHub.
+
+    Available to any authenticated user (per product requirement).
+    """
     result = await push_all_tables()
     return result
 

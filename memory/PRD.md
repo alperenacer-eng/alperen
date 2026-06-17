@@ -54,6 +54,23 @@ SQLite: `/app/backend/data/database.db` (mevcut veriler korundu)
 - `MotorinVerme.js` 1430+ satır → alt bileşenlere bölünmeli (UploadsList, RecordsModal, EditRecordModal)
 - `XLSX.utils.sheet_to_json({ raw: true })` ile sayısal hücrelerin doğrudan JS number gelmesi
 
+### Bu Oturum (Şubat 2026) - GitHub Otomatik Senkronizasyon
+1. **GitHub Auto-Sync (RESOLVED)**:
+   - `/app/backend/github_sync.py` modülü oluşturuldu — debounce'lı, async push
+   - FastAPI middleware: POST/PUT/DELETE → otomatik tetikleme
+   - Her tablo `data/<table>.json` olarak push (3sn debounce)
+   - Full `backups/database.db` push (10sn debounce)
+   - `users` tablosu güvenlik için skip ediliyor (parola hash içerir)
+   - Repo: `alperenacer-eng/alperen`, Branch: `main`
+   - GITHUB_TOKEN .env'de saklı
+
+2. **Manuel Tam Yedek Al Butonu (RESOLVED — Şub 2026)**:
+   - Backend: `POST /api/github-sync/push-all` — `current_user` ile auth gerekli
+   - Frontend: `ModuleSelector.js` ana sayfa sağ üstte turuncu gradient buton
+   - Loading state, sonner toast (success/warning/error)
+   - Tüm giriş yapmış kullanıcılara açık (admin/staff fark etmez)
+   - Test: 45/45 tablo + database.db başarıyla GitHub'a push edildi
+
 ## Next Action Items
-- Kullanıcı yeni Excel akışını test edip dönüş yapacak
+- Kullanıcı manuel yedek butonunu UI'da test edip dönüş yapacak
 - Diğer modüllerde benzer Excel desteği isteniyorsa eklenebilir
