@@ -86,19 +86,28 @@ const MotorinKaynaklar = () => {
 
   const handleTedarikciSubmit = async (e) => {
     e.preventDefault();
-    if (!tedarikciForm.name.trim()) {
+    const name = (tedarikciForm.name || '').trim();
+    if (!name) {
       toast.error('Firma adı zorunludur');
+      return;
+    }
+
+    const duplicate = tedarikciler.find(
+      t => (t.name || '').trim().toLowerCase() === name.toLowerCase() && t.id !== editingTedarikciId
+    );
+    if (duplicate) {
+      toast.error(`"${duplicate.name}" zaten kayıtlı`);
       return;
     }
 
     try {
       if (editingTedarikciId) {
-        await axios.put(`${API_URL}/motorin-tedarikciler/${editingTedarikciId}`, tedarikciForm, {
+        await axios.put(`${API_URL}/motorin-tedarikciler/${editingTedarikciId}`, { ...tedarikciForm, name }, {
           headers: { Authorization: `Bearer ${token}` }
         });
         toast.success('Tedarikçi güncellendi');
       } else {
-        await axios.post(`${API_URL}/motorin-tedarikciler`, tedarikciForm, {
+        await axios.post(`${API_URL}/motorin-tedarikciler`, { ...tedarikciForm, name }, {
           headers: { Authorization: `Bearer ${token}` }
         });
         toast.success('Tedarikçi eklendi');
@@ -163,19 +172,29 @@ const MotorinKaynaklar = () => {
 
   const handleTesisSubmit = async (e) => {
     e.preventDefault();
-    if (!tesisForm.name.trim()) {
+    const name = (tesisForm.name || '').trim();
+    if (!name) {
       toast.error('Tesis adı zorunludur');
+      return;
+    }
+
+    // Aynı isimle başka kayıt var mı (düzenleme dışında) — büyük/küçük harf duyarsız
+    const duplicate = tesisler.find(
+      t => (t.name || '').trim().toLowerCase() === name.toLowerCase() && t.id !== editingTesisId
+    );
+    if (duplicate) {
+      toast.error(`"${duplicate.name}" zaten kayıtlı`);
       return;
     }
 
     try {
       if (editingTesisId) {
-        await axios.put(`${API_URL}/bosaltim-tesisleri/${editingTesisId}`, tesisForm, {
+        await axios.put(`${API_URL}/bosaltim-tesisleri/${editingTesisId}`, { ...tesisForm, name }, {
           headers: { Authorization: `Bearer ${token}` }
         });
         toast.success('Tesis güncellendi');
       } else {
-        await axios.post(`${API_URL}/bosaltim-tesisleri`, tesisForm, {
+        await axios.post(`${API_URL}/bosaltim-tesisleri`, { ...tesisForm, name }, {
           headers: { Authorization: `Bearer ${token}` }
         });
         toast.success('Tesis eklendi');
@@ -235,19 +254,28 @@ const MotorinKaynaklar = () => {
 
   const handleMarkaSubmit = async (e) => {
     e.preventDefault();
-    if (!markaForm.name.trim()) {
+    const name = (markaForm.name || '').trim();
+    if (!name) {
       toast.error('Marka adı zorunludur');
+      return;
+    }
+
+    const duplicate = markalar.find(
+      m => (m.name || '').trim().toLowerCase() === name.toLowerCase() && m.id !== editingMarkaId
+    );
+    if (duplicate) {
+      toast.error(`"${duplicate.name}" zaten kayıtlı`);
       return;
     }
 
     try {
       if (editingMarkaId) {
-        await axios.put(`${API_URL}/akaryakit-markalari/${editingMarkaId}`, markaForm, {
+        await axios.put(`${API_URL}/akaryakit-markalari/${editingMarkaId}`, { ...markaForm, name }, {
           headers: { Authorization: `Bearer ${token}` }
         });
         toast.success('Marka güncellendi');
       } else {
-        await axios.post(`${API_URL}/akaryakit-markalari`, markaForm, {
+        await axios.post(`${API_URL}/akaryakit-markalari`, { ...markaForm, name }, {
           headers: { Authorization: `Bearer ${token}` }
         });
         toast.success('Marka eklendi');

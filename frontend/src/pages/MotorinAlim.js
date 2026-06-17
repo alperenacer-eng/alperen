@@ -142,7 +142,8 @@ const MotorinAlim = () => {
 
   // Hızlı kaynak ekleme fonksiyonu
   const handleQuickAdd = async () => {
-    if (!quickAddValue.trim()) {
+    const name = quickAddValue.trim();
+    if (!name) {
       toast.error('Lütfen bir değer girin');
       return;
     }
@@ -153,9 +154,32 @@ const MotorinAlim = () => {
       'bosaltim_tesisi': '/bosaltim-tesisleri'
     };
 
+    // Mevcut listeden kontrol et — varsa yeniden ekleme, sadece seç
+    const lists = {
+      'tedarikci': tedarikciler,
+      'akaryakit_markasi': markalar,
+      'bosaltim_tesisi': tesisler
+    };
+    const existing = lists[quickAddModal.type]?.find(
+      x => (x.name || '').trim().toLowerCase() === name.toLowerCase()
+    );
+    if (existing) {
+      toast.info(`"${name}" zaten kayıtlı — seçildi`);
+      setQuickAddModal({ open: false, type: '', title: '' });
+      setQuickAddValue('');
+      if (quickAddModal.type === 'tedarikci') {
+        setFormData(prev => ({ ...prev, tedarikci_id: existing.id, tedarikci_adi: existing.name }));
+      } else if (quickAddModal.type === 'akaryakit_markasi') {
+        setFormData(prev => ({ ...prev, akaryakit_markasi: existing.name }));
+      } else if (quickAddModal.type === 'bosaltim_tesisi') {
+        setFormData(prev => ({ ...prev, bosaltim_tesisi: existing.name }));
+      }
+      return;
+    }
+
     try {
-      const response = await axios.post(`${API_URL}${endpoints[quickAddModal.type]}`, 
-        { name: quickAddValue.trim() },
+      const response = await axios.post(`${API_URL}${endpoints[quickAddModal.type]}`,
+        { name },
         { headers: { Authorization: `Bearer ${token}` }}
       );
 
@@ -163,21 +187,21 @@ const MotorinAlim = () => {
         toast.success(`${quickAddModal.title} eklendi`);
         setQuickAddModal({ open: false, type: '', title: '' });
         setQuickAddValue('');
-        
+
         // İlgili listeyi yenile ve eklenen değeri seç
         if (quickAddModal.type === 'tedarikci') {
           fetchTedarikciler();
-          setFormData(prev => ({ 
-            ...prev, 
+          setFormData(prev => ({
+            ...prev,
             tedarikci_id: response.data.id,
-            tedarikci_adi: quickAddValue.trim() 
+            tedarikci_adi: name
           }));
         } else if (quickAddModal.type === 'akaryakit_markasi') {
           fetchMarkalar();
-          setFormData(prev => ({ ...prev, akaryakit_markasi: quickAddValue.trim() }));
+          setFormData(prev => ({ ...prev, akaryakit_markasi: name }));
         } else if (quickAddModal.type === 'bosaltim_tesisi') {
           fetchTesisler();
-          setFormData(prev => ({ ...prev, bosaltim_tesisi: quickAddValue.trim() }));
+          setFormData(prev => ({ ...prev, bosaltim_tesisi: name }));
         }
       }
     } catch (error) {
@@ -202,11 +226,10 @@ const MotorinAlim = () => {
   };
 
   const handleTesisChange = (e) => {
-    const tesisId = e.target.value;
-    const tesis = tesisler.find(t => t.id === tesisId);
+    // Dropdown option value={t.name} olduğu için doğrudan kullan
     setFormData({
       ...formData,
-      bosaltim_tesisi: tesis ? tesis.name : ''
+      bosaltim_tesisi: e.target.value
     });
   };
 
