@@ -1,7 +1,7 @@
 {
   "table": "puantaj",
-  "exported_at": "2026-06-30T11:23:09.850860+00:00",
-  "row_count": 90,
+  "exported_at": "2026-06-30T11:23:29.698118+00:00",
+  "row_count": 91,
   "rows": [
     {
       "id": "1774260465758916",
@@ -1438,6 +1438,22 @@
       "fazla_mesai": 0.0,
       "notlar": "",
       "created_at": "2026-06-30T11:23:06.843782+00:00",
+      "tesis_id": "",
+      "tesis_adi": "",
+      "durum": "geldi",
+      "durum2": ""
+    },
+    {
+      "id": "1782818606690759",
+      "personel_id": "1780413419512577",
+      "personel_adi": "MUSTAFA KANTÜRK",
+      "tarih": "2026-06-04",
+      "giris_saati": "08:00",
+      "cikis_saati": "22:00",
+      "mesai_suresi": 0.0,
+      "fazla_mesai": 0.0,
+      "notlar": "",
+      "created_at": "2026-06-30T11:23:26.690749+00:00",
       "tesis_id": "",
       "tesis_adi": "",
       "durum": "geldi",
