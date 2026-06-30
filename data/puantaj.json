@@ -1,7 +1,7 @@
 {
   "table": "puantaj",
-  "exported_at": "2026-06-30T11:22:32.864825+00:00",
-  "row_count": 88,
+  "exported_at": "2026-06-30T11:23:00.124623+00:00",
+  "row_count": 89,
   "rows": [
     {
       "id": "1774260465758916",
@@ -1406,6 +1406,22 @@
       "fazla_mesai": 0.0,
       "notlar": "",
       "created_at": "2026-06-30T11:22:29.857495+00:00",
+      "tesis_id": "",
+      "tesis_adi": "",
+      "durum": "geldi",
+      "durum2": ""
+    },
+    {
+      "id": "1782818577115871",
+      "personel_id": "1780325568575938",
+      "personel_adi": "ABDULLAH YASİN ÇAĞLAK",
+      "tarih": "2026-06-03",
+      "giris_saati": "08:00",
+      "cikis_saati": "20:00",
+      "mesai_suresi": 0.0,
+      "fazla_mesai": 0.0,
+      "notlar": "",
+      "created_at": "2026-06-30T11:22:57.115860+00:00",
       "tesis_id": "",
       "tesis_adi": "",
       "durum": "geldi",
