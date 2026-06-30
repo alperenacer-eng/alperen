@@ -1,7 +1,7 @@
 {
   "table": "puantaj",
-  "exported_at": "2026-06-30T11:21:48.840122+00:00",
-  "row_count": 85,
+  "exported_at": "2026-06-30T11:21:58.869687+00:00",
+  "row_count": 86,
   "rows": [
     {
       "id": "1774260465758916",
@@ -1358,6 +1358,22 @@
       "fazla_mesai": 0.0,
       "notlar": "",
       "created_at": "2026-06-30T11:21:45.832782+00:00",
+      "tesis_id": "",
+      "tesis_adi": "",
+      "durum": "geldi",
+      "durum2": ""
+    },
+    {
+      "id": "1782818515862725",
+      "personel_id": "1780325314853497",
+      "personel_adi": "ABDULLAH ARI",
+      "tarih": "2026-06-02",
+      "giris_saati": "08:00",
+      "cikis_saati": "21:00",
+      "mesai_suresi": 0.0,
+      "fazla_mesai": 0.0,
+      "notlar": "",
+      "created_at": "2026-06-30T11:21:55.862715+00:00",
       "tesis_id": "",
       "tesis_adi": "",
       "durum": "geldi",
