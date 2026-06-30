@@ -1,7 +1,7 @@
 {
   "table": "puantaj",
-  "exported_at": "2026-06-30T11:22:15.552015+00:00",
-  "row_count": 87,
+  "exported_at": "2026-06-30T11:22:32.864825+00:00",
+  "row_count": 88,
   "rows": [
     {
       "id": "1774260465758916",
@@ -1390,6 +1390,22 @@
       "fazla_mesai": 0.0,
       "notlar": "",
       "created_at": "2026-06-30T11:22:12.545087+00:00",
+      "tesis_id": "",
+      "tesis_adi": "",
+      "durum": "geldi",
+      "durum2": ""
+    },
+    {
+      "id": "1782818549857506",
+      "personel_id": "1780412157396884",
+      "personel_adi": "EMRAH BAYRAKTAR",
+      "tarih": "2026-06-02",
+      "giris_saati": "08:00",
+      "cikis_saati": "21:30",
+      "mesai_suresi": 0.0,
+      "fazla_mesai": 0.0,
+      "notlar": "",
+      "created_at": "2026-06-30T11:22:29.857495+00:00",
       "tesis_id": "",
       "tesis_adi": "",
       "durum": "geldi",
