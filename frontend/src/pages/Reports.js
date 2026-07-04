@@ -644,6 +644,7 @@ const Reports = () => {
                     <th className="text-right py-3 px-3">Üretilen Net Palet</th>
                     <th className="text-right py-3 px-3">Çalışılan Vardiya</th>
                     <th className="text-right py-3 px-3">Harcanan Çimento</th>
+                    <th className="text-right py-3 px-3">Vardiya Başı</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -653,6 +654,11 @@ const Reports = () => {
                       <td className="py-3 px-3 text-right font-mono text-purple-400">{fmtTR(m.total_net_pallets)}</td>
                       <td className="py-3 px-3 text-right font-mono text-cyan-400">{fmtTR(m.total_records)}</td>
                       <td className="py-3 px-3 text-right font-mono text-amber-400">{fmtTR(m.total_cement_used)}</td>
+                      <td className="py-3 px-3 text-right font-mono text-emerald-400">
+                        {m.total_records > 0
+                          ? (m.total_net_pallets / m.total_records).toLocaleString('tr-TR', { maximumFractionDigits: 2 })
+                          : '0'}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -667,6 +673,11 @@ const Reports = () => {
                     </td>
                     <td className="py-3 px-3 text-right font-mono text-amber-400 font-bold text-base">
                       {fmtTR(yearlyData.totals.total_cement_used)}
+                    </td>
+                    <td className="py-3 px-3 text-right font-mono text-emerald-400 font-bold text-base">
+                      {yearlyData.totals.total_records > 0
+                        ? (yearlyData.totals.total_net_pallets / yearlyData.totals.total_records).toLocaleString('tr-TR', { maximumFractionDigits: 2 })
+                        : '0'}
                     </td>
                   </tr>
                 </tfoot>
