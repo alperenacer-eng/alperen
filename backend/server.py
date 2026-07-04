@@ -3481,6 +3481,88 @@ async def get_yearly_report(year: int, module: Optional[str] = None,
         "totals": totals,
     }
 
+@api_router.get("/reports/product-based")
+async def get_product_based_report(module: Optional[str] = None,
+                                    current_user: dict = Depends(get_current_user)):
+    """Ürün bazlı rapor - Üretilen ve üretimden çıkan (paketlenmiş) toplamları."""
+    db = await get_db()
+    query = "SELECT * FROM production_records WHERE 1=1"
+    params = []
+    if module:
+        query += " AND module = ?"
+        params.append(module)
+    async with db.execute(query, params) as cursor:
+        rows = await cursor.fetchall()
+    await db.close()
+
+    records = rows_to_list(rows)
+
+    # Ürün adı bazlı üretim toplamları
+    uretilen_by_product = {}
+    # Ürün adı bazlı çıkan (paket) toplamları
+    cikan_by_product = {}
+
+    for r in records:
+        # --- Üretilen ---
+        pname = (r.get("product_name") or "").strip() or "-"
+        qty = r.get("quantity", 0) or 0
+        if pname not in uretilen_by_product:
+            uretilen_by_product[pname] = 0
+        uretilen_by_product[pname] += qty
+
+        # --- Çıkan paket ürünleri ---
+        for i in range(1, 6):
+            paket_str = r.get(f"cikan_paket_{i}")
+            if not paket_str:
+                continue
+            try:
+                paket = json.loads(paket_str) if isinstance(paket_str, str) else paket_str
+                if not paket:
+                    continue
+                cpname = (paket.get("urun_adi") or "").strip()
+                if not cpname:
+                    continue
+                paket_7 = int(paket.get("paket_7_boy") or 0)
+                paket_5 = int(paket.get("paket_5_boy") or 0)
+                birim_7 = int(paket.get("birim_7_boy") or 0)
+                birim_5 = int(paket.get("birim_5_boy") or 0)
+                toplam = (paket_7 * birim_7) + (paket_5 * birim_5)
+                if cpname not in cikan_by_product:
+                    cikan_by_product[cpname] = 0
+                cikan_by_product[cpname] += toplam
+            except (ValueError, TypeError, json.JSONDecodeError):
+                continue
+
+    # Tüm ürünleri birleştir
+    all_products = set(uretilen_by_product.keys()) | set(cikan_by_product.keys())
+    products = []
+    total_uretilen = 0
+    total_cikan = 0
+    for name in all_products:
+        u = uretilen_by_product.get(name, 0)
+        c = cikan_by_product.get(name, 0)
+        icerde = u - c
+        products.append({
+            "product_name": name,
+            "uretilen": u,
+            "cikan": c,
+            "icerde_kalan": icerde,
+        })
+        total_uretilen += u
+        total_cikan += c
+
+    # Üretilen çoktan aza sırala
+    products.sort(key=lambda x: x["uretilen"], reverse=True)
+
+    return {
+        "products": products,
+        "totals": {
+            "total_uretilen": total_uretilen,
+            "total_cikan": total_cikan,
+            "total_icerde_kalan": total_uretilen - total_cikan,
+        },
+    }
+
 @api_router.get("/reports/daily-detailed")
 async def get_daily_detailed_report(days: int = 7, module: Optional[str] = None,
                                      current_user: dict = Depends(get_current_user)):

@@ -35,11 +35,15 @@ const Reports = () => {
   const [monthlyData, setMonthlyData] = useState(null);
   const [monthlyLoading, setMonthlyLoading] = useState(false);
 
-  // Sekme (Ay Bazlı / Yıl Bazlı) ve Yıl Bazlı Rapor state
-  const [activeTab, setActiveTab] = useState('monthly'); // 'monthly' | 'yearly'
+  // Sekme (Ay Bazlı / Yıl Bazlı / Ürün Bazlı) ve Yıl Bazlı Rapor state
+  const [activeTab, setActiveTab] = useState('monthly'); // 'monthly' | 'yearly' | 'product'
   const [yearlySelectedYear, setYearlySelectedYear] = useState(now.getFullYear());
   const [yearlyData, setYearlyData] = useState(null);
   const [yearlyLoading, setYearlyLoading] = useState(false);
+
+  // Ürün Bazlı Rapor state
+  const [productData, setProductData] = useState(null);
+  const [productLoading, setProductLoading] = useState(false);
 
   useEffect(() => {
     if (!currentModule) {
@@ -100,10 +104,29 @@ const Reports = () => {
     fetchYearly(y);
   };
 
-  // Yıl Bazlı sekmesine ilk geçişte veri çek
+  const fetchProductBased = async () => {
+    setProductLoading(true);
+    try {
+      const res = await axios.get(`${API_URL}/reports/product-based?module=${currentModule.id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setProductData(res.data);
+    } catch (error) {
+      toast.error('Ürün bazlı rapor yüklenemedi');
+      setProductData(null);
+    } finally {
+      setProductLoading(false);
+    }
+  };
+
+  // Yıl / Ürün Bazlı sekmelerine ilk geçişte veri çek
   useEffect(() => {
-    if (activeTab === 'yearly' && currentModule && !yearlyData && !yearlyLoading) {
+    if (!currentModule) return;
+    if (activeTab === 'yearly' && !yearlyData && !yearlyLoading) {
       fetchYearly(yearlySelectedYear);
+    }
+    if (activeTab === 'product' && !productData && !productLoading) {
+      fetchProductBased();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, currentModule]);
@@ -306,6 +329,18 @@ const Reports = () => {
         >
           <CalendarRange className="w-4 h-4" />
           Yıl Bazlı Rapor
+        </button>
+        <button
+          onClick={() => setActiveTab('product')}
+          data-testid="tab-product"
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-lg font-medium transition-all ${
+            activeTab === 'product'
+              ? 'bg-cyan-500 text-white shadow-lg shadow-cyan-500/20'
+              : 'bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-700'
+          }`}
+        >
+          <Package className="w-4 h-4" />
+          Ürün Bazlı Rapor
         </button>
       </div>
 
@@ -686,6 +721,74 @@ const Reports = () => {
           </>
         ) : (
           <div className="text-center py-8 text-slate-500">Bu yıl için veri bulunmuyor</div>
+        )}
+      </div>
+      )}
+
+      {/* ÜRÜN BAZLI RAPOR */}
+      {activeTab === 'product' && (
+      <div className="glass-effect rounded-xl p-6 border border-orange-500/30 bg-orange-500/5 mb-8" data-testid="product-panel">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-5">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-orange-400/20 border border-orange-400/30 rounded-lg flex items-center justify-center">
+              <Package className="w-5 h-5 text-orange-400" />
+            </div>
+            <div>
+              <h2 className="text-xl font-semibold text-white">Ürün Bazlı Rapor</h2>
+              <p className="text-sm text-slate-400">Ürün bazlı üretim ve üretimden çıkan toplamları — İçeride Kalan otomatik hesaplanır</p>
+            </div>
+          </div>
+        </div>
+
+        {productLoading ? (
+          <div className="text-center py-8 text-slate-400">Yükleniyor...</div>
+        ) : productData && productData.products && productData.products.length > 0 ? (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm" data-testid="product-based-table">
+              <thead>
+                <tr className="border-b border-slate-700 text-slate-400 text-xs">
+                  <th className="text-left py-3 px-3">Ürün</th>
+                  <th className="text-right py-3 px-3">Üretilen Adet</th>
+                  <th className="text-right py-3 px-3">Çıkan Adet</th>
+                  <th className="text-right py-3 px-3">İçeride Kalan</th>
+                </tr>
+              </thead>
+              <tbody>
+                {productData.products.map((p, idx) => {
+                  const kalan = Number(p.icerde_kalan || 0);
+                  const kalanColor = kalan < 0 ? 'text-red-400' : kalan === 0 ? 'text-slate-300' : 'text-emerald-400';
+                  return (
+                    <tr key={idx} className="border-b border-slate-800/50 hover:bg-slate-800/30">
+                      <td className="py-3 px-3 text-white font-medium">{p.product_name}</td>
+                      <td className="py-3 px-3 text-right font-mono text-orange-400">{fmtTR(p.uretilen)}</td>
+                      <td className="py-3 px-3 text-right font-mono text-blue-400">{fmtTR(p.cikan)}</td>
+                      <td className={`py-3 px-3 text-right font-mono font-semibold ${kalanColor}`}>{fmtTR(kalan)}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+              <tfoot>
+                <tr className="border-t-2 border-orange-500/40 bg-slate-800/40">
+                  <td className="py-3 px-3 text-white font-bold text-base">GENEL TOPLAM</td>
+                  <td className="py-3 px-3 text-right font-mono text-orange-400 font-bold text-base">
+                    {fmtTR(productData.totals.total_uretilen)}
+                  </td>
+                  <td className="py-3 px-3 text-right font-mono text-blue-400 font-bold text-base">
+                    {fmtTR(productData.totals.total_cikan)}
+                  </td>
+                  <td className={`py-3 px-3 text-right font-mono font-bold text-base ${
+                    Number(productData.totals.total_icerde_kalan) < 0 ? 'text-red-400'
+                    : Number(productData.totals.total_icerde_kalan) === 0 ? 'text-slate-300'
+                    : 'text-emerald-400'
+                  }`}>
+                    {fmtTR(productData.totals.total_icerde_kalan)}
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        ) : (
+          <div className="text-center py-8 text-slate-500">Veri bulunmuyor</div>
         )}
       </div>
       )}
