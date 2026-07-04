@@ -9,7 +9,7 @@ import json
 import sys
 
 # Backend URL from frontend/.env
-BACKEND_URL = "https://getir-project-1.preview.emergentagent.com/api"
+BACKEND_URL = "https://alperen-preview-2.preview.emergentagent.com/api"
 
 # Test credentials
 LOGIN_EMAIL = "alperenacer@acerler.com"
