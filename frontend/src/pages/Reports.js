@@ -6,7 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Button } from '@/components/ui/button';
-import { Calendar, TrendingUp, Download, FileText, Sun, Moon, Factory, Package, ChevronDown, ChevronUp, CalendarDays, FileSpreadsheet } from 'lucide-react';
+import { Calendar, TrendingUp, Download, FileText, Sun, Moon, Factory, Package, ChevronDown, ChevronUp, CalendarDays, FileSpreadsheet, CalendarRange } from 'lucide-react';
 import { format } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import * as XLSX from 'xlsx';
@@ -34,6 +34,12 @@ const Reports = () => {
   const [selectedMonth, setSelectedMonth] = useState(now.getMonth() + 1);
   const [monthlyData, setMonthlyData] = useState(null);
   const [monthlyLoading, setMonthlyLoading] = useState(false);
+
+  // Sekme (Ay Bazlı / Yıl Bazlı) ve Yıl Bazlı Rapor state
+  const [activeTab, setActiveTab] = useState('monthly'); // 'monthly' | 'yearly'
+  const [yearlySelectedYear, setYearlySelectedYear] = useState(now.getFullYear());
+  const [yearlyData, setYearlyData] = useState(null);
+  const [yearlyLoading, setYearlyLoading] = useState(false);
 
   useEffect(() => {
     if (!currentModule) {
@@ -73,6 +79,34 @@ const Reports = () => {
     setSelectedMonth(m);
     fetchMonthly(selectedYear, m);
   };
+
+  const fetchYearly = async (year) => {
+    setYearlyLoading(true);
+    try {
+      const res = await axios.get(`${API_URL}/reports/yearly?year=${year}&module=${currentModule.id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setYearlyData(res.data);
+    } catch (error) {
+      toast.error('Yıllık rapor yüklenemedi');
+      setYearlyData(null);
+    } finally {
+      setYearlyLoading(false);
+    }
+  };
+
+  const handleYearlyYearChange = (y) => {
+    setYearlySelectedYear(y);
+    fetchYearly(y);
+  };
+
+  // Yıl Bazlı sekmesine ilk geçişte veri çek
+  useEffect(() => {
+    if (activeTab === 'yearly' && currentModule && !yearlyData && !yearlyLoading) {
+      fetchYearly(yearlySelectedYear);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, currentModule]);
 
   const yearOptions = (() => {
     const cy = now.getFullYear();
@@ -247,7 +281,36 @@ const Reports = () => {
         </div>
       </div>
 
-      {/* YIL / AY FİLTRESİ - Aylık Üretim Toplamları */}
+      {/* Sekme Butonları */}
+      <div className="flex gap-2 mb-4" data-testid="report-tabs">
+        <button
+          onClick={() => setActiveTab('monthly')}
+          data-testid="tab-monthly"
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-lg font-medium transition-all ${
+            activeTab === 'monthly'
+              ? 'bg-cyan-500 text-white shadow-lg shadow-cyan-500/20'
+              : 'bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-700'
+          }`}
+        >
+          <CalendarDays className="w-4 h-4" />
+          Ay Bazlı Rapor
+        </button>
+        <button
+          onClick={() => setActiveTab('yearly')}
+          data-testid="tab-yearly"
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-lg font-medium transition-all ${
+            activeTab === 'yearly'
+              ? 'bg-cyan-500 text-white shadow-lg shadow-cyan-500/20'
+              : 'bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-700'
+          }`}
+        >
+          <CalendarRange className="w-4 h-4" />
+          Yıl Bazlı Rapor
+        </button>
+      </div>
+
+      {/* AY BAZLI RAPOR - YIL / AY FİLTRESİ */}
+      {activeTab === 'monthly' && (
       <div className="glass-effect rounded-xl p-6 border border-cyan-500/30 bg-cyan-500/5 mb-8" data-testid="monthly-panel">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-5">
           <div className="flex items-center gap-3">
@@ -255,7 +318,7 @@ const Reports = () => {
               <CalendarDays className="w-5 h-5 text-cyan-400" />
             </div>
             <div>
-              <h2 className="text-xl font-semibold text-white">Aylık Üretim Toplamları</h2>
+              <h2 className="text-xl font-semibold text-white">Ay Bazlı Rapor</h2>
               <p className="text-sm text-slate-400">Yıl ve ay seçin, dönem üretim toplamı otomatik gelir</p>
             </div>
           </div>
@@ -535,6 +598,86 @@ const Reports = () => {
           <div className="text-center py-8 text-slate-500">Bu dönem için veri bulunmuyor</div>
         )}
       </div>
+      )}
+
+      {/* YIL BAZLI RAPOR */}
+      {activeTab === 'yearly' && (
+      <div className="glass-effect rounded-xl p-6 border border-purple-500/30 bg-purple-500/5 mb-8" data-testid="yearly-panel">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-5">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-purple-400/20 border border-purple-400/30 rounded-lg flex items-center justify-center">
+              <CalendarRange className="w-5 h-5 text-purple-400" />
+            </div>
+            <div>
+              <h2 className="text-xl font-semibold text-white">Yıl Bazlı Rapor</h2>
+              <p className="text-sm text-slate-400">Seçilen yıl için aylık üretim toplamları</p>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <label className="text-sm text-slate-400">Yıl:</label>
+            <select
+              value={yearlySelectedYear}
+              onChange={(e) => handleYearlyYearChange(parseInt(e.target.value))}
+              data-testid="yearly-year-select"
+              className="bg-slate-900 border border-slate-700 text-white rounded-md px-3 py-2 h-10 focus:outline-none focus:border-purple-500"
+            >
+              {yearOptions.map(y => (
+                <option key={y} value={y}>{y}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {yearlyLoading ? (
+          <div className="text-center py-8 text-slate-400">Yükleniyor...</div>
+        ) : yearlyData && yearlyData.months ? (
+          <>
+            <p className="text-purple-400 text-sm mb-4 font-medium">
+              {yearlyData.year} Yılı Aylık Toplamları
+            </p>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm" data-testid="yearly-report-table">
+                <thead>
+                  <tr className="border-b border-slate-700 text-slate-400 text-xs">
+                    <th className="text-left py-3 px-3">Ay</th>
+                    <th className="text-right py-3 px-3">Üretilen Net Palet</th>
+                    <th className="text-right py-3 px-3">Çalışılan Vardiya</th>
+                    <th className="text-right py-3 px-3">Harcanan Çimento</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {yearlyData.months.map((m) => (
+                    <tr key={m.month} className="border-b border-slate-800/50 hover:bg-slate-800/30">
+                      <td className="py-3 px-3 text-white font-medium">{m.month_name}</td>
+                      <td className="py-3 px-3 text-right font-mono text-purple-400">{fmtTR(m.total_net_pallets)}</td>
+                      <td className="py-3 px-3 text-right font-mono text-cyan-400">{fmtTR(m.total_records)}</td>
+                      <td className="py-3 px-3 text-right font-mono text-amber-400">{fmtTR(m.total_cement_used)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot>
+                  <tr className="border-t-2 border-purple-500/40 bg-slate-800/40">
+                    <td className="py-3 px-3 text-white font-bold text-base">GENEL TOPLAM</td>
+                    <td className="py-3 px-3 text-right font-mono text-purple-400 font-bold text-base">
+                      {fmtTR(yearlyData.totals.total_net_pallets)}
+                    </td>
+                    <td className="py-3 px-3 text-right font-mono text-cyan-400 font-bold text-base">
+                      {fmtTR(yearlyData.totals.total_records)}
+                    </td>
+                    <td className="py-3 px-3 text-right font-mono text-amber-400 font-bold text-base">
+                      {fmtTR(yearlyData.totals.total_cement_used)}
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </>
+        ) : (
+          <div className="text-center py-8 text-slate-500">Bu yıl için veri bulunmuyor</div>
+        )}
+      </div>
+      )}
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 mb-8">

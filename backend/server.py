@@ -3396,6 +3396,91 @@ async def get_monthly_report(year: int, month: int, module: Optional[str] = None
         "by_operator": sorted(by_operator.values(), key=lambda x: x["quantity"], reverse=True),
     }
 
+@api_router.get("/reports/yearly")
+async def get_yearly_report(year: int, module: Optional[str] = None,
+                            current_user: dict = Depends(get_current_user)):
+    """Yıl bazlı üretim raporu - 12 ay için aylık toplamlar."""
+    if year < 2000 or year > 2100:
+        raise HTTPException(status_code=400, detail="Geçersiz yıl")
+
+    start_date = f"{year:04d}-01-01"
+    end_date = f"{year + 1:04d}-01-01"
+
+    db = await get_db()
+    query = "SELECT * FROM production_records WHERE 1=1"
+    params = []
+    if module:
+        query += " AND module = ?"
+        params.append(module)
+    async with db.execute(query, params) as cursor:
+        rows = await cursor.fetchall()
+    await db.close()
+
+    records = rows_to_list(rows)
+
+    ay_adlari = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran',
+                 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık']
+
+    # 12 ay için boş şablon
+    months = []
+    for i in range(1, 13):
+        months.append({
+            "month": i,
+            "month_name": ay_adlari[i - 1],
+            "total_quantity": 0,
+            "total_net_pallets": 0,
+            "total_records": 0,
+            "total_cement_used": 0,
+            "total_machine_cement": 0,
+        })
+
+    totals = {
+        "total_quantity": 0,
+        "total_net_pallets": 0,
+        "total_records": 0,
+        "total_cement_used": 0,
+        "total_machine_cement": 0,
+    }
+
+    for r in records:
+        dkey = r.get("production_date") or (r.get("created_at") or "")[:10]
+        if not dkey or dkey < start_date or dkey >= end_date:
+            continue
+
+        try:
+            month_idx = int(dkey[5:7]) - 1
+        except (ValueError, IndexError):
+            continue
+        if month_idx < 0 or month_idx > 11:
+            continue
+
+        qty = r.get("quantity", 0) or 0
+        pal = r.get("pallet_count", 0) or 0
+        waste = r.get("waste", 0) or 0
+        net_pal = max(pal - waste, 0)
+        mix = r.get("mix_count", 0) or 0
+        cmix = r.get("cement_in_mix", 0) or 0
+        harcanan = mix * cmix
+        mk = r.get("machine_cement", 0) or 0
+
+        months[month_idx]["total_quantity"] += qty
+        months[month_idx]["total_net_pallets"] += net_pal
+        months[month_idx]["total_records"] += 1
+        months[month_idx]["total_cement_used"] += harcanan
+        months[month_idx]["total_machine_cement"] += mk
+
+        totals["total_quantity"] += qty
+        totals["total_net_pallets"] += net_pal
+        totals["total_records"] += 1
+        totals["total_cement_used"] += harcanan
+        totals["total_machine_cement"] += mk
+
+    return {
+        "year": year,
+        "months": months,
+        "totals": totals,
+    }
+
 @api_router.get("/reports/daily-detailed")
 async def get_daily_detailed_report(days: int = 7, module: Optional[str] = None,
                                      current_user: dict = Depends(get_current_user)):
