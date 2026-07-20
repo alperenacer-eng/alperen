@@ -87,15 +87,12 @@ SQLite: `/app/backend/data/database.db` (mevcut veriler korundu)
 - Kullanıcı manuel yedek butonunu UI'da test edip dönüş yapacak
 - Diğer modüllerde benzer Excel desteği isteniyorsa eklenebilir
 
-### Bu Oturum (Tem 2025) — Çıkan Paket Toplam Adet
-1. **ProductionEntry.js**:
-   - Çıkan Paket satırına her satır için "Toplam Adet" sütunu eklendi (7 Boy Top. + 5 Boy Top.)
-   - Grid `grid-cols-9` → `grid-cols-10`
-   - Alt toplam satırına 3. sütun eklendi (Genel Toplam) — eski "GENEL TOPLAM" kutusu artık grid içinde
-2. **ProductionList.js (Kayıtlar)**:
-   - Her paket için (P1..P5) yeni computed sütun: `paket_N_toplam` — "PN Toplam Adet"
-   - `cellValue` fonksiyonuna `toplam` regex eşlemesi eklendi
-   - Eski kayıtlarda `paket_7_boy × birim_7_boy + paket_5_boy × birim_5_boy` formülüyle otomatik hesaplanıyor (DB migration'a gerek yok)
+### Bu Oturum (Tem 2025) — Kayıtlar Çıkan Paket Sadeleştirme
+1. **ProductionList.js — Sütun listesi sadeleştirildi**:
+   - Her paket için 6 sütun (Ürün, 7B Adet, 5B Adet, 7B Top., 5B Top., Toplam) yerine artık sadece **2 sütun**: "Çıkan Paket N - Ürün" ve "Çıkan Paket N - Toplam Adet"
+   - Toplam Adet = `paket_7_boy × birim_7_boy + paket_5_boy × birim_5_boy` (eski verilerde de otomatik hesaplanıyor)
+   - localStorage'daki eski sütun ID'leri güvenli şekilde filtreleniyor (loadOrder/loadVisible)
+2. **cellValue** fonksiyonunda `toplam` regex eşlemesi zaten mevcut, korundu
 
 ### Bu Oturum (Şubat 2026) - Kayıtlar Filtreleme & BIMS Rapor Geliştirmesi
 1. **BIMS Üretim Raporu — Ürün Bazlı (RESOLVED)**:
