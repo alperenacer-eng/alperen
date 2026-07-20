@@ -88,6 +88,13 @@ SQLite: `/app/backend/data/database.db` (mevcut veriler korundu)
 - Diğer modüllerde benzer Excel desteği isteniyorsa eklenebilir
 
 ### Bu Oturum (Tem 2025) — Önceki Yıldan İçerde Kalan
+(devamı yukarıda)
+
+### Bu Oturum (Tem 2025) — Kayıtlar Tarih Sıralama Bug Fix
+1. **Bug**: Kayıt güncellendiğinde tarih sırası bozuluyordu (backend `created_at DESC` sıralıyor, `production_date` değiştiği zaman görsel sıra ile uyumsuzluk)
+2. **Fix**: `filteredRecords` useMemo artık `production_date`'e (fallback: `created_at`) göre sıralanıyor. Aynı tarihte `created_at` ile ikincil sıralama (stability).
+3. **Yeni Özellik**: "Sütunlar" butonunun yanına **Sıralama Yönü Toggle Butonu** eklendi (ArrowDownAZ / ArrowUpAZ ikonları). "Yeniden Eskiye" ↔ "Eskiden Yeniye". Tercih localStorage'a kaydediliyor (`bims_kayit_sort_order`).
+4. **Test**: Frontend testing agent %100 (5/5) — bug fixed, feature works, persistence çalışıyor.
 1. **ProductionEntry.js — Çıkan Paket satırlarına yeni alan**:
    - Grid `grid-cols-10` → `grid-cols-11`
    - Her paket satırının en sonuna "Önc. Yıl Kalan" input alanı eklendi (orange renk)
