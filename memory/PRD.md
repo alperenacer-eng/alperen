@@ -87,6 +87,16 @@ SQLite: `/app/backend/data/database.db` (mevcut veriler korundu)
 - Kullanıcı manuel yedek butonunu UI'da test edip dönüş yapacak
 - Diğer modüllerde benzer Excel desteği isteniyorsa eklenebilir
 
+### Bu Oturum (Tem 2025) — Çıkan Paket Toplam Adet
+1. **ProductionEntry.js**:
+   - Çıkan Paket satırına her satır için "Toplam Adet" sütunu eklendi (7 Boy Top. + 5 Boy Top.)
+   - Grid `grid-cols-9` → `grid-cols-10`
+   - Alt toplam satırına 3. sütun eklendi (Genel Toplam) — eski "GENEL TOPLAM" kutusu artık grid içinde
+2. **ProductionList.js (Kayıtlar)**:
+   - Her paket için (P1..P5) yeni computed sütun: `paket_N_toplam` — "PN Toplam Adet"
+   - `cellValue` fonksiyonuna `toplam` regex eşlemesi eklendi
+   - Eski kayıtlarda `paket_7_boy × birim_7_boy + paket_5_boy × birim_5_boy` formülüyle otomatik hesaplanıyor (DB migration'a gerek yok)
+
 ### Bu Oturum (Şubat 2026) - Kayıtlar Filtreleme & BIMS Rapor Geliştirmesi
 1. **BIMS Üretim Raporu — Ürün Bazlı (RESOLVED)**:
    - `/api/reports/monthly` endpoint'ine yeni alanlar eklendi: `net_palet`, `shift_breakdown` (vardiya), `strip_used`, `mix_count`, `cement_used` (harcanan), `machine_cement`

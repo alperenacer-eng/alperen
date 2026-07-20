@@ -959,7 +959,7 @@ const ProductionEntry = () => {
             <p className="text-sm text-slate-400 mb-4">Ürün seçin, paket adetlerini girin. Birim adetler otomatik gelir ve toplam hesaplanır.</p>
             
             {/* Başlık Satırı */}
-            <div className="grid grid-cols-9 gap-3 mb-3 px-2">
+            <div className="grid grid-cols-10 gap-3 mb-3 px-2">
               <div className="col-span-1 text-xs text-slate-500 font-medium">#</div>
               <div className="col-span-2 text-xs text-slate-500 font-medium">Ürün</div>
               <div className="col-span-1 text-xs text-cyan-400 font-medium text-center">7 Boy Paket</div>
@@ -968,6 +968,7 @@ const ProductionEntry = () => {
               <div className="col-span-1 text-xs text-slate-500 font-medium text-center">Birim Adet</div>
               <div className="col-span-1 text-xs text-emerald-400 font-medium text-center">7 Boy Top.</div>
               <div className="col-span-1 text-xs text-purple-400 font-medium text-center">5 Boy Top.</div>
+              <div className="col-span-1 text-xs text-cyan-300 font-medium text-center">Toplam Adet</div>
             </div>
             
             {/* 5 Satır */}
@@ -981,7 +982,7 @@ const ProductionEntry = () => {
               const toplam5 = paket5Adet * birim5;
               
               return (
-                <div key={rowIndex} className="grid grid-cols-9 gap-3 mb-3 items-center bg-slate-900/50 p-3 rounded-lg border border-slate-800">
+                <div key={rowIndex} className="grid grid-cols-10 gap-3 mb-3 items-center bg-slate-900/50 p-3 rounded-lg border border-slate-800">
                   {/* Satır Numarası */}
                   <div className="col-span-1">
                     <span className="text-slate-500 font-mono text-lg">{rowIndex}</span>
@@ -1054,12 +1055,19 @@ const ProductionEntry = () => {
                       {formatInteger(toplam5)}
                     </div>
                   </div>
+
+                  {/* Satır Toplam Adet (7 Boy Top. + 5 Boy Top.) */}
+                  <div className="col-span-1">
+                    <div className="h-12 bg-cyan-500/20 border-2 border-cyan-500/50 rounded-lg flex items-center justify-center font-mono text-cyan-300 font-bold text-lg">
+                      {formatInteger(toplam7 + toplam5)}
+                    </div>
+                  </div>
                 </div>
               );
             })}
             
             {/* Genel Toplam Satırı */}
-            <div className="grid grid-cols-9 gap-3 mt-4 p-4 bg-gradient-to-r from-emerald-900/30 to-purple-900/30 rounded-xl border border-slate-700">
+            <div className="grid grid-cols-10 gap-3 mt-4 p-4 bg-gradient-to-r from-emerald-900/30 to-purple-900/30 rounded-xl border border-slate-700">
               <div className="col-span-1"></div>
               <div className="col-span-2"></div>
               <div className="col-span-1"></div>
@@ -1078,6 +1086,12 @@ const ProductionEntry = () => {
                 <div className="h-14 bg-purple-500/20 border-2 border-purple-500/50 rounded-lg flex flex-col items-center justify-center">
                   <span className="font-mono text-purple-400 text-2xl font-bold">{formatInteger(calculations.toplam_5_boy)}</span>
                   <span className="text-purple-400/70 text-xs">5 Boy</span>
+                </div>
+              </div>
+              <div className="col-span-1">
+                <div className="h-14 bg-cyan-500/20 border-2 border-cyan-500/50 rounded-lg flex flex-col items-center justify-center">
+                  <span className="font-mono text-cyan-300 text-2xl font-bold">{formatInteger(calculations.genel_toplam_paket)}</span>
+                  <span className="text-cyan-300/70 text-xs">Toplam</span>
                 </div>
               </div>
             </div>

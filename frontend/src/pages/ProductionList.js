@@ -63,30 +63,35 @@ const COLUMNS = [
   { id: 'paket_1_5boy',    label: 'P1 5B Adet',     default: false, width: 'w-20' },
   { id: 'paket_1_7top',    label: 'P1 7B Top.',     default: false, width: 'w-20', computed: true },
   { id: 'paket_1_5top',    label: 'P1 5B Top.',     default: false, width: 'w-20', computed: true },
+  { id: 'paket_1_toplam',  label: 'P1 Toplam Adet', default: false, width: 'w-24', computed: true },
   // Çıkan Paket 2
   { id: 'paket_2_urun',    label: 'P2 Ürün',        default: false, width: 'w-32' },
   { id: 'paket_2_7boy',    label: 'P2 7B Adet',     default: false, width: 'w-20' },
   { id: 'paket_2_5boy',    label: 'P2 5B Adet',     default: false, width: 'w-20' },
   { id: 'paket_2_7top',    label: 'P2 7B Top.',     default: false, width: 'w-20', computed: true },
   { id: 'paket_2_5top',    label: 'P2 5B Top.',     default: false, width: 'w-20', computed: true },
+  { id: 'paket_2_toplam',  label: 'P2 Toplam Adet', default: false, width: 'w-24', computed: true },
   // Çıkan Paket 3
   { id: 'paket_3_urun',    label: 'P3 Ürün',        default: false, width: 'w-32' },
   { id: 'paket_3_7boy',    label: 'P3 7B Adet',     default: false, width: 'w-20' },
   { id: 'paket_3_5boy',    label: 'P3 5B Adet',     default: false, width: 'w-20' },
   { id: 'paket_3_7top',    label: 'P3 7B Top.',     default: false, width: 'w-20', computed: true },
   { id: 'paket_3_5top',    label: 'P3 5B Top.',     default: false, width: 'w-20', computed: true },
+  { id: 'paket_3_toplam',  label: 'P3 Toplam Adet', default: false, width: 'w-24', computed: true },
   // Çıkan Paket 4
   { id: 'paket_4_urun',    label: 'P4 Ürün',        default: false, width: 'w-32' },
   { id: 'paket_4_7boy',    label: 'P4 7B Adet',     default: false, width: 'w-20' },
   { id: 'paket_4_5boy',    label: 'P4 5B Adet',     default: false, width: 'w-20' },
   { id: 'paket_4_7top',    label: 'P4 7B Top.',     default: false, width: 'w-20', computed: true },
   { id: 'paket_4_5top',    label: 'P4 5B Top.',     default: false, width: 'w-20', computed: true },
+  { id: 'paket_4_toplam',  label: 'P4 Toplam Adet', default: false, width: 'w-24', computed: true },
   // Çıkan Paket 5
   { id: 'paket_5_urun',    label: 'P5 Ürün',        default: false, width: 'w-32' },
   { id: 'paket_5_7boy',    label: 'P5 7B Adet',     default: false, width: 'w-20' },
   { id: 'paket_5_5boy',    label: 'P5 5B Adet',     default: false, width: 'w-20' },
   { id: 'paket_5_7top',    label: 'P5 7B Top.',     default: false, width: 'w-20', computed: true },
   { id: 'paket_5_5top',    label: 'P5 5B Top.',     default: false, width: 'w-20', computed: true },
+  { id: 'paket_5_toplam',  label: 'P5 Toplam Adet', default: false, width: 'w-24', computed: true },
   // Toplam paket
   { id: 'toplam_7_boy',    label: '7 Boy Top.',     default: false, width: 'w-20' },
   { id: 'toplam_5_boy',    label: '5 Boy Top.',     default: false, width: 'w-20' },
@@ -175,7 +180,7 @@ const parsePaket = (record, n) => {
 
 const cellValue = (record, colId) => {
   // Çıkan paket sütunları (paket_N_xxx)
-  const paketMatch = colId.match(/^paket_(\d)_(urun|7boy|5boy|7top|5top)$/);
+  const paketMatch = colId.match(/^paket_(\d)_(urun|7boy|5boy|7top|5top|toplam)$/);
   if (paketMatch) {
     const n = paketMatch[1];
     const part = paketMatch[2];
@@ -193,6 +198,14 @@ const cellValue = (record, colId) => {
       const adet = parseInt(p.paket_5_boy) || 0;
       const birim = parseInt(p.birim_5_boy) || 0;
       return adet * birim ? fmtNum(adet * birim) : '-';
+    }
+    if (part === 'toplam') {
+      const adet7 = parseInt(p.paket_7_boy) || 0;
+      const birim7 = parseInt(p.birim_7_boy) || 0;
+      const adet5 = parseInt(p.paket_5_boy) || 0;
+      const birim5 = parseInt(p.birim_5_boy) || 0;
+      const total = (adet7 * birim7) + (adet5 * birim5);
+      return total ? fmtNum(total) : '-';
     }
   }
 
