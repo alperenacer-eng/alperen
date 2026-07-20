@@ -10,7 +10,7 @@ GitHub'dan getirilen mevcut Acerler BIMS projesinin Puantaj, Personel ve Raporla
 ## 🌐 Domain & Deployment (KRİTİK — UNUTMA)
 - **Custom Domain (kullanıcı tarafından alındı):** `acerlerbims` (tam uzantı kullanıcı tarafından belirtilmedi — sorulduğunda netleştir)
 - **Emergent Production URL:** `https://acer-engine.emergent.host`
-- **Emergent Preview URL (dev):** `https://alperen-preview-2.preview.emergentagent.com`
+- **Emergent Preview URL (dev):** `https://my-project-open-1.preview.emergentagent.com`
 - **GitHub Repo (otomatik yedek hedefi):** `alperenacer-eng/alperen` (branch: `main`)
 - **Deploy durumu:** Production'a deploy edildi (Şub 2026), 50 kredi/ay
 - **Custom domain bağlama:** Emergent'in "Link domain" → Entri akışıyla yapılacak (kullanıcı bağlayacak)
