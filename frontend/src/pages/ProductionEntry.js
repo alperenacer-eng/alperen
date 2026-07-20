@@ -124,11 +124,11 @@ const ProductionEntry = () => {
     cement_per_mix: '',
     machine_cement: '',
     // Çıkan Paket - 5 satır
-    cikan_paket_1: { urun_id: '', urun_adi: '', paket_7_boy: '', paket_5_boy: '', birim_7_boy: 0, birim_5_boy: 0 },
-    cikan_paket_2: { urun_id: '', urun_adi: '', paket_7_boy: '', paket_5_boy: '', birim_7_boy: 0, birim_5_boy: 0 },
-    cikan_paket_3: { urun_id: '', urun_adi: '', paket_7_boy: '', paket_5_boy: '', birim_7_boy: 0, birim_5_boy: 0 },
-    cikan_paket_4: { urun_id: '', urun_adi: '', paket_7_boy: '', paket_5_boy: '', birim_7_boy: 0, birim_5_boy: 0 },
-    cikan_paket_5: { urun_id: '', urun_adi: '', paket_7_boy: '', paket_5_boy: '', birim_7_boy: 0, birim_5_boy: 0 },
+    cikan_paket_1: { urun_id: '', urun_adi: '', paket_7_boy: '', paket_5_boy: '', birim_7_boy: 0, birim_5_boy: 0, onceki_yil_kalan: '' },
+    cikan_paket_2: { urun_id: '', urun_adi: '', paket_7_boy: '', paket_5_boy: '', birim_7_boy: 0, birim_5_boy: 0, onceki_yil_kalan: '' },
+    cikan_paket_3: { urun_id: '', urun_adi: '', paket_7_boy: '', paket_5_boy: '', birim_7_boy: 0, birim_5_boy: 0, onceki_yil_kalan: '' },
+    cikan_paket_4: { urun_id: '', urun_adi: '', paket_7_boy: '', paket_5_boy: '', birim_7_boy: 0, birim_5_boy: 0, onceki_yil_kalan: '' },
+    cikan_paket_5: { urun_id: '', urun_adi: '', paket_7_boy: '', paket_5_boy: '', birim_7_boy: 0, birim_5_boy: 0, onceki_yil_kalan: '' },
     // Arızalar (opsiyonel)
     breakdown_1: '',
     breakdown_2: '',
@@ -959,7 +959,7 @@ const ProductionEntry = () => {
             <p className="text-sm text-slate-400 mb-4">Ürün seçin, paket adetlerini girin. Birim adetler otomatik gelir ve toplam hesaplanır.</p>
             
             {/* Başlık Satırı */}
-            <div className="grid grid-cols-10 gap-3 mb-3 px-2">
+            <div className="grid grid-cols-11 gap-3 mb-3 px-2">
               <div className="col-span-1 text-xs text-slate-500 font-medium">#</div>
               <div className="col-span-2 text-xs text-slate-500 font-medium">Ürün</div>
               <div className="col-span-1 text-xs text-cyan-400 font-medium text-center">7 Boy Paket</div>
@@ -969,6 +969,7 @@ const ProductionEntry = () => {
               <div className="col-span-1 text-xs text-emerald-400 font-medium text-center">7 Boy Top.</div>
               <div className="col-span-1 text-xs text-purple-400 font-medium text-center">5 Boy Top.</div>
               <div className="col-span-1 text-xs text-cyan-300 font-medium text-center">Toplam Adet</div>
+              <div className="col-span-1 text-xs text-orange-300 font-medium text-center">Önc. Yıl Kalan</div>
             </div>
             
             {/* 5 Satır */}
@@ -982,7 +983,7 @@ const ProductionEntry = () => {
               const toplam5 = paket5Adet * birim5;
               
               return (
-                <div key={rowIndex} className="grid grid-cols-10 gap-3 mb-3 items-center bg-slate-900/50 p-3 rounded-lg border border-slate-800">
+                <div key={rowIndex} className="grid grid-cols-11 gap-3 mb-3 items-center bg-slate-900/50 p-3 rounded-lg border border-slate-800">
                   {/* Satır Numarası */}
                   <div className="col-span-1">
                     <span className="text-slate-500 font-mono text-lg">{rowIndex}</span>
@@ -1062,12 +1063,23 @@ const ProductionEntry = () => {
                       {formatInteger(toplam7 + toplam5)}
                     </div>
                   </div>
+
+                  {/* Önceki Yıldan İçerde Kalan */}
+                  <div className="col-span-1">
+                    <Input
+                      type="number"
+                      value={paket.onceki_yil_kalan || ''}
+                      onChange={(e) => handleCikanPaketChange(rowIndex, 'onceki_yil_kalan', e.target.value)}
+                      placeholder="0"
+                      className="h-12 bg-orange-500/10 border-2 border-orange-500/40 text-orange-300 font-mono text-center text-lg font-bold"
+                    />
+                  </div>
                 </div>
               );
             })}
             
             {/* Genel Toplam Satırı */}
-            <div className="grid grid-cols-10 gap-3 mt-4 p-4 bg-gradient-to-r from-emerald-900/30 to-purple-900/30 rounded-xl border border-slate-700">
+            <div className="grid grid-cols-11 gap-3 mt-4 p-4 bg-gradient-to-r from-emerald-900/30 to-purple-900/30 rounded-xl border border-slate-700">
               <div className="col-span-1"></div>
               <div className="col-span-2"></div>
               <div className="col-span-1"></div>
@@ -1094,6 +1106,7 @@ const ProductionEntry = () => {
                   <span className="text-cyan-300/70 text-xs">Toplam</span>
                 </div>
               </div>
+              <div className="col-span-1"></div>
             </div>
             
             {/* Genel Toplam */}

@@ -749,6 +749,7 @@ const Reports = () => {
                 <tr className="border-b border-slate-700 text-slate-400 text-xs">
                   <th className="text-left py-3 px-3">Ürün</th>
                   <th className="text-right py-3 px-3">Üretilen Adet</th>
+                  <th className="text-right py-3 px-3">Önceki Yıldan Kalan</th>
                   <th className="text-right py-3 px-3">Çıkan Adet</th>
                   <th className="text-right py-3 px-3">İçeride Kalan</th>
                 </tr>
@@ -761,6 +762,7 @@ const Reports = () => {
                     <tr key={idx} className="border-b border-slate-800/50 hover:bg-slate-800/30">
                       <td className="py-3 px-3 text-white font-medium">{p.product_name}</td>
                       <td className="py-3 px-3 text-right font-mono text-orange-400">{fmtTR(p.uretilen)}</td>
+                      <td className="py-3 px-3 text-right font-mono text-amber-300">{fmtTR(p.onceki_yil_kalan || 0)}</td>
                       <td className="py-3 px-3 text-right font-mono text-blue-400">{fmtTR(p.cikan)}</td>
                       <td className={`py-3 px-3 text-right font-mono font-semibold ${kalanColor}`}>{fmtTR(kalan)}</td>
                     </tr>
@@ -772,6 +774,9 @@ const Reports = () => {
                   <td className="py-3 px-3 text-white font-bold text-base">GENEL TOPLAM</td>
                   <td className="py-3 px-3 text-right font-mono text-orange-400 font-bold text-base">
                     {fmtTR(productData.totals.total_uretilen)}
+                  </td>
+                  <td className="py-3 px-3 text-right font-mono text-amber-300 font-bold text-base">
+                    {fmtTR(productData.totals.total_onceki_yil_kalan || 0)}
                   </td>
                   <td className="py-3 px-3 text-right font-mono text-blue-400 font-bold text-base">
                     {fmtTR(productData.totals.total_cikan)}

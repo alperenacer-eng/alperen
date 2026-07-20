@@ -3501,6 +3501,8 @@ async def get_product_based_report(module: Optional[str] = None,
     uretilen_by_product = {}
     # Ürün adı bazlı çıkan (paket) toplamları
     cikan_by_product = {}
+    # Ürün adı bazlı önceki yıldan içerde kalan toplamları
+    onceki_yil_by_product = {}
 
     for r in records:
         # --- Üretilen ---
@@ -3530,26 +3532,40 @@ async def get_product_based_report(module: Optional[str] = None,
                 if cpname not in cikan_by_product:
                     cikan_by_product[cpname] = 0
                 cikan_by_product[cpname] += toplam
+
+                # Önceki yıldan içerde kalan (opsiyonel)
+                try:
+                    onceki = int(float(paket.get("onceki_yil_kalan") or 0))
+                except (ValueError, TypeError):
+                    onceki = 0
+                if onceki:
+                    if cpname not in onceki_yil_by_product:
+                        onceki_yil_by_product[cpname] = 0
+                    onceki_yil_by_product[cpname] += onceki
             except (ValueError, TypeError, json.JSONDecodeError):
                 continue
 
     # Tüm ürünleri birleştir
-    all_products = set(uretilen_by_product.keys()) | set(cikan_by_product.keys())
+    all_products = set(uretilen_by_product.keys()) | set(cikan_by_product.keys()) | set(onceki_yil_by_product.keys())
     products = []
     total_uretilen = 0
     total_cikan = 0
+    total_onceki = 0
     for name in all_products:
         u = uretilen_by_product.get(name, 0)
         c = cikan_by_product.get(name, 0)
-        icerde = u - c
+        o = onceki_yil_by_product.get(name, 0)
+        icerde = u + o - c
         products.append({
             "product_name": name,
             "uretilen": u,
             "cikan": c,
+            "onceki_yil_kalan": o,
             "icerde_kalan": icerde,
         })
         total_uretilen += u
         total_cikan += c
+        total_onceki += o
 
     # Üretilen çoktan aza sırala
     products.sort(key=lambda x: x["uretilen"], reverse=True)
@@ -3559,7 +3575,8 @@ async def get_product_based_report(module: Optional[str] = None,
         "totals": {
             "total_uretilen": total_uretilen,
             "total_cikan": total_cikan,
-            "total_icerde_kalan": total_uretilen - total_cikan,
+            "total_onceki_yil_kalan": total_onceki,
+            "total_icerde_kalan": total_uretilen + total_onceki - total_cikan,
         },
     }
 
