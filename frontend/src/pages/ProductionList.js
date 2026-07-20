@@ -22,7 +22,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Search, Trash2, Edit, Plus, Settings2, RotateCcw, FileSpreadsheet, FileText, GripVertical, Filter, X, Calendar, Bookmark, Save, ArrowDownAZ, ArrowUpAZ } from 'lucide-react';
+import { Search, Trash2, Edit, Plus, Settings2, RotateCcw, FileSpreadsheet, FileText, GripVertical, Filter, X, Calendar, Bookmark, Save, ArrowDownAZ, ArrowUpAZ, ListFilter, Check } from 'lucide-react';
 import { format } from 'date-fns';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
@@ -246,6 +246,160 @@ const cellValue = (record, colId) => {
   }
 };
 
+// Excel-tarzı sütun filtre popover'ı — checkbox liste + arama + Tümünü Seç/Temizle
+const ExcelColumnFilter = ({ colId, colLabel, uniqueValues, selectedValues, onApply, onClear }) => {
+  const [open, setOpen] = React.useState(false);
+  const [search, setSearch] = React.useState('');
+  const [staged, setStaged] = React.useState(null); // null: henüz açılmadı, dizi: kullanıcının seçim adayı
+
+  const isFiltered = Array.isArray(selectedValues) && selectedValues.length > 0;
+
+  const openPopover = (v) => {
+    setOpen(v);
+    if (v) {
+      // Popover açıldığında: eğer filtre yoksa hepsini seçili göster; varsa mevcut seçimi göster
+      setStaged(isFiltered ? [...selectedValues] : [...uniqueValues]);
+      setSearch('');
+    }
+  };
+
+  const filtered = React.useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return uniqueValues;
+    return uniqueValues.filter(v => v.toLowerCase().includes(q));
+  }, [uniqueValues, search]);
+
+  const toggleValue = (val) => {
+    setStaged(prev => {
+      const cur = prev || [];
+      if (cur.includes(val)) return cur.filter(v => v !== val);
+      return [...cur, val];
+    });
+  };
+
+  const selectAllFiltered = () => setStaged(prev => Array.from(new Set([...(prev || []), ...filtered])));
+  const deselectAllFiltered = () => setStaged(prev => (prev || []).filter(v => !filtered.includes(v)));
+
+  const apply = () => {
+    // Eğer tüm değerler seçiliyse -> filtre yok (temizle)
+    if (!staged || staged.length === 0) {
+      // Hiçbiri seçili değil -> filtre uygulanmasın diye "hiçbir kayıt gelmez" durumundan kaçınmak için temizle
+      onClear();
+    } else if (staged.length === uniqueValues.length) {
+      onClear();
+    } else {
+      onApply(staged);
+    }
+    setOpen(false);
+  };
+
+  const clearAll = () => {
+    onClear();
+    setOpen(false);
+  };
+
+  return (
+    <Popover open={open} onOpenChange={openPopover}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          data-testid={`excel-filter-${colId}`}
+          onClick={(e) => { e.stopPropagation(); }}
+          onMouseDown={(e) => e.stopPropagation()}
+          className={`inline-flex items-center justify-center w-5 h-5 rounded transition-colors ${
+            isFiltered ? 'bg-orange-500/30 text-orange-300 hover:bg-orange-500/40' : 'text-slate-500 hover:text-orange-300 hover:bg-slate-800'
+          }`}
+          title={isFiltered ? `${selectedValues.length} değer seçili` : 'Filtrele'}
+        >
+          <ListFilter className="w-3.5 h-3.5" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent
+        align="start"
+        className="w-64 bg-slate-900 border-slate-700 text-white p-3"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="text-xs text-slate-400 font-medium mb-2 truncate">
+          Filtre: <span className="text-white">{colLabel}</span>
+        </div>
+        <div className="relative mb-2">
+          <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500" />
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Ara..."
+            className="pl-7 h-8 text-xs bg-slate-950/60 border-slate-800 text-white placeholder:text-slate-500"
+            data-testid={`excel-filter-search-${colId}`}
+          />
+        </div>
+        <div className="flex items-center justify-between mb-2 text-[11px]">
+          <button
+            type="button"
+            onClick={selectAllFiltered}
+            className="text-cyan-400 hover:text-cyan-300"
+            data-testid={`excel-filter-select-all-${colId}`}
+          >
+            Tümünü Seç
+          </button>
+          <button
+            type="button"
+            onClick={deselectAllFiltered}
+            className="text-slate-400 hover:text-white"
+            data-testid={`excel-filter-deselect-all-${colId}`}
+          >
+            Hiçbirini Seçme
+          </button>
+        </div>
+        <div className="max-h-60 overflow-y-auto border border-slate-800 rounded bg-slate-950/40 divide-y divide-slate-800">
+          {filtered.length === 0 && (
+            <div className="px-2 py-3 text-xs text-slate-500 text-center">Değer bulunamadı</div>
+          )}
+          {filtered.map(v => {
+            const checked = (staged || []).includes(v);
+            return (
+              <label
+                key={v}
+                className="flex items-center gap-2 px-2 py-1.5 hover:bg-slate-800/50 cursor-pointer text-xs"
+              >
+                <Checkbox
+                  checked={checked}
+                  onCheckedChange={() => toggleValue(v)}
+                  className="border-slate-600 data-[state=checked]:bg-orange-500 data-[state=checked]:border-orange-500"
+                />
+                <span className="flex-1 text-slate-200 truncate" title={v}>{v}</span>
+              </label>
+            );
+          })}
+        </div>
+        <div className="flex items-center justify-between gap-2 mt-3">
+          {isFiltered ? (
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={clearAll}
+              className="h-7 text-xs text-red-400 hover:bg-red-500/10 hover:text-red-300"
+              data-testid={`excel-filter-clear-${colId}`}
+            >
+              <X className="w-3 h-3 mr-1" />
+              Temizle
+            </Button>
+          ) : <span />}
+          <Button
+            size="sm"
+            onClick={apply}
+            className="h-7 text-xs bg-orange-500 hover:bg-orange-600 text-white"
+            data-testid={`excel-filter-apply-${colId}`}
+          >
+            <Check className="w-3 h-3 mr-1" />
+            Uygula
+          </Button>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+};
+
+
 const ProductionList = () => {
   const { token } = useAuth();
   const { currentModule } = useModule();
@@ -256,7 +410,8 @@ const ProductionList = () => {
   const [deleteId, setDeleteId] = useState(null);
   const [visibleCols, setVisibleCols] = useState(loadVisible);
   const [columnOrder, setColumnOrder] = useState(loadOrder);
-  const [columnFilters, setColumnFilters] = useState({}); // { colId: 'arama' }
+  const [columnFilters, setColumnFilters] = useState({}); // { colId: 'arama' } — metin arama
+  const [columnValueFilters, setColumnValueFilters] = useState({}); // { colId: [seçilen değerler] } — Excel-tarzı çoklu seçim
   const [dateStart, setDateStart] = useState('');
   const [dateEnd, setDateEnd] = useState('');
   const [exportAllCols, setExportAllCols] = useState(false); // false: sadece görünür, true: tüm sütunlar
@@ -364,14 +519,15 @@ const ProductionList = () => {
       toast.error('Önce filtre adı yazın');
       return;
     }
-    const hasAnyFilter = dateStart || dateEnd || Object.values(columnFilters).some(v => v && String(v).trim() !== '') || searchQuery;
+    const hasValueFilters = Object.values(columnValueFilters).some(arr => Array.isArray(arr) && arr.length > 0);
+    const hasAnyFilter = dateStart || dateEnd || Object.values(columnFilters).some(v => v && String(v).trim() !== '') || searchQuery || hasValueFilters;
     if (!hasAnyFilter) {
       toast.error('Kaydedilecek aktif filtre yok');
       return;
     }
     setPresets(prev => {
       const filtered = prev.filter(p => p.name !== name);
-      return [...filtered, { name, searchQuery, dateStart, dateEnd, columnFilters: { ...columnFilters } }];
+      return [...filtered, { name, searchQuery, dateStart, dateEnd, columnFilters: { ...columnFilters }, columnValueFilters: { ...columnValueFilters } }];
     });
     setPresetName('');
     toast.success(`"${name}" filtresi kaydedildi`);
@@ -382,6 +538,7 @@ const ProductionList = () => {
     setDateStart(preset.dateStart || '');
     setDateEnd(preset.dateEnd || '');
     setColumnFilters(preset.columnFilters || {});
+    setColumnValueFilters(preset.columnValueFilters || {});
     toast.success(`"${preset.name}" yüklendi`);
   };
 
@@ -406,6 +563,7 @@ const ProductionList = () => {
   const filteredRecords = useMemo(() => {
     const q = searchQuery ? searchQuery.toLowerCase() : '';
     const activeColFilters = Object.entries(columnFilters).filter(([, v]) => v && String(v).trim() !== '');
+    const activeValueFilters = Object.entries(columnValueFilters).filter(([, arr]) => Array.isArray(arr) && arr.length > 0);
 
     const filtered = records.filter(r => {
       // Genel arama
@@ -427,10 +585,16 @@ const ProductionList = () => {
         if (dateEnd && d > dateEnd) return false;
       }
 
-      // Sütun bazlı filtreler
+      // Sütun bazlı metin filtreleri (içerir)
       for (const [colId, val] of activeColFilters) {
         const cell = String(cellValue(r, colId) ?? '').toLowerCase();
         if (!cell.includes(String(val).toLowerCase())) return false;
+      }
+
+      // Sütun bazlı Excel-tarzı çoklu değer filtreleri (aynı değer)
+      for (const [colId, values] of activeValueFilters) {
+        const cell = String(cellValue(r, colId) ?? '');
+        if (!values.includes(cell)) return false;
       }
 
       return true;
@@ -455,7 +619,7 @@ const ProductionList = () => {
     });
 
     return sorted;
-  }, [records, searchQuery, dateStart, dateEnd, columnFilters, sortOrder]);
+  }, [records, searchQuery, dateStart, dateEnd, columnFilters, columnValueFilters, sortOrder]);
 
   // Sıralama tercihini localStorage'a kaydet
   useEffect(() => {
@@ -469,6 +633,24 @@ const ProductionList = () => {
   const toggleSortOrder = () => {
     setSortOrder(prev => prev === 'desc' ? 'asc' : 'desc');
     toast.success(sortOrder === 'desc' ? 'Eskiden yeniye sıralandı' : 'Yeniden eskiye sıralandı');
+  };
+
+  // Excel-tarzı filtre: bir sütundaki benzersiz değerleri döndürür (arama filtresi hariç, sadece diğer aktif filtreler uygulanarak)
+  const getUniqueValuesForColumn = (colId) => {
+    // Kullanıcının seçim yapabilmesi için, bu sütun için filtre uygulanmamış kayıtlar kullanılır
+    // (böylece "diğer filtrelerle kısıtlanmış" doğru değer seti gösterilir — Excel gibi)
+    const values = new Set();
+    records.forEach(r => {
+      const v = String(cellValue(r, colId) ?? '');
+      if (v && v !== '-') values.add(v);
+    });
+    // Alfabetik/sayısal sıralama
+    return Array.from(values).sort((a, b) => {
+      const na = parseFloat(a.replace(/\./g, '').replace(',', '.'));
+      const nb = parseFloat(b.replace(/\./g, '').replace(',', '.'));
+      if (!isNaN(na) && !isNaN(nb)) return na - nb;
+      return a.localeCompare(b, 'tr');
+    });
   };
 
   const handleDelete = async () => {
@@ -674,11 +856,11 @@ const ProductionList = () => {
                   className="pl-8 h-10 w-[150px] bg-slate-950/50 border-slate-800 text-white text-xs"
                 />
               </div>
-              {(dateStart || dateEnd || Object.values(columnFilters).some(v => v && String(v).trim() !== '')) && (
+              {(dateStart || dateEnd || Object.values(columnFilters).some(v => v && String(v).trim() !== '') || Object.values(columnValueFilters).some(arr => Array.isArray(arr) && arr.length > 0)) && (
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => { setDateStart(''); setDateEnd(''); setColumnFilters({}); }}
+                  onClick={() => { setDateStart(''); setDateEnd(''); setColumnFilters({}); setColumnValueFilters({}); }}
                   data-testid="clear-filters-btn"
                   title="Filtreleri temizle"
                   className="h-10 text-slate-400 hover:text-white hover:bg-slate-800"
@@ -928,18 +1110,30 @@ const ProductionList = () => {
                 {visibleColList.map(col => (
                   <th
                     key={col.id}
-                    draggable
-                    onDragStart={handleDragStart(col.id)}
-                    onDragOver={handleDragOver(col.id)}
-                    onDrop={handleDrop(col.id)}
-                    onDragEnd={handleDragEnd}
-                    title="Sürükleyerek taşıyın"
                     data-testid={`col-header-${col.id}`}
-                    className={`px-3 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider whitespace-nowrap ${col.width} cursor-move select-none hover:bg-slate-800 transition-colors`}
+                    className={`px-3 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider whitespace-nowrap ${col.width} select-none hover:bg-slate-800 transition-colors`}
                   >
                     <div className="flex items-center gap-1">
-                      <GripVertical className="w-3 h-3 text-slate-600 group-hover:text-slate-400" />
-                      {col.label}
+                      <span
+                        draggable
+                        onDragStart={handleDragStart(col.id)}
+                        onDragOver={handleDragOver(col.id)}
+                        onDrop={handleDrop(col.id)}
+                        onDragEnd={handleDragEnd}
+                        title="Sürükleyerek taşıyın"
+                        className="flex items-center gap-1 cursor-move flex-1"
+                      >
+                        <GripVertical className="w-3 h-3 text-slate-600" />
+                        <span>{col.label}</span>
+                      </span>
+                      <ExcelColumnFilter
+                        colId={col.id}
+                        colLabel={col.label}
+                        uniqueValues={getUniqueValuesForColumn(col.id)}
+                        selectedValues={columnValueFilters[col.id] || []}
+                        onApply={(vals) => setColumnValueFilters(prev => ({ ...prev, [col.id]: vals }))}
+                        onClear={() => setColumnValueFilters(prev => { const n = { ...prev }; delete n[col.id]; return n; })}
+                      />
                     </div>
                   </th>
                 ))}
@@ -947,14 +1141,14 @@ const ProductionList = () => {
                   İşlemler
                 </th>
               </tr>
-              {/* Sütun bazlı filtre satırı */}
+              {/* Sütun bazlı filtre satırı (metin arama) */}
               <tr className="bg-slate-900/40 border-t border-slate-800">
                 {visibleColList.map(col => (
                   <th key={`filter-${col.id}`} className="px-2 py-1.5">
                     <Input
                       value={columnFilters[col.id] || ''}
                       onChange={(e) => setColumnFilters(prev => ({ ...prev, [col.id]: e.target.value }))}
-                      placeholder="Filtre..."
+                      placeholder="Metin ara..."
                       data-testid={`col-filter-${col.id}`}
                       className="h-7 text-xs bg-slate-950/60 border-slate-800 text-white placeholder:text-slate-600 font-normal normal-case tracking-normal"
                     />
