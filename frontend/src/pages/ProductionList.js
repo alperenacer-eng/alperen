@@ -22,7 +22,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Search, Trash2, Edit, Plus, Settings2, RotateCcw, FileSpreadsheet, FileText, GripVertical, Filter, X, Calendar, Bookmark, Save } from 'lucide-react';
+import { Search, Trash2, Edit, Plus, Settings2, RotateCcw, FileSpreadsheet, FileText, GripVertical, Filter, X, Calendar, Bookmark, Save, ArrowDownAZ, ArrowUpAZ } from 'lucide-react';
 import { format } from 'date-fns';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
@@ -32,6 +32,7 @@ const API_URL = process.env.REACT_APP_BACKEND_URL + '/api';
 const STORAGE_KEY = 'bims_kayit_visible_columns';
 const ORDER_KEY = 'bims_kayit_column_order';
 const PRESETS_KEY = 'bims_kayit_filter_presets';
+const SORT_ORDER_KEY = 'bims_kayit_sort_order'; // 'desc' (yeniden eskiye) | 'asc' (eskiden yeniye)
 
 // Sütun tanımları — id, başlık, varsayılan görünür
 const COLUMNS = [
@@ -268,6 +269,14 @@ const ProductionList = () => {
     }
   });
   const [presetName, setPresetName] = useState('');
+  const [sortOrder, setSortOrder] = useState(() => {
+    try {
+      const raw = localStorage.getItem(SORT_ORDER_KEY);
+      return raw === 'asc' ? 'asc' : 'desc';
+    } catch {
+      return 'desc';
+    }
+  });
   const dragColId = useRef(null);
   const dragOverColId = useRef(null);
   const topScrollRef = useRef(null);
@@ -398,7 +407,7 @@ const ProductionList = () => {
     const q = searchQuery ? searchQuery.toLowerCase() : '';
     const activeColFilters = Object.entries(columnFilters).filter(([, v]) => v && String(v).trim() !== '');
 
-    return records.filter(r => {
+    const filtered = records.filter(r => {
       // Genel arama
       if (q) {
         const matchesSearch =
@@ -426,7 +435,41 @@ const ProductionList = () => {
 
       return true;
     });
-  }, [records, searchQuery, dateStart, dateEnd, columnFilters]);
+
+    // Tarih bazlı sıralama (production_date öncelikli, yoksa created_at)
+    const getSortDate = (r) => {
+      const raw = r.production_date || r.created_at || '';
+      // ISO date karşılaştırması yeterli (YYYY-MM-DD alfabetik = kronolojik)
+      return String(raw).substring(0, 10);
+    };
+    const sorted = [...filtered].sort((a, b) => {
+      const da = getSortDate(a);
+      const db = getSortDate(b);
+      if (da === db) {
+        // Aynı tarihte, created_at ile ikincil sıralama (yeni kayıt hep aynı yerde)
+        const ca = String(a.created_at || '');
+        const cb = String(b.created_at || '');
+        return sortOrder === 'asc' ? ca.localeCompare(cb) : cb.localeCompare(ca);
+      }
+      return sortOrder === 'asc' ? da.localeCompare(db) : db.localeCompare(da);
+    });
+
+    return sorted;
+  }, [records, searchQuery, dateStart, dateEnd, columnFilters, sortOrder]);
+
+  // Sıralama tercihini localStorage'a kaydet
+  useEffect(() => {
+    try {
+      localStorage.setItem(SORT_ORDER_KEY, sortOrder);
+    } catch {
+      // ignore
+    }
+  }, [sortOrder]);
+
+  const toggleSortOrder = () => {
+    setSortOrder(prev => prev === 'desc' ? 'asc' : 'desc');
+    toast.success(sortOrder === 'desc' ? 'Eskiden yeniye sıralandı' : 'Yeniden eskiye sıralandı');
+  };
 
   const handleDelete = async () => {
     try {
@@ -652,6 +695,26 @@ const ProductionList = () => {
               <span className="font-mono text-cyan-400">{visibleCount}</span>
               <span>/ {COLUMNS.length} sütun</span>
             </div>
+
+            <Button
+              variant="outline"
+              onClick={toggleSortOrder}
+              className="border-cyan-500/40 text-cyan-300 hover:bg-cyan-500/10 h-10"
+              data-testid="sort-order-btn"
+              title={sortOrder === 'desc' ? 'Yeniden Eskiye (Aktif) — Tıklayınca Eskiden Yeniye' : 'Eskiden Yeniye (Aktif) — Tıklayınca Yeniden Eskiye'}
+            >
+              {sortOrder === 'desc' ? (
+                <>
+                  <ArrowDownAZ className="w-4 h-4 mr-2" />
+                  Yeniden Eskiye
+                </>
+              ) : (
+                <>
+                  <ArrowUpAZ className="w-4 h-4 mr-2" />
+                  Eskiden Yeniye
+                </>
+              )}
+            </Button>
 
             <Popover>
               <PopoverTrigger asChild>
