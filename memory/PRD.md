@@ -87,12 +87,19 @@ SQLite: `/app/backend/data/database.db` (mevcut veriler korundu)
 - Kullanıcı manuel yedek butonunu UI'da test edip dönüş yapacak
 - Diğer modüllerde benzer Excel desteği isteniyorsa eklenebilir
 
-### Bu Oturum (Tem 2025) — Kayıtlar Çıkan Paket Sadeleştirme
-1. **ProductionList.js — Sütun listesi sadeleştirildi**:
-   - Her paket için 6 sütun (Ürün, 7B Adet, 5B Adet, 7B Top., 5B Top., Toplam) yerine artık sadece **2 sütun**: "Çıkan Paket N - Ürün" ve "Çıkan Paket N - Toplam Adet"
-   - Toplam Adet = `paket_7_boy × birim_7_boy + paket_5_boy × birim_5_boy` (eski verilerde de otomatik hesaplanıyor)
-   - localStorage'daki eski sütun ID'leri güvenli şekilde filtreleniyor (loadOrder/loadVisible)
-2. **cellValue** fonksiyonunda `toplam` regex eşlemesi zaten mevcut, korundu
+### Bu Oturum (Tem 2025) — Önceki Yıldan İçerde Kalan
+1. **ProductionEntry.js — Çıkan Paket satırlarına yeni alan**:
+   - Grid `grid-cols-10` → `grid-cols-11`
+   - Her paket satırının en sonuna "Önc. Yıl Kalan" input alanı eklendi (orange renk)
+   - `onceki_yil_kalan` alanı JSON içinde otomatik saklanır (DB migration gerekmez)
+2. **Backend `/api/reports/product-based`**:
+   - `cikan_paket_N` JSON'undan `onceki_yil_kalan` toplanır (ürün bazında)
+   - Response'a `onceki_yil_kalan` per product + `total_onceki_yil_kalan` totals'a eklendi
+   - **Yeni formül:** `icerde_kalan = uretilen + onceki_yil_kalan - cikan`
+3. **Reports.js — Ürün Bazlı Rapor**:
+   - Yeni sütun: "Önceki Yıldan Kalan" (amber renk), Üretilen ile Çıkan arasında
+   - Genel Toplam satırında da yer alır
+4. **Backend testi: 7/7 başarılı** (endpoint doğrulandı, formül doğru, backward compatible)
 
 ### Bu Oturum (Şubat 2026) - Kayıtlar Filtreleme & BIMS Rapor Geliştirmesi
 1. **BIMS Üretim Raporu — Ürün Bazlı (RESOLVED)**:
