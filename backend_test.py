@@ -524,29 +524,508 @@ def print_summary():
         if test['message']:
             print(f"  → {test['message']}")
 
+def test_breakdown_analysis_default_params():
+    """Test 1: GET /api/breakdown-analysis with default parameters (days=30, module=bims, use_ai=true)"""
+    print("\n" + "="*80)
+    print("TEST: Breakdown Analysis - Default Parameters")
+    print("="*80)
+    
+    try:
+        headers = {"Authorization": f"Bearer {AUTH_TOKEN}"}
+        response = requests.get(f"{BASE_URL}/breakdown-analysis", headers=headers, timeout=60)
+        
+        if response.status_code != 200:
+            log_test("Breakdown Analysis - Default Params", False, 
+                    f"Expected 200, got {response.status_code}: {response.text[:200]}")
+            return False
+        
+        data = response.json()
+        
+        # Verify all required fields
+        required_fields = [
+            "date_range", "module", "total_records", "total_breakdowns", 
+            "distinct_departments", "executive_summary", "top_issues_overall",
+            "overall_top_keywords", "per_department", "recent_breakdowns",
+            "ai_used", "ai_error"
+        ]
+        
+        missing_fields = [f for f in required_fields if f not in data]
+        if missing_fields:
+            log_test("Breakdown Analysis - Default Params", False, 
+                    f"Missing fields: {missing_fields}")
+            return False
+        
+        # Verify date_range structure
+        if not all(k in data["date_range"] for k in ["start", "end", "days"]):
+            log_test("Breakdown Analysis - Default Params", False, 
+                    "date_range missing start/end/days")
+            return False
+        
+        # Verify module
+        if data["module"] != "bims":
+            log_test("Breakdown Analysis - Default Params", False, 
+                    f"Expected module='bims', got '{data['module']}'")
+            return False
+        
+        # Verify data types
+        if not isinstance(data["total_records"], int):
+            log_test("Breakdown Analysis - Default Params", False, 
+                    f"total_records should be int, got {type(data['total_records'])}")
+            return False
+        
+        if not isinstance(data["total_breakdowns"], int):
+            log_test("Breakdown Analysis - Default Params", False, 
+                    f"total_breakdowns should be int, got {type(data['total_breakdowns'])}")
+            return False
+        
+        if not isinstance(data["distinct_departments"], int):
+            log_test("Breakdown Analysis - Default Params", False, 
+                    f"distinct_departments should be int, got {type(data['distinct_departments'])}")
+            return False
+        
+        if not isinstance(data["executive_summary"], str):
+            log_test("Breakdown Analysis - Default Params", False, 
+                    f"executive_summary should be string, got {type(data['executive_summary'])}")
+            return False
+        
+        if not isinstance(data["top_issues_overall"], list):
+            log_test("Breakdown Analysis - Default Params", False, 
+                    f"top_issues_overall should be list, got {type(data['top_issues_overall'])}")
+            return False
+        
+        if not isinstance(data["overall_top_keywords"], list):
+            log_test("Breakdown Analysis - Default Params", False, 
+                    f"overall_top_keywords should be list, got {type(data['overall_top_keywords'])}")
+            return False
+        
+        if not isinstance(data["per_department"], list):
+            log_test("Breakdown Analysis - Default Params", False, 
+                    f"per_department should be list, got {type(data['per_department'])}")
+            return False
+        
+        if not isinstance(data["recent_breakdowns"], list):
+            log_test("Breakdown Analysis - Default Params", False, 
+                    f"recent_breakdowns should be list, got {type(data['recent_breakdowns'])}")
+            return False
+        
+        if not isinstance(data["ai_used"], bool):
+            log_test("Breakdown Analysis - Default Params", False, 
+                    f"ai_used should be bool, got {type(data['ai_used'])}")
+            return False
+        
+        # Verify per_department structure if data exists
+        if data["per_department"]:
+            dept = data["per_department"][0]
+            required_dept_fields = [
+                "department_id", "department_name", "total_breakdowns", 
+                "top_keywords", "ornekler", "ai_kategoriler", "ai_one_liner"
+            ]
+            missing_dept_fields = [f for f in required_dept_fields if f not in dept]
+            if missing_dept_fields:
+                log_test("Breakdown Analysis - Default Params", False, 
+                        f"per_department missing fields: {missing_dept_fields}")
+                return False
+        
+        # Verify recent_breakdowns structure if data exists
+        if data["recent_breakdowns"]:
+            recent = data["recent_breakdowns"][0]
+            required_recent_fields = ["tarih", "isletme", "vardiya", "operator", "urun", "metin"]
+            missing_recent_fields = [f for f in required_recent_fields if f not in recent]
+            if missing_recent_fields:
+                log_test("Breakdown Analysis - Default Params", False, 
+                        f"recent_breakdowns missing fields: {missing_recent_fields}")
+                return False
+        
+        # Log success with details
+        msg = (f"Response OK: total_records={data['total_records']}, "
+               f"total_breakdowns={data['total_breakdowns']}, "
+               f"distinct_departments={data['distinct_departments']}, "
+               f"ai_used={data['ai_used']}, "
+               f"ai_error={data['ai_error']}")
+        
+        if data["total_breakdowns"] == 0:
+            msg += " (No breakdown data in database - expected behavior)"
+        
+        log_test("Breakdown Analysis - Default Params", True, msg)
+        
+        # Print sample response for verification
+        print(f"\n📊 Sample Response:")
+        print(f"  Date Range: {data['date_range']['start']} to {data['date_range']['end']} ({data['date_range']['days']} days)")
+        print(f"  Module: {data['module']}")
+        print(f"  Total Records: {data['total_records']}")
+        print(f"  Total Breakdowns: {data['total_breakdowns']}")
+        print(f"  Distinct Departments: {data['distinct_departments']}")
+        print(f"  AI Used: {data['ai_used']}")
+        print(f"  AI Error: {data['ai_error']}")
+        print(f"  Executive Summary Length: {len(data['executive_summary'])} chars")
+        print(f"  Top Issues Overall: {len(data['top_issues_overall'])} items")
+        print(f"  Overall Top Keywords: {len(data['overall_top_keywords'])} items")
+        print(f"  Per Department: {len(data['per_department'])} departments")
+        print(f"  Recent Breakdowns: {len(data['recent_breakdowns'])} items")
+        
+        if data["executive_summary"]:
+            print(f"\n📝 Executive Summary Preview:")
+            print(f"  {data['executive_summary'][:200]}...")
+        
+        return True
+        
+    except Exception as e:
+        log_test("Breakdown Analysis - Default Params", False, f"Exception: {str(e)}")
+        return False
+
+
+def test_breakdown_analysis_no_ai():
+    """Test 2: GET /api/breakdown-analysis?use_ai=false - Should return quickly without AI call"""
+    print("\n" + "="*80)
+    print("TEST: Breakdown Analysis - No AI (use_ai=false)")
+    print("="*80)
+    
+    try:
+        headers = {"Authorization": f"Bearer {AUTH_TOKEN}"}
+        start_time = time.time()
+        response = requests.get(f"{BASE_URL}/breakdown-analysis?use_ai=false", headers=headers, timeout=30)
+        elapsed_time = time.time() - start_time
+        
+        if response.status_code != 200:
+            log_test("Breakdown Analysis - No AI", False, 
+                    f"Expected 200, got {response.status_code}: {response.text[:200]}")
+            return False
+        
+        data = response.json()
+        
+        # Verify ai_used is false
+        if data.get("ai_used") != False:
+            log_test("Breakdown Analysis - No AI", False, 
+                    f"Expected ai_used=false, got {data.get('ai_used')}")
+            return False
+        
+        # Verify response time is reasonable (should be fast without AI)
+        msg = f"Response OK: ai_used=false, response_time={elapsed_time:.2f}s"
+        if elapsed_time > 10:
+            msg += " (Warning: Response time > 10s without AI)"
+        
+        log_test("Breakdown Analysis - No AI", True, msg)
+        
+        print(f"\n⚡ Performance:")
+        print(f"  Response Time: {elapsed_time:.2f}s")
+        print(f"  AI Used: {data['ai_used']}")
+        
+        return True
+        
+    except Exception as e:
+        log_test("Breakdown Analysis - No AI", False, f"Exception: {str(e)}")
+        return False
+
+
+def test_breakdown_analysis_custom_date_range():
+    """Test 3: GET /api/breakdown-analysis?start_date=2025-01-01&end_date=2026-12-31 - Custom date range"""
+    print("\n" + "="*80)
+    print("TEST: Breakdown Analysis - Custom Date Range")
+    print("="*80)
+    
+    try:
+        headers = {"Authorization": f"Bearer {AUTH_TOKEN}"}
+        params = {
+            "start_date": "2025-01-01",
+            "end_date": "2026-12-31",
+            "use_ai": "false"  # Disable AI for faster test
+        }
+        response = requests.get(f"{BASE_URL}/breakdown-analysis", headers=headers, params=params, timeout=30)
+        
+        if response.status_code != 200:
+            log_test("Breakdown Analysis - Custom Date Range", False, 
+                    f"Expected 200, got {response.status_code}: {response.text[:200]}")
+            return False
+        
+        data = response.json()
+        
+        # Verify date range
+        if data["date_range"]["start"] != "2025-01-01":
+            log_test("Breakdown Analysis - Custom Date Range", False, 
+                    f"Expected start_date='2025-01-01', got '{data['date_range']['start']}'")
+            return False
+        
+        if data["date_range"]["end"] != "2026-12-31":
+            log_test("Breakdown Analysis - Custom Date Range", False, 
+                    f"Expected end_date='2026-12-31', got '{data['date_range']['end']}'")
+            return False
+        
+        msg = (f"Response OK: date_range={data['date_range']['start']} to {data['date_range']['end']}, "
+               f"days={data['date_range']['days']}, "
+               f"total_records={data['total_records']}, "
+               f"total_breakdowns={data['total_breakdowns']}")
+        
+        log_test("Breakdown Analysis - Custom Date Range", True, msg)
+        
+        print(f"\n📅 Date Range Verification:")
+        print(f"  Start Date: {data['date_range']['start']}")
+        print(f"  End Date: {data['date_range']['end']}")
+        print(f"  Days: {data['date_range']['days']}")
+        print(f"  Total Records: {data['total_records']}")
+        print(f"  Total Breakdowns: {data['total_breakdowns']}")
+        
+        return True
+        
+    except Exception as e:
+        log_test("Breakdown Analysis - Custom Date Range", False, f"Exception: {str(e)}")
+        return False
+
+
+def test_breakdown_analysis_no_auth():
+    """Test 4: GET /api/breakdown-analysis without auth - Should return 401/403"""
+    print("\n" + "="*80)
+    print("TEST: Breakdown Analysis - No Authentication")
+    print("="*80)
+    
+    try:
+        # No Authorization header
+        response = requests.get(f"{BASE_URL}/breakdown-analysis", timeout=10)
+        
+        if response.status_code not in [401, 403]:
+            log_test("Breakdown Analysis - No Auth", False, 
+                    f"Expected 401 or 403, got {response.status_code}")
+            return False
+        
+        log_test("Breakdown Analysis - No Auth", True, 
+                f"Correctly returned {response.status_code} for unauthorized access")
+        
+        print(f"\n🔒 Security Check:")
+        print(f"  Status Code: {response.status_code}")
+        print(f"  Auth Required: ✅")
+        
+        return True
+        
+    except Exception as e:
+        log_test("Breakdown Analysis - No Auth", False, f"Exception: {str(e)}")
+        return False
+
+
+def test_breakdown_analysis_ai_integration():
+    """Test 5: Verify EMERGENT_LLM_KEY and AI integration"""
+    print("\n" + "="*80)
+    print("TEST: Breakdown Analysis - AI Integration Verification")
+    print("="*80)
+    
+    try:
+        headers = {"Authorization": f"Bearer {AUTH_TOKEN}"}
+        # Use default params with use_ai=true
+        response = requests.get(f"{BASE_URL}/breakdown-analysis?use_ai=true", headers=headers, timeout=60)
+        
+        if response.status_code != 200:
+            log_test("Breakdown Analysis - AI Integration", False, 
+                    f"Expected 200, got {response.status_code}: {response.text[:200]}")
+            return False
+        
+        data = response.json()
+        
+        # Check if there's breakdown data
+        if data["total_breakdowns"] == 0:
+            # No breakdown data, so AI should not be called
+            if data["ai_used"] == False:
+                log_test("Breakdown Analysis - AI Integration", True, 
+                        "No breakdown data - AI not called (expected behavior)")
+                print(f"\n🤖 AI Integration:")
+                print(f"  Total Breakdowns: 0")
+                print(f"  AI Used: False (expected - no data to analyze)")
+                print(f"  AI Error: {data['ai_error']}")
+                return True
+            else:
+                log_test("Breakdown Analysis - AI Integration", False, 
+                        "AI was called despite no breakdown data")
+                return False
+        else:
+            # There is breakdown data, verify AI was called
+            if data["ai_used"] == False:
+                # AI was not used - check if there's an error
+                if data["ai_error"]:
+                    log_test("Breakdown Analysis - AI Integration", False, 
+                            f"AI not used due to error: {data['ai_error']}")
+                    print(f"\n🤖 AI Integration:")
+                    print(f"  Total Breakdowns: {data['total_breakdowns']}")
+                    print(f"  AI Used: False")
+                    print(f"  AI Error: {data['ai_error']}")
+                    return False
+                else:
+                    log_test("Breakdown Analysis - AI Integration", False, 
+                            "AI not used despite having breakdown data and no error")
+                    return False
+            else:
+                # AI was used successfully
+                msg = (f"AI integration working: total_breakdowns={data['total_breakdowns']}, "
+                       f"ai_used=true, executive_summary_length={len(data['executive_summary'])}")
+                
+                if data["ai_error"]:
+                    msg += f", ai_error={data['ai_error']}"
+                
+                log_test("Breakdown Analysis - AI Integration", True, msg)
+                
+                print(f"\n🤖 AI Integration:")
+                print(f"  Total Breakdowns: {data['total_breakdowns']}")
+                print(f"  AI Used: True ✅")
+                print(f"  AI Error: {data['ai_error']}")
+                print(f"  Executive Summary Length: {len(data['executive_summary'])} chars")
+                print(f"  Top Issues Overall: {len(data['top_issues_overall'])} items")
+                
+                if data["executive_summary"]:
+                    print(f"\n📝 AI-Generated Executive Summary:")
+                    print(f"  {data['executive_summary'][:300]}...")
+                
+                if data["top_issues_overall"]:
+                    print(f"\n🔝 Top Issues Overall (AI-categorized):")
+                    for i, issue in enumerate(data["top_issues_overall"][:3], 1):
+                        print(f"  {i}. {issue.get('kategori', 'N/A')}: {issue.get('aciklama', 'N/A')[:80]}...")
+                
+                return True
+        
+    except Exception as e:
+        log_test("Breakdown Analysis - AI Integration", False, f"Exception: {str(e)}")
+        return False
+
+
+def test_breakdown_analysis_ai_with_data():
+    """Test 6: Verify AI integration with actual breakdown data"""
+    print("\n" + "="*80)
+    print("TEST: Breakdown Analysis - AI Integration with Real Data")
+    print("="*80)
+    
+    try:
+        headers = {"Authorization": f"Bearer {AUTH_TOKEN}"}
+        # Use custom date range where we know there's data (2025-01-01 to 2026-12-31)
+        params = {
+            "start_date": "2025-01-01",
+            "end_date": "2026-12-31",
+            "use_ai": "true"
+        }
+        response = requests.get(f"{BASE_URL}/breakdown-analysis", headers=headers, params=params, timeout=90)
+        
+        if response.status_code != 200:
+            log_test("Breakdown Analysis - AI with Data", False, 
+                    f"Expected 200, got {response.status_code}: {response.text[:200]}")
+            return False
+        
+        data = response.json()
+        
+        # Check if there's breakdown data
+        if data["total_breakdowns"] == 0:
+            log_test("Breakdown Analysis - AI with Data", True, 
+                    "No breakdown data in specified range - AI not called (expected)")
+            print(f"\n🤖 AI Integration:")
+            print(f"  Total Breakdowns: 0")
+            print(f"  AI Used: {data['ai_used']}")
+            print(f"  Note: No data to analyze in this date range")
+            return True
+        
+        # There is breakdown data - verify AI processing
+        print(f"\n📊 Data Found:")
+        print(f"  Total Records: {data['total_records']}")
+        print(f"  Total Breakdowns: {data['total_breakdowns']}")
+        print(f"  Distinct Departments: {data['distinct_departments']}")
+        
+        print(f"\n🤖 AI Processing:")
+        print(f"  AI Used: {data['ai_used']}")
+        print(f"  AI Error: {data['ai_error']}")
+        
+        if data["ai_used"]:
+            # AI was successfully used
+            print(f"  Executive Summary Length: {len(data['executive_summary'])} chars")
+            print(f"  Top Issues Overall: {len(data['top_issues_overall'])} items")
+            
+            if data["executive_summary"]:
+                print(f"\n📝 AI-Generated Executive Summary:")
+                summary_lines = data['executive_summary'].split('\n')
+                for line in summary_lines[:5]:  # Show first 5 lines
+                    if line.strip():
+                        print(f"  {line.strip()}")
+                if len(summary_lines) > 5:
+                    print(f"  ... ({len(summary_lines) - 5} more lines)")
+            
+            if data["top_issues_overall"]:
+                print(f"\n🔝 Top Issues Overall (AI-categorized):")
+                for i, issue in enumerate(data["top_issues_overall"][:5], 1):
+                    kategori = issue.get('kategori', 'N/A')
+                    adet = issue.get('adet', 0)
+                    aciklama = issue.get('aciklama', 'N/A')
+                    print(f"  {i}. {kategori} ({adet} adet): {aciklama[:100]}")
+            
+            if data["per_department"]:
+                print(f"\n🏭 Per Department AI Analysis:")
+                for i, dept in enumerate(data["per_department"][:3], 1):
+                    print(f"  {i}. {dept['department_name']} ({dept['total_breakdowns']} breakdowns)")
+                    if dept.get('ai_one_liner'):
+                        print(f"     → {dept['ai_one_liner']}")
+                    if dept.get('ai_kategoriler'):
+                        print(f"     Categories: {len(dept['ai_kategoriler'])} AI-categorized issues")
+            
+            msg = (f"AI integration successful: total_breakdowns={data['total_breakdowns']}, "
+                   f"ai_used=true, executive_summary_length={len(data['executive_summary'])}, "
+                   f"top_issues={len(data['top_issues_overall'])}")
+            
+            log_test("Breakdown Analysis - AI with Data", True, msg)
+            return True
+        else:
+            # AI was not used - check for error
+            if data["ai_error"]:
+                log_test("Breakdown Analysis - AI with Data", False, 
+                        f"AI not used due to error: {data['ai_error']}")
+                print(f"\n❌ AI Error Details:")
+                print(f"  {data['ai_error']}")
+                return False
+            else:
+                log_test("Breakdown Analysis - AI with Data", False, 
+                        "AI not used despite having breakdown data and no error reported")
+                return False
+        
+    except Exception as e:
+        log_test("Breakdown Analysis - AI with Data", False, f"Exception: {str(e)}")
+        import traceback
+        print(f"\n❌ Exception Details:")
+        print(traceback.format_exc())
+        return False
+
+
+def test_breakdown_analysis_comprehensive():
+    """Run all breakdown analysis tests"""
+    print("\n" + "="*80)
+    print("BREAKDOWN ANALYSIS ENDPOINT - COMPREHENSIVE TEST SUITE")
+    print("="*80)
+    
+    # Test 1: Default parameters
+    test_breakdown_analysis_default_params()
+    
+    # Test 2: No AI
+    test_breakdown_analysis_no_ai()
+    
+    # Test 3: Custom date range
+    test_breakdown_analysis_custom_date_range()
+    
+    # Test 4: No authentication
+    test_breakdown_analysis_no_auth()
+    
+    # Test 5: AI integration (with default params - may have no data)
+    test_breakdown_analysis_ai_integration()
+    
+    # Test 6: AI integration with actual data (custom date range)
+    test_breakdown_analysis_ai_with_data()
+
+
 def main():
     """Main test runner"""
     print("="*80)
-    print("GITHUB AUTO-RESTORE + SHUTDOWN FLUSH BACKEND TEST SUITE")
+    print("BREAKDOWN ANALYSIS BACKEND TEST SUITE")
     print("="*80)
     print(f"Backend URL: {BASE_URL}")
     print(f"Test Credentials: {TEST_EMAIL} / {TEST_PASSWORD}")
     print(f"Test Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print("="*80)
     
-    # Run tests in order
-    test_health_check()
-    test_startup_restore_logs()
-    
-    # Login is required for subsequent tests
+    # Login is required for tests
     if not test_login():
-        print("\n❌ Login failed - cannot continue with remaining tests")
+        print("\n❌ Login failed - cannot continue with tests")
         print_summary()
         sys.exit(1)
     
-    test_github_sync_push()
-    test_github_sync_status()
-    test_regression()
+    # Run breakdown analysis tests
+    test_breakdown_analysis_comprehensive()
     
     # Print summary
     print_summary()

@@ -14,6 +14,7 @@ import OperatorsManagement from '@/pages/OperatorsManagement';
 import UserManagement from '@/pages/UserManagement';
 import BimsResources from '@/pages/BimsResources';
 import BimsStok from '@/pages/BimsStok';
+import BreakdownDashboard from '@/pages/BreakdownDashboard';
 import CimentoDashboard from '@/pages/CimentoDashboard';
 import CimentoResources from '@/pages/CimentoResources';
 import CimentoEntry from '@/pages/CimentoEntry';
@@ -102,6 +103,7 @@ function App() {
               <Route path="reports" element={<Reports />} />
               <Route path="bims-resources" element={<BimsResources />} />
               <Route path="bims-stok" element={<BimsStok />} />
+              <Route path="breakdown-dashboard" element={<BreakdownDashboard />} />
               <Route path="cimento" element={<CimentoDashboard />} />
               <Route path="cimento-entry" element={<CimentoEntry />} />
               <Route path="cimento-resources" element={<CimentoResources />} />

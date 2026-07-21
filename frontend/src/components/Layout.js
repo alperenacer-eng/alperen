@@ -27,7 +27,8 @@ import {
   FilePlus,
   Building,
   Boxes,
-  Factory
+  Factory,
+  AlertTriangle
 } from 'lucide-react';
 
 const Layout = () => {
@@ -46,6 +47,7 @@ const Layout = () => {
     { path: '/production-list', icon: List, label: 'Kayıtlar', testId: 'nav-production-list' },
     { path: '/bims-stok', icon: Boxes, label: 'Stok', testId: 'nav-bims-stok' },
     { path: '/reports', icon: BarChart3, label: 'Raporlar', testId: 'nav-reports' },
+    { path: '/breakdown-dashboard', icon: AlertTriangle, label: 'Arızalar', testId: 'nav-breakdown-dashboard' },
     { path: '/bims-resources', icon: Database, label: 'Kaynaklar', testId: 'nav-bims-resources' },
   ];
 

@@ -13,7 +13,7 @@ import json
 from pathlib import Path
 from pydantic import BaseModel, Field, ConfigDict, EmailStr
 from typing import List, Optional
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone, timedelta, date
 from passlib.context import CryptContext
 import jwt
 
@@ -7461,6 +7461,242 @@ async def delete_parke_operator(oid: str, current_user: dict = Depends(get_curre
         return {"message": "Operatör silindi"}
     finally:
         await db.close()
+
+
+# ============================================================
+# ARIZA ANALİZİ (AI Destekli Yönetici Özeti)
+# ============================================================
+
+@api_router.get("/breakdown-analysis")
+async def get_breakdown_analysis(
+    days: int = 30,
+    module: str = "bims",
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    use_ai: bool = True,
+    current_user: dict = Depends(get_current_user),
+):
+    """
+    Belirtilen dönemdeki üretim kayıtlarındaki breakdown_1/2/3 metinlerini toplar,
+    işletme bazında gruplar ve LLM ile yorumlayarak yönetici özeti üretir.
+    """
+    import re
+    from collections import defaultdict, Counter
+
+    # Tarih aralığı hesapla
+    today = date.today()
+    if end_date:
+        try:
+            end_dt = datetime.strptime(end_date, "%Y-%m-%d").date()
+        except Exception:
+            end_dt = today
+    else:
+        end_dt = today
+    if start_date:
+        try:
+            start_dt = datetime.strptime(start_date, "%Y-%m-%d").date()
+        except Exception:
+            start_dt = end_dt - timedelta(days=days)
+    else:
+        start_dt = end_dt - timedelta(days=max(1, days))
+
+    db = await get_db()
+    try:
+        # Üretim kayıtlarını çek (module filtreli, tarih aralığı production_date bazlı)
+        query = """
+            SELECT id, production_date, shift_type, department_id, department_name,
+                   operator_name, product_name, breakdown_1, breakdown_2, breakdown_3
+              FROM production_records
+             WHERE module = ?
+               AND production_date >= ?
+               AND production_date <= ?
+             ORDER BY production_date DESC, created_at DESC
+        """
+        async with db.execute(query, (module, start_dt.isoformat(), end_dt.isoformat())) as cursor:
+            rows = await cursor.fetchall()
+        records = [row_to_dict(r) for r in rows]
+    finally:
+        await db.close()
+
+    # Arıza öğelerini flatten et
+    def clean_txt(t):
+        if not t:
+            return ""
+        return str(t).strip()
+
+    all_items = []  # {tarih, isletme_id, isletme, vardiya, operator, urun, metin, slot}
+    dept_map = {}  # id -> name
+    for r in records:
+        dept_id = r.get("department_id") or "unknown"
+        dept_name = r.get("department_name") or "Belirtilmemiş"
+        dept_map[dept_id] = dept_name
+        for slot in ("breakdown_1", "breakdown_2", "breakdown_3"):
+            txt = clean_txt(r.get(slot))
+            if txt:
+                all_items.append({
+                    "tarih": r.get("production_date"),
+                    "isletme_id": dept_id,
+                    "isletme": dept_name,
+                    "vardiya": r.get("shift_type") or "gunduz",
+                    "operator": r.get("operator_name") or "",
+                    "urun": r.get("product_name") or "",
+                    "metin": txt,
+                    "slot": slot,
+                })
+
+    # İşletme bazında grupla
+    per_dept = defaultdict(list)
+    for it in all_items:
+        per_dept[it["isletme_id"]].append(it)
+
+    # Basit anahtar-kelime frekans analizi (fallback + LLM için ipucu)
+    STOPWORDS = {
+        "ve", "ile", "için", "bir", "bu", "şu", "de", "da", "olan", "olarak", "en",
+        "çok", "az", "yok", "var", "vardı", "vardi", "yapıldı", "yapildi", "oldu",
+        "aynı", "ayni", "gibi", "ama", "fakat", "ancak", "kez", "kere", "sonra",
+        "önce", "onceki", "sonraki", "üzere", "uzere", "arıza", "ariza", "arızası",
+        "arizasi", "arızası:", "arizasi:", "-", ".", ",", "the", "a", "an",
+    }
+
+    def tokenize(text):
+        # Türkçe uyumlu basit tokenize
+        text = text.lower()
+        text = re.sub(r"[^\w\sçğıöşüâîû]", " ", text, flags=re.UNICODE)
+        toks = [t for t in text.split() if len(t) >= 3 and t not in STOPWORDS and not t.isdigit()]
+        return toks
+
+    def keyword_top(items, k=10):
+        c = Counter()
+        for it in items:
+            for tok in tokenize(it["metin"]):
+                c[tok] += 1
+        return [{"kelime": w, "adet": n} for w, n in c.most_common(k)]
+
+    per_department_out = []
+    for dept_id, items in per_dept.items():
+        per_department_out.append({
+            "department_id": dept_id,
+            "department_name": dept_map.get(dept_id, "Belirtilmemiş"),
+            "total_breakdowns": len(items),
+            "top_keywords": keyword_top(items, 10),
+            "ornekler": [
+                {"tarih": x["tarih"], "vardiya": x["vardiya"], "operator": x["operator"],
+                 "urun": x["urun"], "metin": x["metin"]}
+                for x in items[:8]
+            ],
+        })
+    # İşletmeleri arıza sayısına göre sırala
+    per_department_out.sort(key=lambda d: d["total_breakdowns"], reverse=True)
+
+    overall_top_keywords = keyword_top(all_items, 15)
+
+    # Son 15 arızayı liste olarak dön
+    recent = [
+        {"tarih": x["tarih"], "isletme": x["isletme"], "vardiya": x["vardiya"],
+         "operator": x["operator"], "urun": x["urun"], "metin": x["metin"]}
+        for x in all_items[:15]
+    ]
+
+    executive_summary = ""
+    per_department_ai = {}  # dept_id -> ai summary
+    top_issues_overall = []
+    ai_error = None
+    ai_used = False
+
+    if use_ai and all_items:
+        try:
+            from emergentintegrations.llm.chat import LlmChat, UserMessage
+            api_key = os.environ.get("EMERGENT_LLM_KEY")
+            if api_key:
+                # LLM için compact context hazırla — token maliyeti için özet gönder
+                dept_snippets = []
+                for d in per_department_out[:10]:
+                    metinler = [f"- {it['metin']}" for it in d["ornekler"][:8]]
+                    dept_snippets.append(
+                        f"İŞLETME: {d['department_name']} ({d['total_breakdowns']} arıza kaydı)\n" +
+                        "\n".join(metinler)
+                    )
+                context_block = "\n\n".join(dept_snippets)
+                system_msg = (
+                    "Sen bir üretim tesisi yönetici asistanısın. Sana beton parke üretim "
+                    "hattından operatörlerin yazdığı ARIZA (breakdown) notları verilecek. "
+                    "Görevlerin:\n"
+                    "1) Arızaları anlamlı kategorilere ayır (örn: 'Elektrik', 'Mekanik', "
+                    "'Kalıp/Palet', 'Karma/Çimento', 'Bant/Presleyici', 'Diğer').\n"
+                    "2) Her işletme için en çok tekrar eden arızaları belirle.\n"
+                    "3) Sabah kontrol için 4-8 cümlelik NET bir yönetici özeti yaz.\n"
+                    "4) Yanıtı SADECE geçerli JSON olarak ver, ek yorum yazma.\n\n"
+                    "JSON şeması:\n"
+                    "{\n"
+                    '  "executive_summary": "5-8 cümlelik Türkçe yönetici özeti",\n'
+                    '  "top_issues_overall": [ {"kategori": "...", "adet": N, "aciklama": "..."} ],\n'
+                    '  "per_department": [ {"department_name": "...", "kategoriler": [ {"kategori": "...", "adet": N, "aciklama": "..." } ], "one_liner": "tek cümle özet" } ]\n'
+                    "}\n"
+                    "Türkçe yaz, madde işareti kullanma, sayıları verilerden çıkar."
+                )
+                user_text = (
+                    f"Tarih aralığı: {start_dt.isoformat()} — {end_dt.isoformat()}\n"
+                    f"Toplam üretim kaydı: {len(records)}, toplam arıza notu: {len(all_items)}\n\n"
+                    f"İŞLETME BAZLI ARIZA NOTLARI:\n\n{context_block}\n\n"
+                    "Yukarıdaki verileri yorumla ve tanımlanan JSON şemasına göre yanıt ver."
+                )
+                chat = LlmChat(
+                    api_key=api_key,
+                    session_id=f"breakdown-analysis-{start_dt.isoformat()}-{end_dt.isoformat()}",
+                    system_message=system_msg,
+                ).with_model("openai", "gpt-4o-mini")
+                resp = await chat.send_message(UserMessage(text=user_text))
+                # Cevaptan JSON çıkar
+                raw = resp if isinstance(resp, str) else str(resp)
+                m = re.search(r"\{[\s\S]*\}", raw)
+                if m:
+                    try:
+                        parsed = json.loads(m.group(0))
+                        executive_summary = parsed.get("executive_summary", "")
+                        top_issues_overall = parsed.get("top_issues_overall", []) or []
+                        for pd in parsed.get("per_department", []) or []:
+                            name = pd.get("department_name", "")
+                            per_department_ai[name] = pd
+                        ai_used = True
+                    except Exception as pe:
+                        ai_error = f"JSON parse hatası: {pe}"
+                        executive_summary = raw[:600]
+                else:
+                    executive_summary = raw[:600]
+                    ai_used = True
+            else:
+                ai_error = "EMERGENT_LLM_KEY tanımlı değil"
+        except Exception as e:
+            ai_error = f"LLM hatası: {e}"
+
+    # AI çıktısını işletmelere iliştir
+    for d in per_department_out:
+        ai_pd = per_department_ai.get(d["department_name"])
+        if ai_pd:
+            d["ai_kategoriler"] = ai_pd.get("kategoriler", []) or []
+            d["ai_one_liner"] = ai_pd.get("one_liner", "")
+        else:
+            d["ai_kategoriler"] = []
+            d["ai_one_liner"] = ""
+
+    return {
+        "date_range": {
+            "start": start_dt.isoformat(),
+            "end": end_dt.isoformat(),
+            "days": (end_dt - start_dt).days + 1,
+        },
+        "module": module,
+        "total_records": len(records),
+        "total_breakdowns": len(all_items),
+        "distinct_departments": len(per_department_out),
+        "executive_summary": executive_summary,
+        "top_issues_overall": top_issues_overall,
+        "overall_top_keywords": overall_top_keywords,
+        "per_department": per_department_out,
+        "recent_breakdowns": recent,
+        "ai_used": ai_used,
+        "ai_error": ai_error,
+    }
 
 
 # Include the API router after all routes are defined
