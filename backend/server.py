@@ -25,6 +25,8 @@ from github_sync import (
     resolve_table_from_path,
     schedule_sync,
     push_all_tables,
+    restore_database_from_github,
+    flush_pending_pushes,
     get_stats as github_sync_stats,
     is_configured as github_sync_is_configured,
 )
@@ -7466,9 +7468,27 @@ app.include_router(api_router)
 
 @app.on_event("startup")
 async def startup_event():
+    # 1) Container yeniden başladıysa GitHub'dan en son yedeği geri yükle
+    #    (yalnızca local DB yoksa veya boşsa/eskiyse — mevcut veriye dokunulmaz)
+    try:
+        restore_result = await restore_database_from_github()
+        if restore_result.get("restored"):
+            logger.info("GitHub restore: %s", restore_result)
+        else:
+            logger.info("GitHub restore skipped: %s", restore_result.get("reason"))
+    except Exception as e:
+        logger.exception("GitHub restore failed at startup: %s", e)
+
+    # 2) DB şemasını hazırla (yeni tablolar, kolonlar, vs.)
     await init_db()
     logger.info("SQLite database initialized")
 
 @app.on_event("shutdown")
 async def shutdown_event():
+    # Uyku/restart öncesi bekleyen debounce push'ları hemen çalıştır
+    try:
+        flush_result = await flush_pending_pushes()
+        logger.info("Shutdown flush result: %s", flush_result)
+    except Exception as e:
+        logger.exception("Shutdown flush failed: %s", e)
     logger.info("Application shutdown")

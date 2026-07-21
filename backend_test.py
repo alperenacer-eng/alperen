@@ -1,367 +1,561 @@
 #!/usr/bin/env python3
 """
-Backend API Testing Script for BIMS Üretim Aylık Rapor - Ürün Bazlı yeni alanlar
-Tests newly added fields in GET /api/reports/monthly endpoint
+Backend Test Suite for GitHub Auto-Restore on Startup + Shutdown Flush
+=======================================================================
+Tests the P0 data loss bug fix that includes:
+1. Backend health check
+2. Startup restore log verification
+3. GitHub sync push functionality
+4. GitHub sync status endpoint
+5. Regression tests for existing endpoints
 """
 
 import requests
+import time
 import json
 import sys
+from datetime import datetime
 
 # Backend URL from frontend/.env
-BACKEND_URL = "https://alperen-labs.preview.emergentagent.com/api"
+BASE_URL = "https://alperen-labs.preview.emergentagent.com/api"
 
 # Test credentials
-LOGIN_EMAIL = "alperenacer@acerler.com"
-LOGIN_PASSWORD = "1234"
+TEST_EMAIL = "alperenacer@acerler.com"
+TEST_PASSWORD = "1234"
 
 # Global token storage
-auth_token = None
+AUTH_TOKEN = None
 
-def print_test(test_name, passed, details=""):
-    """Print test result with formatting"""
-    status = "✅ PASS" if passed else "❌ FAIL"
+# Test results tracking
+test_results = {
+    "total": 0,
+    "passed": 0,
+    "failed": 0,
+    "tests": []
+}
+
+def log_test(test_name, passed, message=""):
+    """Log test result"""
+    test_results["total"] += 1
+    if passed:
+        test_results["passed"] += 1
+        status = "✅ PASS"
+    else:
+        test_results["failed"] += 1
+        status = "❌ FAIL"
+    
+    test_results["tests"].append({
+        "name": test_name,
+        "passed": passed,
+        "message": message
+    })
+    
     print(f"{status}: {test_name}")
-    if details:
-        print(f"   Details: {details}")
+    if message:
+        print(f"  → {message}")
 
-def login():
-    """Login and get JWT token"""
-    global auth_token
+def get_headers(with_auth=False):
+    """Get request headers"""
+    headers = {"Content-Type": "application/json"}
+    if with_auth and AUTH_TOKEN:
+        headers["Authorization"] = f"Bearer {AUTH_TOKEN}"
+    return headers
+
+def test_health_check():
+    """Test 1: Backend sağlıklı başladı mı?"""
     print("\n" + "="*80)
-    print("TEST 1: Login Authentication")
+    print("TEST 1: Backend Health Check")
     print("="*80)
     
     try:
+        response = requests.get(f"{BASE_URL}/health", timeout=10)
+        
+        if response.status_code == 200:
+            data = response.json()
+            if data.get("status") == "healthy" and "/app/backend/data/database.db" in data.get("database", ""):
+                log_test("GET /api/health returns 200 with healthy status", True, 
+                        f"Response: {json.dumps(data, indent=2)}")
+                return True
+            else:
+                log_test("GET /api/health returns 200 with healthy status", False,
+                        f"Unexpected response: {json.dumps(data, indent=2)}")
+                return False
+        else:
+            log_test("GET /api/health returns 200 with healthy status", False,
+                    f"Status code: {response.status_code}, Body: {response.text[:200]}")
+            return False
+    except Exception as e:
+        log_test("GET /api/health returns 200 with healthy status", False, f"Exception: {str(e)}")
+        return False
+
+def test_startup_restore_logs():
+    """Test 2: Startup restore log'u var mı?"""
+    print("\n" + "="*80)
+    print("TEST 2: Startup Restore Log Verification")
+    print("="*80)
+    
+    import subprocess
+    
+    try:
+        # Check backend logs for restore messages (check both .out.log and .err.log)
+        result_out = subprocess.run(
+            ["tail", "-n", "200", "/var/log/supervisor/backend.out.log"],
+            capture_output=True,
+            text=True,
+            timeout=5
+        )
+        
+        result_err = subprocess.run(
+            ["tail", "-n", "200", "/var/log/supervisor/backend.err.log"],
+            capture_output=True,
+            text=True,
+            timeout=5
+        )
+        
+        log_content = result_out.stdout + result_out.stderr + result_err.stdout + result_err.stderr
+        
+        # Look for restore log messages
+        has_restore_log = False
+        restore_message = ""
+        
+        if "GitHub restore skipped: local db is up to date" in log_content:
+            has_restore_log = True
+            restore_message = "Found: 'GitHub restore skipped: local db is up to date' (normal case)"
+        elif "GitHub restore:" in log_content and "restored" in log_content:
+            has_restore_log = True
+            restore_message = "Found: 'GitHub restore: {..., 'restored': True, ...}' (fresh container case)"
+        elif "GitHub restore skipped:" in log_content:
+            has_restore_log = True
+            restore_message = f"Found: GitHub restore skipped message in logs"
+        
+        # Check for error logs (should NOT exist)
+        has_error = "GitHub restore failed at startup" in log_content
+        
+        if has_restore_log and not has_error:
+            log_test("Startup restore log exists without errors", True, restore_message)
+            return True
+        elif has_error:
+            log_test("Startup restore log exists without errors", False,
+                    "ERROR: Found 'GitHub restore failed at startup' in logs")
+            return False
+        else:
+            log_test("Startup restore log exists without errors", False,
+                    "No restore log found in backend logs")
+            return False
+            
+    except Exception as e:
+        log_test("Startup restore log exists without errors", False, f"Exception: {str(e)}")
+        return False
+
+def test_login():
+    """Test: Login functionality"""
+    print("\n" + "="*80)
+    print("TEST: Login Authentication")
+    print("="*80)
+    
+    global AUTH_TOKEN
+    
+    try:
+        payload = {
+            "email": TEST_EMAIL,
+            "password": TEST_PASSWORD
+        }
+        
         response = requests.post(
-            f"{BACKEND_URL}/auth/login",
-            json={"email": LOGIN_EMAIL, "password": LOGIN_PASSWORD},
-            timeout=10
-        )
-        
-        if response.status_code == 200:
-            data = response.json()
-            auth_token = data.get("access_token")
-            print_test("POST /api/auth/login", True, f"Logged in as {LOGIN_EMAIL}")
-            return True
-        else:
-            print_test("POST /api/auth/login", False, f"Status: {response.status_code}, Response: {response.text}")
-            return False
-    except Exception as e:
-        print_test("POST /api/auth/login", False, f"Exception: {str(e)}")
-        return False
-
-def get_headers():
-    """Get authorization headers"""
-    return {
-        "Authorization": f"Bearer {auth_token}",
-        "Content-Type": "application/json"
-    }
-
-def find_year_month_with_records():
-    """Find a year/month that has production records"""
-    print("\n" + "="*80)
-    print("TEST 2: Find Year/Month with Production Records")
-    print("="*80)
-    
-    try:
-        response = requests.get(
-            f"{BACKEND_URL}/production",
+            f"{BASE_URL}/auth/login",
+            json=payload,
             headers=get_headers(),
             timeout=10
         )
         
         if response.status_code == 200:
             data = response.json()
-            if isinstance(data, list) and len(data) > 0:
-                # Get the first record's date
-                first_record = data[0]
-                production_date = first_record.get("production_date") or first_record.get("created_at", "")[:10]
+            if "access_token" in data and "user" in data:
+                AUTH_TOKEN = data["access_token"]
+                log_test(f"POST /api/auth/login with {TEST_EMAIL}/{TEST_PASSWORD}", True,
+                        f"Token received, user: {data['user'].get('email')}")
+                return True
+            else:
+                log_test(f"POST /api/auth/login with {TEST_EMAIL}/{TEST_PASSWORD}", False,
+                        f"Missing access_token or user in response")
+                return False
+        else:
+            log_test(f"POST /api/auth/login with {TEST_EMAIL}/{TEST_PASSWORD}", False,
+                    f"Status code: {response.status_code}, Body: {response.text[:200]}")
+            return False
+    except Exception as e:
+        log_test(f"POST /api/auth/login with {TEST_EMAIL}/{TEST_PASSWORD}", False, f"Exception: {str(e)}")
+        return False
+
+def test_github_sync_push():
+    """Test 3: GitHub sync yeni verileri push ediyor mu?"""
+    print("\n" + "="*80)
+    print("TEST 3: GitHub Sync Push Functionality")
+    print("="*80)
+    
+    if not AUTH_TOKEN:
+        log_test("GitHub sync push test", False, "No auth token available")
+        return False
+    
+    test_production_id = None
+    
+    try:
+        # Step 1: Create a test production record
+        print("\nStep 1: Creating test production record...")
+        
+        # First, get a valid product to use
+        response = requests.get(
+            f"{BASE_URL}/products",
+            headers=get_headers(with_auth=True),
+            timeout=10
+        )
+        
+        if response.status_code != 200 or not response.json():
+            log_test("GitHub sync push test - get products", False, 
+                    "No products available for testing")
+            return False
+        
+        products = response.json()
+        test_product = products[0]
+        
+        # Create production record with valid schema
+        production_payload = {
+            "product_id": test_product["id"],
+            "product_name": test_product["name"],
+            "quantity": 100,
+            "unit": test_product.get("unit", "adet"),
+            "production_date": datetime.now().strftime("%Y-%m-%d"),
+            "shift": "gündüz",
+            "notes": "TEST_GITHUB_SYNC_" + datetime.now().strftime("%Y%m%d_%H%M%S"),
+            "module": "bims"
+        }
+        
+        response = requests.post(
+            f"{BASE_URL}/production",
+            json=production_payload,
+            headers=get_headers(with_auth=True),
+            timeout=10
+        )
+        
+        if response.status_code in [200, 201]:
+            data = response.json()
+            test_production_id = data.get("id")
+            log_test("POST /api/production creates test record", True,
+                    f"Created production record with ID: {test_production_id}")
+        else:
+            log_test("POST /api/production creates test record", False,
+                    f"Status code: {response.status_code}, Body: {response.text[:300]}")
+            return False
+        
+        # Step 2: Wait for debounce (3 seconds, but debounce is now 1s for table + 2s for DB)
+        print("\nStep 2: Waiting 3 seconds for debounce...")
+        time.sleep(3)
+        
+        # Step 3: Check GitHub sync status
+        print("\nStep 3: Checking GitHub sync status...")
+        response = requests.get(
+            f"{BASE_URL}/github-sync/status",
+            headers=get_headers(with_auth=True),
+            timeout=10
+        )
+        
+        if response.status_code == 200:
+            data = response.json()
+            last_success = data.get("stats", {}).get("last_success_at")
+            
+            if last_success:
+                # Parse last_success_at timestamp
+                try:
+                    from dateutil import parser
+                    last_success_time = parser.isoparse(last_success)
+                    current_time = datetime.now(last_success_time.tzinfo)
+                    time_diff = (current_time - last_success_time).total_seconds()
+                    
+                    if time_diff <= 30:
+                        log_test("GET /api/github-sync/status shows recent push", True,
+                                f"last_success_at: {last_success} (within last 30 seconds)")
+                    else:
+                        log_test("GET /api/github-sync/status shows recent push", False,
+                                f"last_success_at: {last_success} (more than 30 seconds ago: {time_diff}s)")
+                        return False
+                except:
+                    # Fallback: just check if last_success exists
+                    log_test("GET /api/github-sync/status shows recent push", True,
+                            f"last_success_at exists: {last_success}")
+            else:
+                log_test("GET /api/github-sync/status shows recent push", False,
+                        "No last_success_at in response")
+                return False
+        else:
+            log_test("GET /api/github-sync/status shows recent push", False,
+                    f"Status code: {response.status_code}, Body: {response.text[:200]}")
+            return False
+        
+        # Step 4: Cleanup - delete test record
+        print("\nStep 4: Cleaning up test record...")
+        if test_production_id:
+            response = requests.delete(
+                f"{BASE_URL}/production/{test_production_id}",
+                headers=get_headers(with_auth=True),
+                timeout=10
+            )
+            
+            if response.status_code in [200, 204]:
+                log_test("DELETE /api/production/{id} cleanup", True,
+                        f"Deleted test production record: {test_production_id}")
+            else:
+                log_test("DELETE /api/production/{id} cleanup", False,
+                        f"Status code: {response.status_code}, Body: {response.text[:200]}")
+        
+        return True
+        
+    except Exception as e:
+        log_test("GitHub sync push test", False, f"Exception: {str(e)}")
+        
+        # Attempt cleanup even on error
+        if test_production_id:
+            try:
+                requests.delete(
+                    f"{BASE_URL}/production/{test_production_id}",
+                    headers=get_headers(with_auth=True),
+                    timeout=10
+                )
+            except:
+                pass
+        
+        return False
+
+def test_github_sync_status():
+    """Test 4: /api/github-sync/status endpoint'i doğru cevap veriyor mu?"""
+    print("\n" + "="*80)
+    print("TEST 4: GitHub Sync Status Endpoint")
+    print("="*80)
+    
+    if not AUTH_TOKEN:
+        log_test("GitHub sync status endpoint test", False, "No auth token available")
+        return False
+    
+    try:
+        response = requests.get(
+            f"{BASE_URL}/github-sync/status",
+            headers=get_headers(with_auth=True),
+            timeout=10
+        )
+        
+        if response.status_code == 200:
+            data = response.json()
+            
+            # Check required fields
+            has_configured = "configured" in data
+            has_repo = "repo" in data
+            has_branch = "branch" in data
+            has_stats = "stats" in data
+            
+            if has_configured and has_repo and has_branch and has_stats:
+                is_configured = data.get("configured")
                 
-                if production_date:
-                    year = int(production_date.split("-")[0])
-                    month = int(production_date.split("-")[1])
-                    print_test("GET /api/production", True, f"Found {len(data)} records. Using year={year}, month={month} from date: {production_date}")
-                    return year, month, len(data)
+                if is_configured:
+                    log_test("GET /api/github-sync/status returns correct structure", True,
+                            f"Response has all required fields (configured={is_configured}, repo={data.get('repo')}, branch={data.get('branch')})")
+                    return True
                 else:
-                    print_test("GET /api/production", False, f"No production_date found in record: {first_record}")
-                    return None, None, 0
+                    log_test("GET /api/github-sync/status returns correct structure", False,
+                            "configured is False - GitHub sync not configured")
+                    return False
             else:
-                print_test("GET /api/production", False, f"No production records found. Cannot test monthly report.")
-                return None, None, 0
+                missing_fields = []
+                if not has_configured: missing_fields.append("configured")
+                if not has_repo: missing_fields.append("repo")
+                if not has_branch: missing_fields.append("branch")
+                if not has_stats: missing_fields.append("stats")
+                
+                log_test("GET /api/github-sync/status returns correct structure", False,
+                        f"Missing fields: {', '.join(missing_fields)}")
+                return False
         else:
-            print_test("GET /api/production", False, f"Status: {response.status_code}, Response: {response.text}")
-            return None, None, 0
+            log_test("GET /api/github-sync/status returns correct structure", False,
+                    f"Status code: {response.status_code}, Body: {response.text[:200]}")
+            return False
+            
     except Exception as e:
-        print_test("GET /api/production", False, f"Exception: {str(e)}")
-        return None, None, 0
-
-def test_monthly_report_new_fields(year, month):
-    """Test GET /api/reports/monthly with new fields"""
-    print("\n" + "="*80)
-    print(f"TEST 3: Monthly Report New Fields (year={year}, month={month})")
-    print("="*80)
-    
-    try:
-        response = requests.get(
-            f"{BACKEND_URL}/reports/monthly?year={year}&month={month}",
-            headers=get_headers(),
-            timeout=10
-        )
-        
-        if response.status_code != 200:
-            print_test("GET /api/reports/monthly", False, f"Status: {response.status_code}, Response: {response.text}")
-            return False
-        
-        data = response.json()
-        
-        # Check if by_product exists
-        if "by_product" not in data:
-            print_test("GET /api/reports/monthly", False, f"Response missing 'by_product' field. Keys: {list(data.keys())}")
-            return False
-        
-        by_product = data["by_product"]
-        
-        # Check if by_product is an array
-        if not isinstance(by_product, list):
-            print_test("GET /api/reports/monthly", False, f"'by_product' is not an array. Type: {type(by_product)}")
-            return False
-        
-        print_test("GET /api/reports/monthly", True, f"Endpoint returned 200 with by_product array containing {len(by_product)} products")
-        
-        # If no products, that's OK for empty month
-        if len(by_product) == 0:
-            print_test("by_product array", True, f"Empty array (no production records for this month)")
-            return True
-        
-        # Check each product has the required fields
-        all_fields_present = True
-        required_new_fields = ["records", "strip_used", "mix_count", "cement_used", "machine_cement"]
-        required_existing_fields = ["product_name", "quantity", "net_pallets"]
-        
-        for idx, product in enumerate(by_product):
-            product_name = product.get("product_name", f"Product {idx}")
-            
-            # Check existing fields
-            missing_existing = [f for f in required_existing_fields if f not in product]
-            if missing_existing:
-                print_test(f"Product '{product_name}' - Existing fields", False, f"Missing fields: {missing_existing}")
-                all_fields_present = False
-                continue
-            
-            # Check new fields
-            missing_new = [f for f in required_new_fields if f not in product]
-            if missing_new:
-                print_test(f"Product '{product_name}' - New fields", False, f"Missing fields: {missing_new}")
-                all_fields_present = False
-                continue
-            
-            # Validate field types
-            records = product.get("records")
-            strip_used = product.get("strip_used")
-            mix_count = product.get("mix_count")
-            cement_used = product.get("cement_used")
-            machine_cement = product.get("machine_cement")
-            
-            # records should be integer >= 1
-            if not isinstance(records, int) or records < 1:
-                print_test(f"Product '{product_name}' - records field", False, f"Expected integer >= 1, got: {records} (type: {type(records)})")
-                all_fields_present = False
-                continue
-            
-            # Other fields should be numbers (int or float)
-            if not isinstance(strip_used, (int, float)):
-                print_test(f"Product '{product_name}' - strip_used field", False, f"Expected number, got: {strip_used} (type: {type(strip_used)})")
-                all_fields_present = False
-                continue
-            
-            if not isinstance(mix_count, (int, float)):
-                print_test(f"Product '{product_name}' - mix_count field", False, f"Expected number, got: {mix_count} (type: {type(mix_count)})")
-                all_fields_present = False
-                continue
-            
-            if not isinstance(cement_used, (int, float)):
-                print_test(f"Product '{product_name}' - cement_used field", False, f"Expected number, got: {cement_used} (type: {type(cement_used)})")
-                all_fields_present = False
-                continue
-            
-            if not isinstance(machine_cement, (int, float)):
-                print_test(f"Product '{product_name}' - machine_cement field", False, f"Expected number, got: {machine_cement} (type: {type(machine_cement)})")
-                all_fields_present = False
-                continue
-            
-            print_test(f"Product '{product_name}'", True, 
-                      f"All fields present - records={records}, strip_used={strip_used}, mix_count={mix_count}, cement_used={cement_used}, machine_cement={machine_cement}")
-        
-        return all_fields_present
-        
-    except Exception as e:
-        print_test("GET /api/reports/monthly", False, f"Exception: {str(e)}")
+        log_test("GET /api/github-sync/status returns correct structure", False, f"Exception: {str(e)}")
         return False
 
-def validate_records_count(year, month, by_product):
-    """Validate that records count matches actual production records for each product"""
+def test_regression():
+    """Test 5: Regresyon testi - mevcut endpoint'ler çalışıyor mu?"""
     print("\n" + "="*80)
-    print(f"TEST 4: Validate Records Count (year={year}, month={month})")
+    print("TEST 5: Regression Tests - Existing Endpoints")
     print("="*80)
     
+    if not AUTH_TOKEN:
+        log_test("Regression tests", False, "No auth token available")
+        return False
+    
+    all_passed = True
+    
+    # Test 5.1: GET /api/production
     try:
-        # Get all production records for the month (use high limit to get all)
         response = requests.get(
-            f"{BACKEND_URL}/production?limit=10000",
-            headers=get_headers(),
+            f"{BASE_URL}/production",
+            headers=get_headers(with_auth=True),
             timeout=10
         )
         
-        if response.status_code != 200:
-            print_test("GET /api/production", False, f"Status: {response.status_code}")
-            return False
-        
-        all_records = response.json()
-        
-        # Filter records for the specific year/month
-        start_date = f"{year:04d}-{month:02d}-01"
-        if month == 12:
-            next_y, next_m = year + 1, 1
-        else:
-            next_y, next_m = year, month + 1
-        end_date = f"{next_y:04d}-{next_m:02d}-01"
-        
-        month_records = []
-        for r in all_records:
-            dkey = r.get("production_date") or (r.get("created_at") or "")[:10]
-            if dkey and dkey >= start_date and dkey < end_date:
-                month_records.append(r)
-        
-        print(f"Found {len(month_records)} production records for {year}-{month:02d}")
-        
-        # Count records by product
-        product_counts = {}
-        for r in month_records:
-            pname = r.get("product_name") or "-"
-            product_counts[pname] = product_counts.get(pname, 0) + 1
-        
-        # Validate each product in by_product
-        all_valid = True
-        for product in by_product:
-            product_name = product.get("product_name")
-            records_in_report = product.get("records")
-            actual_count = product_counts.get(product_name, 0)
-            
-            if records_in_report == actual_count:
-                print_test(f"Product '{product_name}' records count", True, 
-                          f"Report shows {records_in_report} records, actual count is {actual_count} ✅")
+        if response.status_code == 200:
+            data = response.json()
+            if isinstance(data, list):
+                log_test("GET /api/production returns 200 with array", True,
+                        f"Retrieved {len(data)} production records")
             else:
-                print_test(f"Product '{product_name}' records count", False, 
-                          f"Report shows {records_in_report} records, but actual count is {actual_count}")
-                all_valid = False
-        
-        return all_valid
-        
+                log_test("GET /api/production returns 200 with array", False,
+                        f"Response is not an array: {type(data)}")
+                all_passed = False
+        else:
+            log_test("GET /api/production returns 200 with array", False,
+                    f"Status code: {response.status_code}")
+            all_passed = False
     except Exception as e:
-        print_test("Validate records count", False, f"Exception: {str(e)}")
-        return False
-
-def test_empty_month():
-    """Test that endpoint returns 200 with empty by_product for a month with no records"""
-    print("\n" + "="*80)
-    print("TEST 5: Empty Month (year=2099, month=12)")
-    print("="*80)
+        log_test("GET /api/production returns 200 with array", False, f"Exception: {str(e)}")
+        all_passed = False
     
+    # Test 5.2: GET /api/personeller
     try:
         response = requests.get(
-            f"{BACKEND_URL}/reports/monthly?year=2099&month=12",
-            headers=get_headers(),
+            f"{BASE_URL}/personeller",
+            headers=get_headers(with_auth=True),
             timeout=10
         )
         
-        if response.status_code != 200:
-            print_test("GET /api/reports/monthly (empty month)", False, f"Status: {response.status_code}, Response: {response.text}")
-            return False
-        
-        data = response.json()
-        
-        if "by_product" not in data:
-            print_test("GET /api/reports/monthly (empty month)", False, f"Response missing 'by_product' field")
-            return False
-        
-        by_product = data["by_product"]
-        
-        if not isinstance(by_product, list):
-            print_test("GET /api/reports/monthly (empty month)", False, f"'by_product' is not an array")
-            return False
-        
-        if len(by_product) == 0:
-            print_test("GET /api/reports/monthly (empty month)", True, f"Correctly returned 200 with empty by_product array")
-            return True
+        if response.status_code == 200:
+            data = response.json()
+            if isinstance(data, list):
+                log_test("GET /api/personeller returns 200", True,
+                        f"Retrieved {len(data)} personnel records")
+            else:
+                log_test("GET /api/personeller returns 200", False,
+                        f"Response is not an array: {type(data)}")
+                all_passed = False
         else:
-            print_test("GET /api/reports/monthly (empty month)", False, f"Expected empty array, got {len(by_product)} products")
-            return False
-        
+            log_test("GET /api/personeller returns 200", False,
+                    f"Status code: {response.status_code}")
+            all_passed = False
     except Exception as e:
-        print_test("GET /api/reports/monthly (empty month)", False, f"Exception: {str(e)}")
-        return False
+        log_test("GET /api/personeller returns 200", False, f"Exception: {str(e)}")
+        all_passed = False
+    
+    # Test 5.3: GET /api/products
+    try:
+        response = requests.get(
+            f"{BASE_URL}/products",
+            headers=get_headers(with_auth=True),
+            timeout=10
+        )
+        
+        if response.status_code == 200:
+            data = response.json()
+            if isinstance(data, list):
+                log_test("GET /api/products returns 200", True,
+                        f"Retrieved {len(data)} products")
+            else:
+                log_test("GET /api/products returns 200", False,
+                        f"Response is not an array: {type(data)}")
+                all_passed = False
+        else:
+            log_test("GET /api/products returns 200", False,
+                    f"Status code: {response.status_code}")
+            all_passed = False
+    except Exception as e:
+        log_test("GET /api/products returns 200", False, f"Exception: {str(e)}")
+        all_passed = False
+    
+    # Test 5.4: GET /api/reports/monthly
+    try:
+        response = requests.get(
+            f"{BASE_URL}/reports/monthly?year=2026&month=1",
+            headers=get_headers(with_auth=True),
+            timeout=10
+        )
+        
+        if response.status_code == 200:
+            data = response.json()
+            if "by_product" in data and isinstance(data["by_product"], list):
+                log_test("GET /api/reports/monthly returns 200 with by_product array", True,
+                        f"Report contains {len(data['by_product'])} product entries")
+            else:
+                log_test("GET /api/reports/monthly returns 200 with by_product array", False,
+                        f"Missing or invalid by_product field")
+                all_passed = False
+        else:
+            log_test("GET /api/reports/monthly returns 200 with by_product array", False,
+                    f"Status code: {response.status_code}")
+            all_passed = False
+    except Exception as e:
+        log_test("GET /api/reports/monthly returns 200 with by_product array", False, f"Exception: {str(e)}")
+        all_passed = False
+    
+    return all_passed
 
-def main():
-    """Main test execution"""
-    print("\n" + "="*80)
-    print("BIMS ÜRETİM AYLIK RAPOR - ÜRÜN BAZLI YENİ ALANLAR TESTİ")
-    print("Testing new fields in GET /api/reports/monthly endpoint")
-    print("="*80)
-    
-    # Login
-    if not login():
-        print("\n❌ LOGIN FAILED - Cannot proceed with tests")
-        sys.exit(1)
-    
-    # Find year/month with records
-    year, month, total_records = find_year_month_with_records()
-    if year is None or month is None:
-        print("\n❌ NO PRODUCTION RECORDS FOUND - Cannot test monthly report")
-        sys.exit(1)
-    
-    # Test monthly report new fields
-    monthly_report_result = test_monthly_report_new_fields(year, month)
-    
-    # Get by_product for validation
-    response = requests.get(
-        f"{BACKEND_URL}/reports/monthly?year={year}&month={month}",
-        headers=get_headers(),
-        timeout=10
-    )
-    by_product = response.json().get("by_product", []) if response.status_code == 200 else []
-    
-    # Validate records count
-    records_count_result = validate_records_count(year, month, by_product) if by_product else True
-    
-    # Test empty month
-    empty_month_result = test_empty_month()
-    
-    # Summary
+def print_summary():
+    """Print test summary"""
     print("\n" + "="*80)
     print("TEST SUMMARY")
     print("="*80)
+    print(f"Total Tests: {test_results['total']}")
+    print(f"Passed: {test_results['passed']} ✅")
+    print(f"Failed: {test_results['failed']} ❌")
+    print(f"Success Rate: {(test_results['passed'] / test_results['total'] * 100):.1f}%")
     
-    all_passed = monthly_report_result and records_count_result and empty_month_result
+    if test_results['failed'] > 0:
+        print("\n" + "="*80)
+        print("FAILED TESTS:")
+        print("="*80)
+        for test in test_results['tests']:
+            if not test['passed']:
+                print(f"❌ {test['name']}")
+                if test['message']:
+                    print(f"   {test['message']}")
     
-    print(f"\nLogin Authentication: ✅ PASSED")
-    print(f"Find Year/Month with Records: ✅ PASSED (year={year}, month={month})")
-    print(f"Monthly Report New Fields: {'✅ PASSED' if monthly_report_result else '❌ FAILED'}")
-    print(f"Records Count Validation: {'✅ PASSED' if records_count_result else '❌ FAILED'}")
-    print(f"Empty Month Test: {'✅ PASSED' if empty_month_result else '❌ FAILED'}")
+    print("\n" + "="*80)
+    print("DETAILED RESULTS:")
+    print("="*80)
+    for test in test_results['tests']:
+        status = "✅ PASS" if test['passed'] else "❌ FAIL"
+        print(f"{status}: {test['name']}")
+        if test['message']:
+            print(f"  → {test['message']}")
+
+def main():
+    """Main test runner"""
+    print("="*80)
+    print("GITHUB AUTO-RESTORE + SHUTDOWN FLUSH BACKEND TEST SUITE")
+    print("="*80)
+    print(f"Backend URL: {BASE_URL}")
+    print(f"Test Credentials: {TEST_EMAIL} / {TEST_PASSWORD}")
+    print(f"Test Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    print("="*80)
     
-    if all_passed:
-        print("\n✅ ALL TESTS PASSED (5/5)")
-        print("\nMonthly Report New Fields are working correctly:")
-        print("  - by_product array exists ✅")
-        print("  - New fields present: records, strip_used, mix_count, cement_used, machine_cement ✅")
-        print("  - Existing fields preserved: product_name, quantity, net_pallets ✅")
-        print("  - Records count matches actual production records ✅")
-        print("  - Empty month returns 200 with empty by_product array ✅")
-        sys.exit(0)
-    else:
-        print("\n❌ SOME TESTS FAILED")
+    # Run tests in order
+    test_health_check()
+    test_startup_restore_logs()
+    
+    # Login is required for subsequent tests
+    if not test_login():
+        print("\n❌ Login failed - cannot continue with remaining tests")
+        print_summary()
         sys.exit(1)
+    
+    test_github_sync_push()
+    test_github_sync_status()
+    test_regression()
+    
+    # Print summary
+    print_summary()
+    
+    # Exit with appropriate code
+    if test_results['failed'] > 0:
+        sys.exit(1)
+    else:
+        sys.exit(0)
 
 if __name__ == "__main__":
     main()

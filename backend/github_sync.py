@@ -44,8 +44,9 @@ API_BASE = "https://api.github.com"
 SKIP_TABLES = {"users"}  # contains password hashes
 
 # Debounce window (seconds) — multiple rapid changes get coalesced
-TABLE_DEBOUNCE_SECONDS = 3
-DB_DEBOUNCE_SECONDS = 10
+# Kısaltıldı: Container aniden kapanırsa daha az veri kaybı olur.
+TABLE_DEBOUNCE_SECONDS = 1
+DB_DEBOUNCE_SECONDS = 2
 
 # URL prefixes that should not trigger any sync
 SKIP_URL_PREFIXES = ("auth/", "upload-file")
@@ -401,6 +402,151 @@ def schedule_sync(table_name: Optional[str]) -> None:
     if db_task and not db_task.done():
         db_task.cancel()
     _debounce_tasks["__db__"] = loop.create_task(_delayed_push_db())
+
+
+# ---------------------------------------------------------------------------
+# Restore from GitHub (called at startup)
+# ---------------------------------------------------------------------------
+async def restore_database_from_github(force: bool = False) -> dict:
+    """
+    Startup helper: If local database.db is missing OR older than the version
+    on GitHub, download the GitHub copy and place it at DB_PATH.
+
+    Returns a summary dict with keys:
+      restored: bool - True if we replaced the local file
+      reason:   str  - human-readable explanation
+    """
+    if not is_configured():
+        return {"restored": False, "reason": "github sync not configured"}
+
+    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+
+    url = f"{API_BASE}/repos/{GITHUB_REPO}/contents/backups/database.db"
+    try:
+        async with httpx.AsyncClient() as client:
+            # Get file metadata (contains size + sha + last commit indirectly)
+            r = await client.get(
+                url,
+                params={"ref": GITHUB_BRANCH},
+                headers=_headers(),
+                timeout=30.0,
+            )
+            if r.status_code == 404:
+                return {"restored": False, "reason": "no backup on github yet"}
+            if r.status_code != 200:
+                return {
+                    "restored": False,
+                    "reason": f"github meta status {r.status_code}: {r.text[:200]}",
+                }
+
+            meta = r.json()
+            remote_size = int(meta.get("size", 0))
+            download_url = meta.get("download_url")
+
+            local_exists = DB_PATH.exists()
+            local_size = DB_PATH.stat().st_size if local_exists else 0
+
+            # Decision policy:
+            #   - If local missing or empty -> restore
+            #   - If local is smaller than remote by 5% -> restore (likely reset)
+            #   - Otherwise trust local (it has our newest changes not yet pushed)
+            should_restore = force or (not local_exists) or (local_size == 0)
+            if not should_restore and remote_size > 0:
+                # Restore if local is meaningfully smaller than remote
+                if local_size < remote_size * 0.95:
+                    should_restore = True
+
+            if not should_restore:
+                return {
+                    "restored": False,
+                    "reason": (
+                        f"local db is up to date "
+                        f"(local={local_size}b, remote={remote_size}b)"
+                    ),
+                    "local_size": local_size,
+                    "remote_size": remote_size,
+                }
+
+            # Download the actual file bytes
+            if not download_url:
+                # Fallback: use base64 content from metadata (works for files < 1MB)
+                b64 = meta.get("content", "").replace("\n", "")
+                if not b64:
+                    return {"restored": False, "reason": "no download_url and no content"}
+                content_bytes = base64.b64decode(b64)
+            else:
+                r2 = await client.get(download_url, timeout=120.0)
+                if r2.status_code != 200:
+                    return {
+                        "restored": False,
+                        "reason": f"download status {r2.status_code}",
+                    }
+                content_bytes = r2.content
+
+            # Safety backup of the current local file before overwriting
+            if local_exists and local_size > 0:
+                bkp = DB_PATH.with_suffix(
+                    f".before_restore_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}.db"
+                )
+                try:
+                    with open(bkp, "wb") as f:
+                        with open(DB_PATH, "rb") as src:
+                            f.write(src.read())
+                except Exception:
+                    logger.exception("could not create pre-restore backup")
+
+            with open(DB_PATH, "wb") as f:
+                f.write(content_bytes)
+
+            logger.info(
+                "restored database.db from github (%d bytes -> %s)",
+                len(content_bytes),
+                DB_PATH,
+            )
+            return {
+                "restored": True,
+                "reason": "restored from github",
+                "bytes": len(content_bytes),
+                "prev_local_size": local_size,
+            }
+    except Exception as e:
+        logger.exception("restore_database_from_github failed")
+        return {"restored": False, "reason": f"exception: {e}"}
+
+
+async def flush_pending_pushes() -> dict:
+    """
+    Called on shutdown: run any pending debounced pushes NOW (synchronously),
+    so we don't lose the last few seconds of writes.
+    """
+    if not is_configured():
+        return {"flushed": False, "reason": "not configured"}
+
+    # Cancel debounce tasks (we'll do them immediately)
+    tables_to_push = set()
+    for key, task in list(_debounce_tasks.items()):
+        if task and not task.done():
+            task.cancel()
+        if key != "__db__":
+            tables_to_push.add(key)
+
+    _debounce_tasks.clear()
+
+    result = {"tables": {}, "database": False, "flushed": True}
+    for table in tables_to_push:
+        try:
+            result["tables"][table] = await push_table_to_github(table)
+        except Exception:
+            logger.exception("flush push failed for %s", table)
+            result["tables"][table] = False
+
+    # Always push the DB itself at shutdown
+    try:
+        result["database"] = await push_database_to_github()
+    except Exception:
+        logger.exception("flush db push failed")
+
+    return result
 
 
 # ---------------------------------------------------------------------------
