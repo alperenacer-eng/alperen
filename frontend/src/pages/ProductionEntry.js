@@ -96,6 +96,8 @@ const ProductionEntry = () => {
   const [molds, setMolds] = useState([]);
   const [kalipNoListesi, setKalipNoListesi] = useState([]);
   const [validationErrors, setValidationErrors] = useState({});
+  const [existingRecords, setExistingRecords] = useState([]);
+  const [duplicateRecord, setDuplicateRecord] = useState(null);
   const [formData, setFormData] = useState({
     // Temel alanlar
     product_id: '',
@@ -244,6 +246,34 @@ const ProductionEntry = () => {
     formData.cikan_paket_5
   ]);
 
+  // Aynı Tarih + İşletme + Vardiya Türü kombinasyonu için uyarı kontrolü
+  useEffect(() => {
+    if (!formData.production_date || !formData.department_id || !formData.shift_type) {
+      setDuplicateRecord(null);
+      return;
+    }
+    const match = existingRecords.find(r => {
+      if (isEditMode && editId && String(r.id) === String(editId)) return false;
+      return (
+        r.production_date === formData.production_date &&
+        String(r.department_id) === String(formData.department_id) &&
+        (r.shift_type || 'gunduz') === formData.shift_type
+      );
+    });
+    setDuplicateRecord(prev => {
+      // Yeni bir mükerrer tespit edildiğinde toast uyarısı göster (aynı ID tekrar tetiklenmesin)
+      if (match && (!prev || prev.id !== match.id)) {
+        const shiftLabel = formData.shift_type === 'gece' ? 'GECE 🌙' : 'GÜNDÜZ 🌞';
+        const deptName = departments.find(d => String(d.id) === String(formData.department_id))?.name || '';
+        toast.warning(
+          `⚠️ Dikkat! ${formData.production_date} tarihinde "${deptName}" işletmesinde ${shiftLabel} vardiyası için zaten kayıt var.`,
+          { duration: 6000 }
+        );
+      }
+      return match || null;
+    });
+  }, [formData.production_date, formData.department_id, formData.shift_type, existingRecords, isEditMode, editId, departments]);
+
   const calculateValues = () => {
     const producedPallets = parseFloat(formData.produced_pallets) || 0;
     const waste = parseFloat(formData.waste) || 0;
@@ -309,16 +339,18 @@ const ProductionEntry = () => {
 
   const fetchData = async () => {
     try {
-      const [productsRes, departmentsRes, operatorsRes, moldsRes] = await Promise.all([
+      const [productsRes, departmentsRes, operatorsRes, moldsRes, existingRes] = await Promise.all([
         axios.get(`${API_URL}/products`, { headers: { Authorization: `Bearer ${token}` } }),
         axios.get(`${API_URL}/departments`, { headers: { Authorization: `Bearer ${token}` } }),
         axios.get(`${API_URL}/operators`, { headers: { Authorization: `Bearer ${token}` } }),
-        axios.get(`${API_URL}/molds`, { headers: { Authorization: `Bearer ${token}` } })
+        axios.get(`${API_URL}/molds`, { headers: { Authorization: `Bearer ${token}` } }),
+        axios.get(`${API_URL}/production?limit=1000&module=${currentModule?.id || 'bims'}`, { headers: { Authorization: `Bearer ${token}` } })
       ]);
       setProducts(productsRes.data);
       setDepartments(departmentsRes.data);
       setOperators(operatorsRes.data);
       setMolds(moldsRes.data);
+      setExistingRecords(Array.isArray(existingRes.data) ? existingRes.data : (existingRes.data?.records || []));
       
       // Tüm kalıp numaralarını çıkar ve sırala
       const allKalipNos = [];
@@ -521,6 +553,20 @@ const ProductionEntry = () => {
       return;
     }
 
+    // Aynı Tarih + İşletme + Vardiya Türü kombinasyonu varsa onay iste
+    if (duplicateRecord) {
+      const shiftLabel = formData.shift_type === 'gece' ? 'GECE' : 'GÜNDÜZ';
+      const deptLabel = formData.department_name || duplicateRecord.department_name || '';
+      const dateLabel = formData.production_date;
+      const ok = window.confirm(
+        `⚠️ DİKKAT!\n\n${dateLabel} tarihinde "${deptLabel}" işletmesinde ${shiftLabel} vardiyası için zaten bir üretim kaydı bulunmaktadır.\n\nAynı vardiyaya ikinci bir kayıt eklemek istediğinize emin misiniz?`
+      );
+      if (!ok) {
+        toast.warning('Kayıt iptal edildi. Farklı bir işletme veya vardiya seçin.');
+        return;
+      }
+    }
+
     setLoading(true);
 
     try {
@@ -601,6 +647,35 @@ const ProductionEntry = () => {
       <div className="glass-effect rounded-xl p-6 md:p-8 border border-slate-800">
         <form onSubmit={handleSubmit} className="space-y-8">
           
+          {/* Aynı vardiya için mükerrer kayıt uyarısı */}
+          {duplicateRecord && (
+            <div
+              data-testid="duplicate-shift-warning"
+              className="rounded-lg border-2 border-amber-500 bg-amber-500/10 p-4 flex items-start gap-3 animate-pulse"
+            >
+              <div className="text-3xl leading-none">⚠️</div>
+              <div className="flex-1">
+                <div className="text-amber-300 font-bold text-lg mb-1">
+                  Dikkat! Bu vardiya için zaten kayıt var
+                </div>
+                <div className="text-amber-100 text-sm leading-relaxed">
+                  <strong>{formData.production_date}</strong> tarihinde{' '}
+                  <strong>&ldquo;{formData.department_name || duplicateRecord.department_name || '—'}&rdquo;</strong> işletmesinde{' '}
+                  <strong className="uppercase">
+                    {formData.shift_type === 'gece' ? '🌙 GECE' : '🌞 GÜNDÜZ'} vardiyası
+                  </strong>{' '}
+                  için zaten bir üretim kaydı bulunmaktadır.
+                  {duplicateRecord.operator_name && (
+                    <> Operatör: <strong>{duplicateRecord.operator_name}</strong>.</>
+                  )}
+                  <br />
+                  Yanlışlıkla aynı vardiyaya ikinci bir kayıt eklemediğinizden emin olun. Farklı bir işletme
+                  veya vardiya türü seçebilir ya da mevcut kaydı düzenleyebilirsiniz.
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Temel Bilgiler */}
           <div>
             <h2 className="text-xl font-semibold text-white mb-4 pb-2 border-b border-slate-700">📋 Temel Bilgiler</h2>
