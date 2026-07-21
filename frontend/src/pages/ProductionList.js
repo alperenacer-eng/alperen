@@ -22,7 +22,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Search, Trash2, Edit, Plus, Settings2, RotateCcw, FileSpreadsheet, FileText, GripVertical, Filter, X, Calendar, Bookmark, Save, ArrowDownAZ, ArrowUpAZ, ListFilter, Check } from 'lucide-react';
+import { Search, Trash2, Edit, Plus, Settings2, RotateCcw, FileSpreadsheet, FileText, GripVertical, Filter, X, Calendar, Bookmark, Save, ArrowDownAZ, ArrowUpAZ, ListFilter, Check, Clock } from 'lucide-react';
 import { format } from 'date-fns';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
@@ -32,7 +32,7 @@ const API_URL = process.env.REACT_APP_BACKEND_URL + '/api';
 const STORAGE_KEY = 'bims_kayit_visible_columns';
 const ORDER_KEY = 'bims_kayit_column_order';
 const PRESETS_KEY = 'bims_kayit_filter_presets';
-const SORT_ORDER_KEY = 'bims_kayit_sort_order'; // 'desc' (yeniden eskiye) | 'asc' (eskiden yeniye)
+const SORT_ORDER_KEY = 'bims_kayit_sort_order'; // 'entry_desc' (son girilen — varsayılan) | 'date_desc' (üretim tarihi yeniden eskiye) | 'date_asc' (üretim tarihi eskiden yeniye)
 
 // Sütun tanımları — id, başlık, varsayılan görünür
 const COLUMNS = [
@@ -427,9 +427,13 @@ const ProductionList = () => {
   const [sortOrder, setSortOrder] = useState(() => {
     try {
       const raw = localStorage.getItem(SORT_ORDER_KEY);
-      return raw === 'asc' ? 'asc' : 'desc';
+      // Yeni mod ('entry_desc' varsayılan). Eski değerleri geriye dönük destekle.
+      if (raw === 'entry_desc' || raw === 'date_desc' || raw === 'date_asc') return raw;
+      if (raw === 'asc') return 'date_asc';
+      if (raw === 'desc') return 'date_desc';
+      return 'entry_desc';
     } catch {
-      return 'desc';
+      return 'entry_desc';
     }
   });
   const dragColId = useRef(null);
@@ -600,22 +604,27 @@ const ProductionList = () => {
       return true;
     });
 
-    // Tarih bazlı sıralama (production_date öncelikli, yoksa created_at)
-    const getSortDate = (r) => {
-      const raw = r.production_date || r.created_at || '';
-      // ISO date karşılaştırması yeterli (YYYY-MM-DD alfabetik = kronolojik)
-      return String(raw).substring(0, 10);
-    };
+    // Sıralama modları:
+    //  - entry_desc: Son girilen kayıt en üstte (created_at DESC — varsayılan)
+    //  - date_desc:  Üretim tarihine göre yeniden eskiye (production_date DESC)
+    //  - date_asc:   Üretim tarihine göre eskiden yeniye (production_date ASC)
     const sorted = [...filtered].sort((a, b) => {
-      const da = getSortDate(a);
-      const db = getSortDate(b);
-      if (da === db) {
-        // Aynı tarihte, created_at ile ikincil sıralama (yeni kayıt hep aynı yerde)
+      if (sortOrder === 'entry_desc') {
+        // Son girilen kayıt en üstte
         const ca = String(a.created_at || '');
         const cb = String(b.created_at || '');
-        return sortOrder === 'asc' ? ca.localeCompare(cb) : cb.localeCompare(ca);
+        return cb.localeCompare(ca);
       }
-      return sortOrder === 'asc' ? da.localeCompare(db) : db.localeCompare(da);
+      // Üretim tarihi bazlı (production_date öncelikli, yoksa created_at)
+      const da = String(a.production_date || a.created_at || '').substring(0, 10);
+      const db = String(b.production_date || b.created_at || '').substring(0, 10);
+      if (da === db) {
+        // Aynı tarihte, created_at ile ikincil sıralama
+        const ca = String(a.created_at || '');
+        const cb = String(b.created_at || '');
+        return sortOrder === 'date_asc' ? ca.localeCompare(cb) : cb.localeCompare(ca);
+      }
+      return sortOrder === 'date_asc' ? da.localeCompare(db) : db.localeCompare(da);
     });
 
     return sorted;
@@ -631,8 +640,17 @@ const ProductionList = () => {
   }, [sortOrder]);
 
   const toggleSortOrder = () => {
-    setSortOrder(prev => prev === 'desc' ? 'asc' : 'desc');
-    toast.success(sortOrder === 'desc' ? 'Eskiden yeniye sıralandı' : 'Yeniden eskiye sıralandı');
+    // Döngü: entry_desc → date_desc → date_asc → entry_desc
+    setSortOrder(prev => {
+      const next = prev === 'entry_desc' ? 'date_desc'
+                 : prev === 'date_desc'  ? 'date_asc'
+                 :                          'entry_desc';
+      const label = next === 'entry_desc' ? 'Son Girilen Kayıt üstte'
+                  : next === 'date_desc'  ? 'Üretim tarihi: Yeniden Eskiye'
+                  :                          'Üretim tarihi: Eskiden Yeniye';
+      toast.success(label);
+      return next;
+    });
   };
 
   // Excel-tarzı filtre: bir sütundaki benzersiz değerleri döndürür (arama filtresi hariç, sadece diğer aktif filtreler uygulanarak)
@@ -883,9 +901,18 @@ const ProductionList = () => {
               onClick={toggleSortOrder}
               className="border-cyan-500/40 text-cyan-300 hover:bg-cyan-500/10 h-10"
               data-testid="sort-order-btn"
-              title={sortOrder === 'desc' ? 'Yeniden Eskiye (Aktif) — Tıklayınca Eskiden Yeniye' : 'Eskiden Yeniye (Aktif) — Tıklayınca Yeniden Eskiye'}
+              title={
+                sortOrder === 'entry_desc' ? 'Son Girilen Kayıt (Aktif) — Tıklayınca Üretim Tarihi Yeniden Eskiye'
+                : sortOrder === 'date_desc' ? 'Üretim Tarihi Yeniden Eskiye (Aktif) — Tıklayınca Üretim Tarihi Eskiden Yeniye'
+                : 'Üretim Tarihi Eskiden Yeniye (Aktif) — Tıklayınca Son Girilen Kayıt'
+              }
             >
-              {sortOrder === 'desc' ? (
+              {sortOrder === 'entry_desc' ? (
+                <>
+                  <Clock className="w-4 h-4 mr-2" />
+                  Son Girilen
+                </>
+              ) : sortOrder === 'date_desc' ? (
                 <>
                   <ArrowDownAZ className="w-4 h-4 mr-2" />
                   Yeniden Eskiye
