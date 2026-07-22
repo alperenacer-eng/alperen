@@ -641,39 +641,44 @@ const PuantajRaporlama = () => {
         }
         return escapeHtml(val);
       };
-      const cellStyle = (k) => {
-        if (k === 'baz_gun') return 'text-align:center;color:#b45309;font-weight:600';
-        if (k === 'maas' || k === 'hak') return 'text-align:right;color:#059669;font-weight:600';
-        if (k.startsWith('birim_') || k === 'fm_birim' || k === 'eksik_birim') return 'text-align:center;font-size:10px;color:#64748b';
+      const valueStyle = (k) => {
+        if (k === 'baz_gun') return 'text-align:right;color:#b45309;font-weight:600';
+        if (k === 'maas' || k === 'hak') return 'text-align:right;color:#059669;font-weight:700';
+        if (k.startsWith('birim_') || k === 'fm_birim' || k === 'eksik_birim') return 'text-align:right;font-size:11px;color:#475569';
         if (k.startsWith('tutar_') || k === 'fm_tutar') return 'text-align:right;color:#059669;font-weight:600';
         if (k === 'eksik_tutar') return 'text-align:right;color:#e11d48;font-weight:600';
-        if (k.startsWith('durum_') || k === 'fm' || k === 'gun') return 'text-align:center';
-        return '';
+        return 'text-align:right';
       };
-      const headStyle = (k) => {
-        if (k.startsWith('birim_') || k === 'fm_birim' || k === 'eksik_birim') return 'font-size:10px;color:#64748b';
-        if (k.startsWith('tutar_') || k === 'fm_tutar') return 'color:#059669';
-        if (k === 'eksik_tutar') return 'color:#e11d48';
-        return '';
+      // Ad ve departman/pozisyon gibi başlıkta gösterilecek anahtarlar
+      const headerKeys = ['ad', 'departman', 'pozisyon'];
+      const getKeyValue = (p, idx, key) => {
+        if (!personelExportMap[key]) return '';
+        return fmtCell(key, personelExportMap[key].value(p, idx), p);
       };
-      tableHtml = `
-        <table>
-          <thead>
-            <tr>
-              ${orderedKeys.map(k => `<th style="${headStyle(k)}">${escapeHtml(personelExportMap[k].label)}</th>`).join('')}
-            </tr>
-          </thead>
-          <tbody>
-            ${personelRaporu.map((p, idx) => `
-              <tr>
-                ${orderedKeys.map(k => {
-                  const v = personelExportMap[k].value(p, idx);
-                  return `<td style="${cellStyle(k)}">${fmtCell(k, v, p)}</td>`;
-                }).join('')}
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>`;
+      // Her personel için ayrı bir "kart/blok"
+      tableHtml = personelRaporu.map((p, idx) => {
+        const ad = getKeyValue(p, idx, 'ad');
+        const dep = getKeyValue(p, idx, 'departman');
+        const poz = getKeyValue(p, idx, 'pozisyon');
+        const bodyKeys = orderedKeys.filter(k => !headerKeys.includes(k));
+        const rows = bodyKeys.map(k => {
+          const label = escapeHtml(personelExportMap[k].label);
+          const value = fmtCell(k, personelExportMap[k].value(p, idx), p);
+          return `<tr><td class="lbl">${label}</td><td class="val" style="${valueStyle(k)}">${value}</td></tr>`;
+        }).join('');
+        const subtitleParts = [];
+        if (dep && dep !== '-') subtitleParts.push(`<span>Departman: <strong>${dep}</strong></span>`);
+        if (poz && poz !== '-') subtitleParts.push(`<span>Pozisyon: <strong>${poz}</strong></span>`);
+        const subtitle = subtitleParts.length ? `<div class="sub">${subtitleParts.join(' &nbsp;•&nbsp; ')}</div>` : '';
+        return `
+          <div class="person-block">
+            <div class="person-title">${idx + 1}. ${ad || '-'}</div>
+            ${subtitle}
+            <table class="kv">
+              <tbody>${rows}</tbody>
+            </table>
+          </div>`;
+      }).join('');
     } else if (activeTab === 'tesis') {
       const tesisKeys = tesisOrder.order.filter(k => tesisExportMap[k]);
       tableHtml = `
@@ -747,6 +752,19 @@ const PuantajRaporlama = () => {
           tr:nth-child(even) { background-color: #fafafa; }
           .header-info { color: #666; margin-bottom: 20px; }
           .tesis-list { font-size: 11px; color: #666; }
+          /* Personel bazlı dikey (alt alta) rapor stilleri */
+          .person-block { margin-top: 18px; page-break-inside: avoid; border: 1px solid #cbd5e1; border-radius: 6px; padding: 12px 14px; background: #fff; }
+          .person-title { font-size: 15px; font-weight: 700; color: #0f172a; padding-bottom: 6px; border-bottom: 2px solid #0f172a; margin-bottom: 8px; }
+          .person-block .sub { font-size: 11px; color: #475569; margin-bottom: 8px; }
+          .person-block table.kv { width: 100%; margin-top: 0; border-collapse: collapse; }
+          .person-block table.kv td { border: 1px solid #e2e8f0; padding: 6px 10px; font-size: 12px; vertical-align: top; }
+          .person-block table.kv td.lbl { width: 55%; color: #334155; background: #f8fafc; font-weight: 500; }
+          .person-block table.kv td.val { width: 45%; color: #0f172a; }
+          .person-block table.kv tr:nth-child(even) td { background-color: #f8fafc; }
+          .person-block table.kv tr:nth-child(even) td.val { background-color: #f8fafc; }
+          @media print {
+            .person-block { break-inside: avoid; }
+          }
         </style>
       </head>
       <body>
