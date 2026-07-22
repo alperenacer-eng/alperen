@@ -28,7 +28,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   ArrowLeft, Calendar, Users, Clock, FileSpreadsheet, FileText,
   TrendingUp, CalendarDays, User, Building2, RotateCcw,
-  Calculator, Plus, Minus, GripVertical, X
+  Calculator, Plus, Minus, GripVertical, X, ChevronDown, ChevronUp
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { useColumnOrder } from '@/hooks/useColumnOrder';
@@ -160,6 +160,16 @@ const PuantajRaporlama = () => {
   const [acerCikart, setAcerCikart] = useState(_initAcerCfg?.cikart || []); // metric key listesi
   const [acerDragKey, setAcerDragKey] = useState(null);
   const [acerSabit, setAcerSabit] = useState(_initAcerCfg?.sabit || 0);     // sabit ekle/çıkar (ikramiye, kesinti gibi)
+  // Hesaplama Alanı aç/kapa (localStorage'da kalıcı)
+  const [acerHesapAcik, setAcerHesapAcik] = useState(() => {
+    try {
+      const v = localStorage.getItem('puantaj_acer_hesap_acik');
+      return v === null ? true : v === 'true';
+    } catch (_) { return true; }
+  });
+  React.useEffect(() => {
+    try { localStorage.setItem('puantaj_acer_hesap_acik', String(acerHesapAcik)); } catch (_) { /* noop */ }
+  }, [acerHesapAcik]);
 
   // Topla/Çıkart/Sabit değiştiğinde localStorage'a kaydet
   React.useEffect(() => {
@@ -1937,12 +1947,31 @@ const PuantajRaporlama = () => {
             <CardContent className="p-4 space-y-5">
               {/* ─────── 1) HESAPLAMA ALANI (ÜSTTE) ─────── */}
               <div className="rounded-xl border border-orange-500/30 bg-gradient-to-br from-orange-900/10 to-amber-900/5 p-4">
-                <div className="flex items-center gap-2 mb-3">
+                <div
+                  className="flex items-center gap-2 mb-3 cursor-pointer select-none"
+                  onClick={() => setAcerHesapAcik(v => !v)}
+                  data-testid="acer-hesap-toggle"
+                  title={acerHesapAcik ? 'Hesaplama alanını gizle' : 'Hesaplama alanını aç'}
+                >
                   <Calculator className="w-4 h-4 text-orange-400" />
                   <h3 className="text-sm font-bold text-orange-200 tracking-wide uppercase">Hesaplama Alanı</h3>
                   <span className="text-[10px] text-orange-300/60 ml-2">Metrikleri aşağıdan sürükleyin</span>
+                  {!acerHesapAcik && (
+                    <span className="ml-2 text-[11px] text-orange-300/80">
+                      Toplam Hak Ediş: <strong className={acerTotals.net < 0 ? 'text-rose-300' : 'text-yellow-300'}>{formatCurrency(acerTotals.net)}</strong>
+                    </span>
+                  )}
+                  <button
+                    type="button"
+                    className="ml-auto p-1 rounded-md hover:bg-orange-500/20 text-orange-300 transition-colors"
+                    aria-label={acerHesapAcik ? 'Kapat' : 'Aç'}
+                  >
+                    {acerHesapAcik ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                  </button>
                 </div>
 
+                {acerHesapAcik && (
+                <>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {/* Toplama Zone */}
                   <div
@@ -2086,6 +2115,8 @@ const PuantajRaporlama = () => {
                     )}
                   </div>
                 </div>
+                </>
+                )}
               </div>
 
               {/* ─────── 2) PERSONEL & DÖNEM (ALTTA) ─────── */}
