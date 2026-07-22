@@ -547,7 +547,20 @@ const MaasBordrosu = () => {
         table{width:100%;border-collapse:collapse;margin-top:12px}
         th,td{border:1px solid #ddd;padding:6px 8px}
         th{background:#f5f5f5}
+        @media print { .no-print { display: none !important; } }
+        .action-bar { position: sticky; top: 0; z-index: 10; background:#fff; padding:10px 0 14px; border-bottom:1px solid #e2e8f0; margin-bottom:8px; display:flex; gap:8px; flex-wrap:wrap; }
+        .action-bar button { font-family:inherit; font-size:13px; padding:8px 16px; border-radius:6px; border:1px solid transparent; cursor:pointer; font-weight:600; }
+        .action-bar .btn-print { background:#dc2626; color:#fff; border-color:#dc2626; }
+        .action-bar .btn-print:hover { background:#b91c1c; }
+        .action-bar .btn-close { background:#f1f5f9; color:#334155; border-color:#cbd5e1; }
+        .action-bar .btn-close:hover { background:#e2e8f0; }
+        .action-bar .hint { color:#64748b; font-size:11px; align-self:center; margin-left:6px; }
       </style></head><body>
+        <div class="action-bar no-print">
+          <button class="btn-print" onclick="window.print()">🖨️ Yazdır / PDF Kaydet</button>
+          <button class="btn-close" onclick="window.close()">Kapat</button>
+          <span class="hint">Hazır — istediğinizde "Yazdır" butonuna basın.</span>
+        </div>
         <h1>Maaş Bordrosu Raporu — ${ayLabel} ${selectedYil}</h1>
         <p><strong>Toplam Bordro:</strong> ${bordrolar.length} | <strong>Toplam Brüt:</strong> ${fmt(toplamlar.brut)} | <strong>Toplam Net:</strong> ${fmt(toplamlar.net)} | <strong>Durum Ek Toplam:</strong> ${fmt(toplamlar.durum_ek)} | <strong>Toplam Ödeme:</strong> ${fmt(toplamlar.toplam)}</p>
 
@@ -565,8 +578,7 @@ const MaasBordrosu = () => {
     const w = window.open('', '_blank');
     w.document.write(html);
     w.document.close();
-    w.print();
-    toast.success('PDF raporu hazırlandı');
+    toast.success('PDF raporu hazırlandı — yeni sekmede "Yazdır" butonuna basın');
   };
 
   return (

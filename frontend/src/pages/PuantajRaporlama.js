@@ -764,10 +764,24 @@ const PuantajRaporlama = () => {
           .person-block table.kv tr:nth-child(even) td.val { background-color: #f8fafc; }
           @media print {
             .person-block { break-inside: avoid; }
+            .no-print { display: none !important; }
           }
+          /* Aksiyon çubuğu (Yazdır / Kapat) */
+          .action-bar { position: sticky; top: 0; z-index: 10; background: #ffffff; padding: 10px 0 14px; border-bottom: 1px solid #e2e8f0; margin-bottom: 8px; display: flex; gap: 8px; flex-wrap: wrap; }
+          .action-bar button { font-family: inherit; font-size: 13px; padding: 8px 16px; border-radius: 6px; border: 1px solid transparent; cursor: pointer; font-weight: 600; }
+          .action-bar .btn-print { background: #dc2626; color: #fff; border-color: #dc2626; }
+          .action-bar .btn-print:hover { background: #b91c1c; }
+          .action-bar .btn-close { background: #f1f5f9; color: #334155; border-color: #cbd5e1; }
+          .action-bar .btn-close:hover { background: #e2e8f0; }
+          .action-bar .hint { color: #64748b; font-size: 11px; align-self: center; margin-left: 6px; }
         </style>
       </head>
       <body>
+        <div class="action-bar no-print">
+          <button class="btn-print" onclick="window.print()">🖨️ Yazdır / PDF Kaydet</button>
+          <button class="btn-close" onclick="window.close()">Kapat</button>
+          <span class="hint">Yazdır penceresi açılmadı — istediğinizde yukarıdaki butonla yazdırın.</span>
+        </div>
         <h1>Puantaj Raporu</h1>
         <div class="header-info">
           ${activeTab === 'personel'
@@ -783,8 +797,7 @@ const PuantajRaporlama = () => {
     const printWindow = window.open('', '_blank');
     printWindow.document.write(printContent);
     printWindow.document.close();
-    printWindow.print();
-    toast.success('PDF raporu hazırlandı');
+    toast.success('PDF raporu hazırlandı — yeni sekmede "Yazdır" butonuna basın');
   };
 
   // ===========================================================
