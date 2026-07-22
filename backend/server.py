@@ -4424,6 +4424,19 @@ async def create_puantaj(input: PuantajCreate, current_user: dict = Depends(get_
         except:
             pass
     
+    # Aynı personel + tarih için mevcut kayıt varsa mükerrer girişe izin verme
+    async with db.execute(
+        "SELECT id FROM puantaj WHERE personel_id = ? AND tarih = ?",
+        (data['personel_id'], data['tarih'])
+    ) as cursor:
+        existing = await cursor.fetchone()
+    if existing:
+        await db.close()
+        raise HTTPException(
+            status_code=409,
+            detail=f"Bu personel için {data['tarih']} tarihinde zaten bir puantaj kaydı mevcut. Aynı tarihe tekrar veri girilemez, mevcut kaydı düzenleyin."
+        )
+    
     await db.execute(
         """INSERT INTO puantaj (id, personel_id, personel_adi, tarih, giris_saati, cikis_saati,
            mesai_suresi, fazla_mesai, durum, notlar, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
@@ -4538,6 +4551,7 @@ class TopluPuantajItem(BaseModel):
 class TopluPuantajCreate(BaseModel):
     tarih: str
     kayitlar: List[TopluPuantajItem]
+    overwrite: bool = False  # Varsayılan: mevcut kayıtları üzerine yazma. True ise günceller.
 
 @api_router.post("/puantaj/toplu")
 async def create_toplu_puantaj(input: TopluPuantajCreate, current_user: dict = Depends(get_current_user)):
@@ -4545,6 +4559,7 @@ async def create_toplu_puantaj(input: TopluPuantajCreate, current_user: dict = D
     created_at = datetime.now(timezone.utc).isoformat()
     
     results = []
+    skipped = []
     for kayit in input.kayitlar:
         puantaj_id = generate_id()
         data = kayit.model_dump()
@@ -4564,13 +4579,22 @@ async def create_toplu_puantaj(input: TopluPuantajCreate, current_user: dict = D
             existing = await cursor.fetchone()
         
         if existing:
-            # Güncelle
-            await db.execute(
-                """UPDATE puantaj SET giris_saati = ?, cikis_saati = ?, mesai_suresi = ?, 
-                   fazla_mesai = ?, tesis_id = ?, tesis_adi = ?, durum = ?, notlar = ? WHERE id = ?""",
-                (giris_saati, cikis_saati, mesai_suresi, fazla_mesai, tesis_id, tesis_adi, data.get('durum', 'geldi'), data['notlar'], existing[0])
-            )
-            results.append({"id": existing[0], "personel_id": data['personel_id'], "updated": True})
+            if input.overwrite:
+                # Güncelle (yalnızca overwrite=True olduğunda)
+                await db.execute(
+                    """UPDATE puantaj SET giris_saati = ?, cikis_saati = ?, mesai_suresi = ?, 
+                       fazla_mesai = ?, tesis_id = ?, tesis_adi = ?, durum = ?, notlar = ? WHERE id = ?""",
+                    (giris_saati, cikis_saati, mesai_suresi, fazla_mesai, tesis_id, tesis_adi, data.get('durum', 'geldi'), data['notlar'], existing[0])
+                )
+                results.append({"id": existing[0], "personel_id": data['personel_id'], "personel_adi": data.get('personel_adi', ''), "updated": True})
+            else:
+                # Mükerrer girişe izin verme — atla
+                skipped.append({
+                    "personel_id": data['personel_id'],
+                    "personel_adi": data.get('personel_adi', ''),
+                    "tarih": input.tarih,
+                    "reason": "duplicate"
+                })
         else:
             # Yeni kayıt
             await db.execute(
@@ -4579,12 +4603,19 @@ async def create_toplu_puantaj(input: TopluPuantajCreate, current_user: dict = D
                 (puantaj_id, data['personel_id'], data['personel_adi'], input.tarih, giris_saati,
                  cikis_saati, mesai_suresi, fazla_mesai, tesis_id, tesis_adi, data.get('durum', 'geldi'), data['notlar'], created_at)
             )
-            results.append({"id": puantaj_id, "personel_id": data['personel_id'], "created": True})
+            results.append({"id": puantaj_id, "personel_id": data['personel_id'], "personel_adi": data.get('personel_adi', ''), "created": True})
     
     await db.commit()
     await db.close()
     
-    return {"message": f"{len(results)} puantaj kaydı işlendi", "results": results}
+    return {
+        "message": f"{len(results)} puantaj kaydı işlendi, {len(skipped)} mükerrer kayıt atlandı" if skipped else f"{len(results)} puantaj kaydı işlendi",
+        "results": results,
+        "skipped": skipped,
+        "created_count": sum(1 for r in results if r.get("created")),
+        "updated_count": sum(1 for r in results if r.get("updated")),
+        "skipped_count": len(skipped)
+    }
 
 @api_router.put("/puantaj/{id}")
 async def update_puantaj(id: str, input: PuantajCreate, current_user: dict = Depends(get_current_user)):

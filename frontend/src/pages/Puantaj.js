@@ -537,16 +537,32 @@ const Puantaj = () => {
 
       // Her tarih için ayrı toplu istek gönder
       let toplamKayit = 0;
+      let toplamAtlanan = 0;
+      const atlananDetay = [];
       for (const tarih of dateList) {
-        const payload = { tarih, kayitlar };
-        await axios.post(`${API_URL}/puantaj/toplu`, payload, { headers });
-        toplamKayit += kayitlar.length;
+        const payload = { tarih, kayitlar, overwrite: false };
+        const resp = await axios.post(`${API_URL}/puantaj/toplu`, payload, { headers });
+        const resData = resp?.data || {};
+        toplamKayit += (resData.created_count || 0) + (resData.updated_count || 0);
+        toplamAtlanan += (resData.skipped_count || 0);
+        if (Array.isArray(resData.skipped)) {
+          resData.skipped.forEach(s => atlananDetay.push(`${s.personel_adi} (${s.tarih})`));
+        }
       }
 
-      if (dateList.length === 1) {
-        toast.success(`${seciliPersoneller.length} personel için puantaj kaydedildi`);
-      } else {
-        toast.success(`${dateList.length} gün × ${seciliPersoneller.length} personel = ${toplamKayit} kayıt işlendi`);
+      if (toplamAtlanan > 0) {
+        const ornekler = atlananDetay.slice(0, 5).join(', ');
+        const digerleri = atlananDetay.length > 5 ? ` ve ${atlananDetay.length - 5} diğer` : '';
+        toast.warning(`${toplamAtlanan} mükerrer kayıt atlandı: ${ornekler}${digerleri}. Değiştirmek için mevcut kaydı düzenleyin.`, { duration: 6000 });
+      }
+      if (toplamKayit > 0) {
+        if (dateList.length === 1) {
+          toast.success(`${toplamKayit} personel için puantaj kaydedildi`);
+        } else {
+          toast.success(`${dateList.length} gün üzerinde ${toplamKayit} kayıt işlendi`);
+        }
+      } else if (toplamAtlanan > 0) {
+        toast.error('Yeni kayıt oluşturulmadı — seçili personellerin bu tarihte zaten kaydı var.');
       }
 
       await fetchPuantajlar();
@@ -589,6 +605,7 @@ const Puantaj = () => {
       const secilenTesis = tesisler.find(t => t.id === editingPuantaj.tesis_id);
       const payload = {
         tarih: editingPuantaj.tarih,
+        overwrite: true, // düzenleme: mevcut kaydı güncelle
         kayitlar: [{
           personel_id: editingPuantaj.personel_id,
           personel_adi: editingPuantaj.personel_adi,
@@ -765,9 +782,12 @@ const Puantaj = () => {
     // 2) Veritabanına kaydet
     setTopluSaving(true);
     try {
+      let toplamAtlanan = 0;
+      const atlananGunler = [];
       for (const tarih of list) {
         const payload = {
           tarih,
+          overwrite: false,
           kayitlar: [{
             personel_id: topluPersonelId,
             personel_adi: personel.ad_soyad,
@@ -781,9 +801,21 @@ const Puantaj = () => {
             tesis_adi: secilenTesis?.tesis_adi || ''
           }]
         };
-        await axios.post(`${API_URL}/puantaj/toplu`, payload, { headers });
+        const resp = await axios.post(`${API_URL}/puantaj/toplu`, payload, { headers });
+        if ((resp?.data?.skipped_count || 0) > 0) {
+          toplamAtlanan += resp.data.skipped_count;
+          atlananGunler.push(tarih);
+        }
       }
-      toast.success(`${list.length} gün kaydedildi (raporlamaya yansıdı)`);
+      const kaydedilen = list.length - toplamAtlanan;
+      if (toplamAtlanan > 0) {
+        toast.warning(`${toplamAtlanan} gün mükerrer olduğu için atlandı (${atlananGunler.slice(0, 5).join(', ')}${atlananGunler.length > 5 ? '...' : ''}). Değiştirmek için mevcut kaydı düzenleyin.`, { duration: 6000 });
+      }
+      if (kaydedilen > 0) {
+        toast.success(`${kaydedilen} gün kaydedildi (raporlamaya yansıdı)`);
+      } else if (toplamAtlanan > 0) {
+        toast.error('Yeni kayıt oluşturulmadı — seçili günlerin tümünde zaten kayıt var.');
+      }
       await fetchPuantajlar();
       setSelectedCalendarDates(new Set());
     } catch (e) {
@@ -941,11 +973,15 @@ const Puantaj = () => {
 
     setTopluSaving(true);
     try {
+      let toplamAtlanan = 0;
+      const atlananGunler = [];
+      let kaydedilen = 0;
       for (const tarih of kaydedilecekTarihler) {
         const r = topluRows[tarih];
         const secilenTesis = tesisler.find(t => t.id === r.tesis_id);
         const payload = {
           tarih,
+          overwrite: false,
           kayitlar: [{
             personel_id: topluPersonelId,
             personel_adi: personel.ad_soyad,
@@ -959,9 +995,23 @@ const Puantaj = () => {
             tesis_adi: secilenTesis?.tesis_adi || ''
           }]
         };
-        await axios.post(`${API_URL}/puantaj/toplu`, payload, { headers });
+        const resp = await axios.post(`${API_URL}/puantaj/toplu`, payload, { headers });
+        const skippedCount = resp?.data?.skipped_count || 0;
+        if (skippedCount > 0) {
+          toplamAtlanan += skippedCount;
+          atlananGunler.push(tarih);
+        } else {
+          kaydedilen += 1;
+        }
       }
-      toast.success(`${personel.ad_soyad} için ${kaydedilecekTarihler.length} gün kaydedildi`);
+      if (toplamAtlanan > 0) {
+        toast.warning(`${toplamAtlanan} gün mükerrer olduğu için atlandı (${atlananGunler.slice(0, 5).join(', ')}${atlananGunler.length > 5 ? '...' : ''}). Değiştirmek için mevcut kaydı düzenleyin.`, { duration: 6000 });
+      }
+      if (kaydedilen > 0) {
+        toast.success(`${personel.ad_soyad} için ${kaydedilen} gün kaydedildi`);
+      } else if (toplamAtlanan > 0) {
+        toast.error('Yeni kayıt oluşturulmadı — seçili günlerin tümünde zaten kayıt var.');
+      }
       await fetchPuantajlar();
     } catch (e) {
       console.error(e);

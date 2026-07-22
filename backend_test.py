@@ -1,1040 +1,698 @@
 #!/usr/bin/env python3
 """
-Backend Test Suite for GitHub Auto-Restore on Startup + Shutdown Flush
-=======================================================================
-Tests the P0 data loss bug fix that includes:
-1. Backend health check
-2. Startup restore log verification
-3. GitHub sync push functionality
-4. GitHub sync status endpoint
-5. Regression tests for existing endpoints
+Backend API Testing Script for Puantaj Mükerrer Kayıt Engelleme Bug Fix
+Tests duplicate prevention in POST /api/puantaj and POST /api/puantaj/toplu endpoints
 """
 
 import requests
-import time
 import json
 import sys
 from datetime import datetime
 
 # Backend URL from frontend/.env
-BASE_URL = "https://tender-wing-9.preview.emergentagent.com/api"
+BACKEND_URL = "https://tender-wing-9.preview.emergentagent.com/api"
 
 # Test credentials
-TEST_EMAIL = "alperenacer@acerler.com"
-TEST_PASSWORD = "1234"
+LOGIN_EMAIL = "alperenacer@acerler.com"
+LOGIN_PASSWORD = "1234"
 
 # Global token storage
-AUTH_TOKEN = None
+TOKEN = None
 
 # Test results tracking
-test_results = {
-    "total": 0,
-    "passed": 0,
-    "failed": 0,
-    "tests": []
-}
+test_results = []
 
-def log_test(test_name, passed, message=""):
+def log_test(test_name, passed, details=""):
     """Log test result"""
-    test_results["total"] += 1
-    if passed:
-        test_results["passed"] += 1
-        status = "✅ PASS"
-    else:
-        test_results["failed"] += 1
-        status = "❌ FAIL"
-    
-    test_results["tests"].append({
-        "name": test_name,
-        "passed": passed,
-        "message": message
-    })
-    
-    print(f"{status}: {test_name}")
-    if message:
-        print(f"  → {message}")
+    status = "✅ PASS" if passed else "❌ FAIL"
+    result = f"{status} - {test_name}"
+    if details:
+        result += f"\n    Details: {details}"
+    print(result)
+    test_results.append({"test": test_name, "passed": passed, "details": details})
 
-def get_headers(with_auth=False):
-    """Get request headers"""
-    headers = {"Content-Type": "application/json"}
-    if with_auth and AUTH_TOKEN:
-        headers["Authorization"] = f"Bearer {AUTH_TOKEN}"
-    return headers
-
-def test_health_check():
-    """Test 1: Backend sağlıklı başladı mı?"""
+def login():
+    """Login and get JWT token"""
+    global TOKEN
     print("\n" + "="*80)
-    print("TEST 1: Backend Health Check")
+    print("TEST SCENARIO 1: LOGIN")
     print("="*80)
     
+    url = f"{BACKEND_URL}/auth/login"
+    payload = {"email": LOGIN_EMAIL, "password": LOGIN_PASSWORD}
+    
     try:
-        response = requests.get(f"{BASE_URL}/health", timeout=10)
+        response = requests.post(url, json=payload)
+        print(f"POST {url}")
+        print(f"Status: {response.status_code}")
         
         if response.status_code == 200:
             data = response.json()
-            if data.get("status") == "healthy" and "/app/backend/data/database.db" in data.get("database", ""):
-                log_test("GET /api/health returns 200 with healthy status", True, 
-                        f"Response: {json.dumps(data, indent=2)}")
+            TOKEN = data.get("access_token")
+            if TOKEN:
+                log_test("Login successful", True, f"Token received: {TOKEN[:20]}...")
                 return True
             else:
-                log_test("GET /api/health returns 200 with healthy status", False,
-                        f"Unexpected response: {json.dumps(data, indent=2)}")
+                log_test("Login failed", False, "No access_token in response")
                 return False
         else:
-            log_test("GET /api/health returns 200 with healthy status", False,
-                    f"Status code: {response.status_code}, Body: {response.text[:200]}")
+            log_test("Login failed", False, f"Status {response.status_code}: {response.text}")
             return False
     except Exception as e:
-        log_test("GET /api/health returns 200 with healthy status", False, f"Exception: {str(e)}")
+        log_test("Login failed", False, f"Exception: {str(e)}")
         return False
 
-def test_startup_restore_logs():
-    """Test 2: Startup restore log'u var mı?"""
-    print("\n" + "="*80)
-    print("TEST 2: Startup Restore Log Verification")
-    print("="*80)
-    
-    import subprocess
-    
-    try:
-        # Check backend logs for restore messages (check both .out.log and .err.log)
-        result_out = subprocess.run(
-            ["tail", "-n", "200", "/var/log/supervisor/backend.out.log"],
-            capture_output=True,
-            text=True,
-            timeout=5
-        )
-        
-        result_err = subprocess.run(
-            ["tail", "-n", "200", "/var/log/supervisor/backend.err.log"],
-            capture_output=True,
-            text=True,
-            timeout=5
-        )
-        
-        log_content = result_out.stdout + result_out.stderr + result_err.stdout + result_err.stderr
-        
-        # Look for restore log messages
-        has_restore_log = False
-        restore_message = ""
-        
-        if "GitHub restore skipped: local db is up to date" in log_content:
-            has_restore_log = True
-            restore_message = "Found: 'GitHub restore skipped: local db is up to date' (normal case)"
-        elif "GitHub restore:" in log_content and "restored" in log_content:
-            has_restore_log = True
-            restore_message = "Found: 'GitHub restore: {..., 'restored': True, ...}' (fresh container case)"
-        elif "GitHub restore skipped:" in log_content:
-            has_restore_log = True
-            restore_message = f"Found: GitHub restore skipped message in logs"
-        
-        # Check for error logs (should NOT exist)
-        has_error = "GitHub restore failed at startup" in log_content
-        
-        if has_restore_log and not has_error:
-            log_test("Startup restore log exists without errors", True, restore_message)
-            return True
-        elif has_error:
-            log_test("Startup restore log exists without errors", False,
-                    "ERROR: Found 'GitHub restore failed at startup' in logs")
-            return False
-        else:
-            log_test("Startup restore log exists without errors", False,
-                    "No restore log found in backend logs")
-            return False
-            
-    except Exception as e:
-        log_test("Startup restore log exists without errors", False, f"Exception: {str(e)}")
-        return False
+def get_headers():
+    """Get authorization headers"""
+    return {"Authorization": f"Bearer {TOKEN}"}
 
-def test_login():
-    """Test: Login functionality"""
+def get_active_personel():
+    """Get an active personel for testing"""
     print("\n" + "="*80)
-    print("TEST: Login Authentication")
+    print("TEST SCENARIO 2: GET ACTIVE PERSONEL")
     print("="*80)
     
-    global AUTH_TOKEN
+    url = f"{BACKEND_URL}/personeller"
     
     try:
-        payload = {
-            "email": TEST_EMAIL,
-            "password": TEST_PASSWORD
-        }
-        
-        response = requests.post(
-            f"{BASE_URL}/auth/login",
-            json=payload,
-            headers=get_headers(),
-            timeout=10
-        )
+        response = requests.get(url, headers=get_headers())
+        print(f"GET {url}")
+        print(f"Status: {response.status_code}")
         
         if response.status_code == 200:
-            data = response.json()
-            if "access_token" in data and "user" in data:
-                AUTH_TOKEN = data["access_token"]
-                log_test(f"POST /api/auth/login with {TEST_EMAIL}/{TEST_PASSWORD}", True,
-                        f"Token received, user: {data['user'].get('email')}")
-                return True
-            else:
-                log_test(f"POST /api/auth/login with {TEST_EMAIL}/{TEST_PASSWORD}", False,
-                        f"Missing access_token or user in response")
-                return False
-        else:
-            log_test(f"POST /api/auth/login with {TEST_EMAIL}/{TEST_PASSWORD}", False,
-                    f"Status code: {response.status_code}, Body: {response.text[:200]}")
-            return False
-    except Exception as e:
-        log_test(f"POST /api/auth/login with {TEST_EMAIL}/{TEST_PASSWORD}", False, f"Exception: {str(e)}")
-        return False
-
-def test_github_sync_push():
-    """Test 3: GitHub sync yeni verileri push ediyor mu?"""
-    print("\n" + "="*80)
-    print("TEST 3: GitHub Sync Push Functionality")
-    print("="*80)
-    
-    if not AUTH_TOKEN:
-        log_test("GitHub sync push test", False, "No auth token available")
-        return False
-    
-    test_production_id = None
-    
-    try:
-        # Step 1: Create a test production record
-        print("\nStep 1: Creating test production record...")
-        
-        # First, get a valid product to use
-        response = requests.get(
-            f"{BASE_URL}/products",
-            headers=get_headers(with_auth=True),
-            timeout=10
-        )
-        
-        if response.status_code != 200 or not response.json():
-            log_test("GitHub sync push test - get products", False, 
-                    "No products available for testing")
-            return False
-        
-        products = response.json()
-        test_product = products[0]
-        
-        # Create production record with valid schema
-        production_payload = {
-            "product_id": test_product["id"],
-            "product_name": test_product["name"],
-            "quantity": 100,
-            "unit": test_product.get("unit", "adet"),
-            "production_date": datetime.now().strftime("%Y-%m-%d"),
-            "shift": "gündüz",
-            "notes": "TEST_GITHUB_SYNC_" + datetime.now().strftime("%Y%m%d_%H%M%S"),
-            "module": "bims"
-        }
-        
-        response = requests.post(
-            f"{BASE_URL}/production",
-            json=production_payload,
-            headers=get_headers(with_auth=True),
-            timeout=10
-        )
-        
-        if response.status_code in [200, 201]:
-            data = response.json()
-            test_production_id = data.get("id")
-            log_test("POST /api/production creates test record", True,
-                    f"Created production record with ID: {test_production_id}")
-        else:
-            log_test("POST /api/production creates test record", False,
-                    f"Status code: {response.status_code}, Body: {response.text[:300]}")
-            return False
-        
-        # Step 2: Wait for debounce (3 seconds, but debounce is now 1s for table + 2s for DB)
-        print("\nStep 2: Waiting 3 seconds for debounce...")
-        time.sleep(3)
-        
-        # Step 3: Check GitHub sync status
-        print("\nStep 3: Checking GitHub sync status...")
-        response = requests.get(
-            f"{BASE_URL}/github-sync/status",
-            headers=get_headers(with_auth=True),
-            timeout=10
-        )
-        
-        if response.status_code == 200:
-            data = response.json()
-            last_success = data.get("stats", {}).get("last_success_at")
-            
-            if last_success:
-                # Parse last_success_at timestamp
-                try:
-                    from dateutil import parser
-                    last_success_time = parser.isoparse(last_success)
-                    current_time = datetime.now(last_success_time.tzinfo)
-                    time_diff = (current_time - last_success_time).total_seconds()
-                    
-                    if time_diff <= 30:
-                        log_test("GET /api/github-sync/status shows recent push", True,
-                                f"last_success_at: {last_success} (within last 30 seconds)")
-                    else:
-                        log_test("GET /api/github-sync/status shows recent push", False,
-                                f"last_success_at: {last_success} (more than 30 seconds ago: {time_diff}s)")
-                        return False
-                except:
-                    # Fallback: just check if last_success exists
-                    log_test("GET /api/github-sync/status shows recent push", True,
-                            f"last_success_at exists: {last_success}")
-            else:
-                log_test("GET /api/github-sync/status shows recent push", False,
-                        "No last_success_at in response")
-                return False
-        else:
-            log_test("GET /api/github-sync/status shows recent push", False,
-                    f"Status code: {response.status_code}, Body: {response.text[:200]}")
-            return False
-        
-        # Step 4: Cleanup - delete test record
-        print("\nStep 4: Cleaning up test record...")
-        if test_production_id:
-            response = requests.delete(
-                f"{BASE_URL}/production/{test_production_id}",
-                headers=get_headers(with_auth=True),
-                timeout=10
-            )
-            
-            if response.status_code in [200, 204]:
-                log_test("DELETE /api/production/{id} cleanup", True,
-                        f"Deleted test production record: {test_production_id}")
-            else:
-                log_test("DELETE /api/production/{id} cleanup", False,
-                        f"Status code: {response.status_code}, Body: {response.text[:200]}")
-        
-        return True
-        
-    except Exception as e:
-        log_test("GitHub sync push test", False, f"Exception: {str(e)}")
-        
-        # Attempt cleanup even on error
-        if test_production_id:
-            try:
-                requests.delete(
-                    f"{BASE_URL}/production/{test_production_id}",
-                    headers=get_headers(with_auth=True),
-                    timeout=10
-                )
-            except:
-                pass
-        
-        return False
-
-def test_github_sync_status():
-    """Test 4: /api/github-sync/status endpoint'i doğru cevap veriyor mu?"""
-    print("\n" + "="*80)
-    print("TEST 4: GitHub Sync Status Endpoint")
-    print("="*80)
-    
-    if not AUTH_TOKEN:
-        log_test("GitHub sync status endpoint test", False, "No auth token available")
-        return False
-    
-    try:
-        response = requests.get(
-            f"{BASE_URL}/github-sync/status",
-            headers=get_headers(with_auth=True),
-            timeout=10
-        )
-        
-        if response.status_code == 200:
-            data = response.json()
-            
-            # Check required fields
-            has_configured = "configured" in data
-            has_repo = "repo" in data
-            has_branch = "branch" in data
-            has_stats = "stats" in data
-            
-            if has_configured and has_repo and has_branch and has_stats:
-                is_configured = data.get("configured")
+            personeller = response.json()
+            if personeller and len(personeller) > 0:
+                # Find an active personel
+                for p in personeller:
+                    if p.get('durum') == 'aktif':
+                        personel_id = p.get('id')
+                        personel_adi = p.get('ad_soyad', '')
+                        log_test("Get active personel", True, f"Found: {personel_adi} (ID: {personel_id})")
+                        return personel_id, personel_adi
                 
-                if is_configured:
-                    log_test("GET /api/github-sync/status returns correct structure", True,
-                            f"Response has all required fields (configured={is_configured}, repo={data.get('repo')}, branch={data.get('branch')})")
+                # If no active, use first one
+                personel_id = personeller[0].get('id')
+                personel_adi = personeller[0].get('ad_soyad', '')
+                log_test("Get active personel", True, f"Using first personel: {personel_adi} (ID: {personel_id})")
+                return personel_id, personel_adi
+            else:
+                log_test("Get active personel", False, "No personel found in database")
+                return None, None
+        else:
+            log_test("Get active personel", False, f"Status {response.status_code}: {response.text}")
+            return None, None
+    except Exception as e:
+        log_test("Get active personel", False, f"Exception: {str(e)}")
+        return None, None
+
+def test_toplu_first_insert(personel_id, personel_adi, test_date):
+    """Test 1: First bulk insert with overwrite=false (should create)"""
+    print("\n" + "="*80)
+    print("TEST SCENARIO 3: TOPLU İLK EKLEME (overwrite=false)")
+    print("="*80)
+    
+    url = f"{BACKEND_URL}/puantaj/toplu"
+    payload = {
+        "tarih": test_date,
+        "overwrite": False,
+        "kayitlar": [
+            {
+                "personel_id": personel_id,
+                "personel_adi": personel_adi,
+                "durum": "geldi",
+                "giris_saati": "08:00",
+                "cikis_saati": "17:00",
+                "mesai_suresi": 0,
+                "fazla_mesai": 0,
+                "notlar": ""
+            }
+        ]
+    }
+    
+    try:
+        response = requests.post(url, json=payload, headers=get_headers())
+        print(f"POST {url}")
+        print(f"Payload: {json.dumps(payload, indent=2, ensure_ascii=False)}")
+        print(f"Status: {response.status_code}")
+        print(f"Response: {json.dumps(response.json(), indent=2, ensure_ascii=False)}")
+        
+        if response.status_code == 200:
+            data = response.json()
+            created_count = data.get('created_count', 0)
+            skipped_count = data.get('skipped_count', 0)
+            updated_count = data.get('updated_count', 0)
+            
+            if created_count == 1 and skipped_count == 0 and updated_count == 0:
+                results = data.get('results', [])
+                if results and results[0].get('created') == True:
+                    log_test("Toplu first insert (overwrite=false)", True, 
+                            f"created_count=1, skipped_count=0, updated_count=0, results[0].created=true")
                     return True
                 else:
-                    log_test("GET /api/github-sync/status returns correct structure", False,
-                            "configured is False - GitHub sync not configured")
+                    log_test("Toplu first insert (overwrite=false)", False, 
+                            f"results[0].created is not true")
                     return False
             else:
-                missing_fields = []
-                if not has_configured: missing_fields.append("configured")
-                if not has_repo: missing_fields.append("repo")
-                if not has_branch: missing_fields.append("branch")
-                if not has_stats: missing_fields.append("stats")
-                
-                log_test("GET /api/github-sync/status returns correct structure", False,
-                        f"Missing fields: {', '.join(missing_fields)}")
+                log_test("Toplu first insert (overwrite=false)", False, 
+                        f"Expected created_count=1, skipped_count=0, updated_count=0, got created={created_count}, skipped={skipped_count}, updated={updated_count}")
                 return False
         else:
-            log_test("GET /api/github-sync/status returns correct structure", False,
-                    f"Status code: {response.status_code}, Body: {response.text[:200]}")
+            log_test("Toplu first insert (overwrite=false)", False, 
+                    f"Status {response.status_code}: {response.text}")
             return False
-            
     except Exception as e:
-        log_test("GET /api/github-sync/status returns correct structure", False, f"Exception: {str(e)}")
+        log_test("Toplu first insert (overwrite=false)", False, f"Exception: {str(e)}")
         return False
 
-def test_regression():
-    """Test 5: Regresyon testi - mevcut endpoint'ler çalışıyor mu?"""
+def test_toplu_duplicate_skip(personel_id, personel_adi, test_date):
+    """Test 2: Duplicate bulk insert with overwrite=false (should skip)"""
     print("\n" + "="*80)
-    print("TEST 5: Regression Tests - Existing Endpoints")
+    print("TEST SCENARIO 4: TOPLU DUPLICATE (overwrite=false) - SHOULD SKIP")
     print("="*80)
     
-    if not AUTH_TOKEN:
-        log_test("Regression tests", False, "No auth token available")
+    url = f"{BACKEND_URL}/puantaj/toplu"
+    payload = {
+        "tarih": test_date,
+        "overwrite": False,
+        "kayitlar": [
+            {
+                "personel_id": personel_id,
+                "personel_adi": personel_adi,
+                "durum": "geldi",
+                "giris_saati": "08:00",
+                "cikis_saati": "17:00",
+                "mesai_suresi": 0,
+                "fazla_mesai": 0,
+                "notlar": ""
+            }
+        ]
+    }
+    
+    try:
+        response = requests.post(url, json=payload, headers=get_headers())
+        print(f"POST {url}")
+        print(f"Payload: {json.dumps(payload, indent=2, ensure_ascii=False)}")
+        print(f"Status: {response.status_code}")
+        print(f"Response: {json.dumps(response.json(), indent=2, ensure_ascii=False)}")
+        
+        if response.status_code == 200:
+            data = response.json()
+            created_count = data.get('created_count', 0)
+            skipped_count = data.get('skipped_count', 0)
+            updated_count = data.get('updated_count', 0)
+            skipped = data.get('skipped', [])
+            
+            if created_count == 0 and skipped_count == 1 and updated_count == 0:
+                if skipped and len(skipped) == 1:
+                    skipped_item = skipped[0]
+                    if (skipped_item.get('personel_id') == personel_id and 
+                        skipped_item.get('tarih') == test_date and 
+                        skipped_item.get('reason') == 'duplicate'):
+                        log_test("Toplu duplicate skip (overwrite=false)", True, 
+                                f"created_count=0, skipped_count=1, updated_count=0, skipped[0].reason='duplicate'")
+                        
+                        # Verify database still has only 1 record with original giris_saati
+                        return verify_single_record(personel_id, test_date, "08:00")
+                    else:
+                        log_test("Toplu duplicate skip (overwrite=false)", False, 
+                                f"skipped[0] missing required fields or wrong values")
+                        return False
+                else:
+                    log_test("Toplu duplicate skip (overwrite=false)", False, 
+                            f"skipped list is empty or has wrong length")
+                    return False
+            else:
+                log_test("Toplu duplicate skip (overwrite=false)", False, 
+                        f"Expected created_count=0, skipped_count=1, updated_count=0, got created={created_count}, skipped={skipped_count}, updated={updated_count}")
+                return False
+        else:
+            log_test("Toplu duplicate skip (overwrite=false)", False, 
+                    f"Status {response.status_code}: {response.text}")
+            return False
+    except Exception as e:
+        log_test("Toplu duplicate skip (overwrite=false)", False, f"Exception: {str(e)}")
         return False
+
+def verify_single_record(personel_id, test_date, expected_giris_saati):
+    """Verify database has only 1 record with expected giris_saati"""
+    print(f"\n  → Verifying database has only 1 record with giris_saati='{expected_giris_saati}'")
     
-    all_passed = True
+    url = f"{BACKEND_URL}/puantaj"
+    params = {
+        "personel_id": personel_id,
+        "tarih_baslangic": test_date,
+        "tarih_bitis": test_date
+    }
     
-    # Test 5.1: GET /api/production
     try:
-        response = requests.get(
-            f"{BASE_URL}/production",
-            headers=get_headers(with_auth=True),
-            timeout=10
-        )
+        response = requests.get(url, params=params, headers=get_headers())
+        print(f"  GET {url}?personel_id={personel_id}&tarih_baslangic={test_date}&tarih_bitis={test_date}")
+        print(f"  Status: {response.status_code}")
+        
+        if response.status_code == 200:
+            records = response.json()
+            print(f"  Found {len(records)} record(s)")
+            
+            if len(records) == 1:
+                giris_saati = records[0].get('giris_saati')
+                print(f"  Record giris_saati: {giris_saati}")
+                
+                if giris_saati == expected_giris_saati:
+                    print(f"  ✅ Database verification passed: 1 record with giris_saati='{expected_giris_saati}'")
+                    return True
+                else:
+                    print(f"  ❌ Database verification failed: giris_saati is '{giris_saati}', expected '{expected_giris_saati}'")
+                    log_test("Database verification", False, 
+                            f"giris_saati is '{giris_saati}', expected '{expected_giris_saati}'")
+                    return False
+            else:
+                print(f"  ❌ Database verification failed: found {len(records)} records, expected 1")
+                log_test("Database verification", False, 
+                        f"found {len(records)} records, expected 1")
+                return False
+        else:
+            print(f"  ❌ Database verification failed: Status {response.status_code}")
+            log_test("Database verification", False, f"Status {response.status_code}")
+            return False
+    except Exception as e:
+        print(f"  ❌ Database verification failed: {str(e)}")
+        log_test("Database verification", False, f"Exception: {str(e)}")
+        return False
+
+def test_toplu_overwrite(personel_id, personel_adi, test_date):
+    """Test 3: Duplicate bulk insert with overwrite=true (should update)"""
+    print("\n" + "="*80)
+    print("TEST SCENARIO 5: TOPLU OVERWRITE (overwrite=true) - SHOULD UPDATE")
+    print("="*80)
+    
+    url = f"{BACKEND_URL}/puantaj/toplu"
+    payload = {
+        "tarih": test_date,
+        "overwrite": True,
+        "kayitlar": [
+            {
+                "personel_id": personel_id,
+                "personel_adi": personel_adi,
+                "durum": "geldi",
+                "giris_saati": "09:00",  # Changed from 08:00
+                "cikis_saati": "18:00",  # Changed from 17:00
+                "mesai_suresi": 0,
+                "fazla_mesai": 0,
+                "notlar": "guncelendi"
+            }
+        ]
+    }
+    
+    try:
+        response = requests.post(url, json=payload, headers=get_headers())
+        print(f"POST {url}")
+        print(f"Payload: {json.dumps(payload, indent=2, ensure_ascii=False)}")
+        print(f"Status: {response.status_code}")
+        print(f"Response: {json.dumps(response.json(), indent=2, ensure_ascii=False)}")
         
         if response.status_code == 200:
             data = response.json()
-            if isinstance(data, list):
-                log_test("GET /api/production returns 200 with array", True,
-                        f"Retrieved {len(data)} production records")
+            created_count = data.get('created_count', 0)
+            skipped_count = data.get('skipped_count', 0)
+            updated_count = data.get('updated_count', 0)
+            
+            if created_count == 0 and updated_count == 1 and skipped_count == 0:
+                log_test("Toplu overwrite (overwrite=true)", True, 
+                        f"created_count=0, updated_count=1, skipped_count=0")
+                
+                # Verify database record was updated with new giris_saati
+                return verify_single_record(personel_id, test_date, "09:00")
             else:
-                log_test("GET /api/production returns 200 with array", False,
-                        f"Response is not an array: {type(data)}")
-                all_passed = False
+                log_test("Toplu overwrite (overwrite=true)", False, 
+                        f"Expected created_count=0, updated_count=1, skipped_count=0, got created={created_count}, updated={updated_count}, skipped={skipped_count}")
+                return False
         else:
-            log_test("GET /api/production returns 200 with array", False,
-                    f"Status code: {response.status_code}")
-            all_passed = False
+            log_test("Toplu overwrite (overwrite=true)", False, 
+                    f"Status {response.status_code}: {response.text}")
+            return False
     except Exception as e:
-        log_test("GET /api/production returns 200 with array", False, f"Exception: {str(e)}")
-        all_passed = False
+        log_test("Toplu overwrite (overwrite=true)", False, f"Exception: {str(e)}")
+        return False
+
+def test_single_post_duplicate(personel_id, personel_adi, test_date):
+    """Test 4: Single POST duplicate (should return 409 Conflict)"""
+    print("\n" + "="*80)
+    print("TEST SCENARIO 6: SINGLE POST DUPLICATE - SHOULD RETURN 409 CONFLICT")
+    print("="*80)
     
-    # Test 5.2: GET /api/personeller
+    url = f"{BACKEND_URL}/puantaj"
+    payload = {
+        "personel_id": personel_id,
+        "personel_adi": personel_adi,
+        "tarih": test_date,
+        "durum": "geldi",
+        "giris_saati": "10:00",
+        "cikis_saati": "19:00",
+        "mesai_suresi": 0,
+        "fazla_mesai": 0,
+        "notlar": ""
+    }
+    
     try:
-        response = requests.get(
-            f"{BASE_URL}/personeller",
-            headers=get_headers(with_auth=True),
-            timeout=10
-        )
+        response = requests.post(url, json=payload, headers=get_headers())
+        print(f"POST {url}")
+        print(f"Payload: {json.dumps(payload, indent=2, ensure_ascii=False)}")
+        print(f"Status: {response.status_code}")
+        print(f"Response: {response.text}")
+        
+        if response.status_code == 409:
+            detail = response.json().get('detail', '')
+            if "zaten bir puantaj kaydı" in detail.lower():
+                log_test("Single POST duplicate (409 Conflict)", True, 
+                        f"Status 409, detail message contains 'zaten bir puantaj kaydı'")
+                return True
+            else:
+                log_test("Single POST duplicate (409 Conflict)", False, 
+                        f"Status 409 but detail message doesn't contain expected text: {detail}")
+                return False
+        else:
+            log_test("Single POST duplicate (409 Conflict)", False, 
+                    f"Expected status 409, got {response.status_code}")
+            return False
+    except Exception as e:
+        log_test("Single POST duplicate (409 Conflict)", False, f"Exception: {str(e)}")
+        return False
+
+def test_single_post_new_date(personel_id, personel_adi, test_date2):
+    """Test 5: Single POST with new date (should create)"""
+    print("\n" + "="*80)
+    print("TEST SCENARIO 7: SINGLE POST YENİ TARİH - SHOULD CREATE")
+    print("="*80)
+    
+    url = f"{BACKEND_URL}/puantaj"
+    payload = {
+        "personel_id": personel_id,
+        "personel_adi": personel_adi,
+        "tarih": test_date2,
+        "durum": "geldi",
+        "giris_saati": "08:00",
+        "cikis_saati": "17:00",
+        "mesai_suresi": 0,
+        "fazla_mesai": 0,
+        "notlar": ""
+    }
+    
+    try:
+        response = requests.post(url, json=payload, headers=get_headers())
+        print(f"POST {url}")
+        print(f"Payload: {json.dumps(payload, indent=2, ensure_ascii=False)}")
+        print(f"Status: {response.status_code}")
+        print(f"Response: {json.dumps(response.json(), indent=2, ensure_ascii=False)}")
         
         if response.status_code == 200:
             data = response.json()
-            if isinstance(data, list):
-                log_test("GET /api/personeller returns 200", True,
-                        f"Retrieved {len(data)} personnel records")
+            if (data.get('id') and 
+                data.get('personel_id') == personel_id and 
+                data.get('tarih') == test_date2):
+                log_test("Single POST new date", True, 
+                        f"Status 200, record created with id={data.get('id')}, tarih={test_date2}")
+                return data.get('id')
             else:
-                log_test("GET /api/personeller returns 200", False,
-                        f"Response is not an array: {type(data)}")
-                all_passed = False
+                log_test("Single POST new date", False, 
+                        f"Status 200 but response missing required fields")
+                return None
         else:
-            log_test("GET /api/personeller returns 200", False,
-                    f"Status code: {response.status_code}")
-            all_passed = False
+            log_test("Single POST new date", False, 
+                    f"Expected status 200, got {response.status_code}: {response.text}")
+            return None
     except Exception as e:
-        log_test("GET /api/personeller returns 200", False, f"Exception: {str(e)}")
-        all_passed = False
+        log_test("Single POST new date", False, f"Exception: {str(e)}")
+        return None
+
+def test_single_post_duplicate_new_date(personel_id, personel_adi, test_date2):
+    """Test 6: Single POST duplicate on new date (should return 409)"""
+    print("\n" + "="*80)
+    print("TEST SCENARIO 8: SINGLE POST DUPLICATE (yeni tarih) - SHOULD RETURN 409")
+    print("="*80)
     
-    # Test 5.3: GET /api/products
+    url = f"{BACKEND_URL}/puantaj"
+    payload = {
+        "personel_id": personel_id,
+        "personel_adi": personel_adi,
+        "tarih": test_date2,
+        "durum": "geldi",
+        "giris_saati": "08:00",
+        "cikis_saati": "17:00",
+        "mesai_suresi": 0,
+        "fazla_mesai": 0,
+        "notlar": ""
+    }
+    
     try:
-        response = requests.get(
-            f"{BASE_URL}/products",
-            headers=get_headers(with_auth=True),
-            timeout=10
-        )
+        response = requests.post(url, json=payload, headers=get_headers())
+        print(f"POST {url}")
+        print(f"Payload: {json.dumps(payload, indent=2, ensure_ascii=False)}")
+        print(f"Status: {response.status_code}")
+        print(f"Response: {response.text}")
         
-        if response.status_code == 200:
-            data = response.json()
-            if isinstance(data, list):
-                log_test("GET /api/products returns 200", True,
-                        f"Retrieved {len(data)} products")
-            else:
-                log_test("GET /api/products returns 200", False,
-                        f"Response is not an array: {type(data)}")
-                all_passed = False
+        if response.status_code == 409:
+            log_test("Single POST duplicate on new date (409 Conflict)", True, 
+                    f"Status 409 as expected")
+            return True
         else:
-            log_test("GET /api/products returns 200", False,
-                    f"Status code: {response.status_code}")
-            all_passed = False
+            log_test("Single POST duplicate on new date (409 Conflict)", False, 
+                    f"Expected status 409, got {response.status_code}")
+            return False
     except Exception as e:
-        log_test("GET /api/products returns 200", False, f"Exception: {str(e)}")
-        all_passed = False
+        log_test("Single POST duplicate on new date (409 Conflict)", False, f"Exception: {str(e)}")
+        return False
+
+def test_regression_different_personel(test_date):
+    """Test 7: Regression - different personel, same date (should create)"""
+    print("\n" + "="*80)
+    print("TEST SCENARIO 9: REGRESYON - FARKLI PERSONEL, AYNI TARİH")
+    print("="*80)
     
-    # Test 5.4: GET /api/reports/monthly
+    # Get another active personel
+    url = f"{BACKEND_URL}/personeller"
+    
     try:
-        response = requests.get(
-            f"{BASE_URL}/reports/monthly?year=2026&month=1",
-            headers=get_headers(with_auth=True),
-            timeout=10
-        )
-        
+        response = requests.get(url, headers=get_headers())
         if response.status_code == 200:
-            data = response.json()
-            if "by_product" in data and isinstance(data["by_product"], list):
-                log_test("GET /api/reports/monthly returns 200 with by_product array", True,
-                        f"Report contains {len(data['by_product'])} product entries")
+            personeller = response.json()
+            if len(personeller) >= 2:
+                # Find a different personel
+                second_personel = None
+                for p in personeller[1:]:  # Skip first one
+                    if p.get('durum') == 'aktif':
+                        second_personel = p
+                        break
+                
+                if not second_personel and len(personeller) > 1:
+                    second_personel = personeller[1]
+                
+                if second_personel:
+                    personel_id2 = second_personel.get('id')
+                    personel_adi2 = second_personel.get('ad_soyad', '')
+                    print(f"Using second personel: {personel_adi2} (ID: {personel_id2})")
+                    
+                    # Try to create puantaj for this personel on same date
+                    url2 = f"{BACKEND_URL}/puantaj/toplu"
+                    payload = {
+                        "tarih": test_date,
+                        "overwrite": False,
+                        "kayitlar": [
+                            {
+                                "personel_id": personel_id2,
+                                "personel_adi": personel_adi2,
+                                "durum": "geldi",
+                                "giris_saati": "08:00",
+                                "cikis_saati": "17:00",
+                                "mesai_suresi": 0,
+                                "fazla_mesai": 0,
+                                "notlar": ""
+                            }
+                        ]
+                    }
+                    
+                    response2 = requests.post(url2, json=payload, headers=get_headers())
+                    print(f"POST {url2}")
+                    print(f"Payload: {json.dumps(payload, indent=2, ensure_ascii=False)}")
+                    print(f"Status: {response2.status_code}")
+                    print(f"Response: {json.dumps(response2.json(), indent=2, ensure_ascii=False)}")
+                    
+                    if response2.status_code == 200:
+                        data = response2.json()
+                        created_count = data.get('created_count', 0)
+                        
+                        if created_count == 1:
+                            log_test("Regression - different personel, same date", True, 
+                                    f"created_count=1 (different personel can have record on same date)")
+                            return personel_id2
+                        else:
+                            log_test("Regression - different personel, same date", False, 
+                                    f"Expected created_count=1, got {created_count}")
+                            return None
+                    else:
+                        log_test("Regression - different personel, same date", False, 
+                                f"Status {response2.status_code}: {response2.text}")
+                        return None
+                else:
+                    log_test("Regression - different personel, same date", False, 
+                            "Could not find second personel")
+                    return None
             else:
-                log_test("GET /api/reports/monthly returns 200 with by_product array", False,
-                        f"Missing or invalid by_product field")
-                all_passed = False
+                log_test("Regression - different personel, same date", False, 
+                        "Not enough personel in database (need at least 2)")
+                return None
         else:
-            log_test("GET /api/reports/monthly returns 200 with by_product array", False,
-                    f"Status code: {response.status_code}")
-            all_passed = False
+            log_test("Regression - different personel, same date", False, 
+                    f"Failed to get personeller: Status {response.status_code}")
+            return None
     except Exception as e:
-        log_test("GET /api/reports/monthly returns 200 with by_product array", False, f"Exception: {str(e)}")
-        all_passed = False
+        log_test("Regression - different personel, same date", False, f"Exception: {str(e)}")
+        return None
+
+def cleanup_test_records(personel_id, test_date, test_date2, personel_id2=None):
+    """Test 8: Cleanup - delete test records"""
+    print("\n" + "="*80)
+    print("TEST SCENARIO 10: TEMİZLİK - DELETE TEST RECORDS")
+    print("="*80)
     
-    return all_passed
+    deleted_count = 0
+    
+    # Get all test records
+    dates_to_clean = [test_date, test_date2]
+    personel_ids_to_clean = [personel_id]
+    if personel_id2:
+        personel_ids_to_clean.append(personel_id2)
+    
+    for pid in personel_ids_to_clean:
+        for date in dates_to_clean:
+            url = f"{BACKEND_URL}/puantaj"
+            params = {
+                "personel_id": pid,
+                "tarih_baslangic": date,
+                "tarih_bitis": date
+            }
+            
+            try:
+                response = requests.get(url, params=params, headers=get_headers())
+                if response.status_code == 200:
+                    records = response.json()
+                    print(f"\nFound {len(records)} record(s) for personel_id={pid}, tarih={date}")
+                    
+                    for record in records:
+                        record_id = record.get('id')
+                        delete_url = f"{BACKEND_URL}/puantaj/{record_id}"
+                        
+                        delete_response = requests.delete(delete_url, headers=get_headers())
+                        print(f"DELETE {delete_url}")
+                        print(f"Status: {delete_response.status_code}")
+                        
+                        if delete_response.status_code == 200:
+                            deleted_count += 1
+                            print(f"✅ Deleted record {record_id}")
+                        else:
+                            print(f"❌ Failed to delete record {record_id}: {delete_response.text}")
+            except Exception as e:
+                print(f"❌ Error cleaning up records: {str(e)}")
+    
+    if deleted_count > 0:
+        log_test("Cleanup test records", True, f"Deleted {deleted_count} test record(s)")
+        return True
+    else:
+        log_test("Cleanup test records", True, "No records to delete (already cleaned)")
+        return True
 
 def print_summary():
     """Print test summary"""
     print("\n" + "="*80)
     print("TEST SUMMARY")
     print("="*80)
-    print(f"Total Tests: {test_results['total']}")
-    print(f"Passed: {test_results['passed']} ✅")
-    print(f"Failed: {test_results['failed']} ❌")
-    print(f"Success Rate: {(test_results['passed'] / test_results['total'] * 100):.1f}%")
     
-    if test_results['failed'] > 0:
+    total_tests = len(test_results)
+    passed_tests = sum(1 for t in test_results if t['passed'])
+    failed_tests = total_tests - passed_tests
+    
+    print(f"\nTotal Tests: {total_tests}")
+    print(f"Passed: {passed_tests} ✅")
+    print(f"Failed: {failed_tests} ❌")
+    print(f"Success Rate: {(passed_tests/total_tests*100):.1f}%")
+    
+    if failed_tests > 0:
         print("\n" + "="*80)
         print("FAILED TESTS:")
         print("="*80)
-        for test in test_results['tests']:
-            if not test['passed']:
-                print(f"❌ {test['name']}")
-                if test['message']:
-                    print(f"   {test['message']}")
+        for t in test_results:
+            if not t['passed']:
+                print(f"❌ {t['test']}")
+                if t['details']:
+                    print(f"   {t['details']}")
     
     print("\n" + "="*80)
-    print("DETAILED RESULTS:")
-    print("="*80)
-    for test in test_results['tests']:
-        status = "✅ PASS" if test['passed'] else "❌ FAIL"
-        print(f"{status}: {test['name']}")
-        if test['message']:
-            print(f"  → {test['message']}")
-
-def test_breakdown_analysis_default_params():
-    """Test 1: GET /api/breakdown-analysis with default parameters (days=30, module=bims, use_ai=true)"""
-    print("\n" + "="*80)
-    print("TEST: Breakdown Analysis - Default Parameters")
-    print("="*80)
     
-    try:
-        headers = {"Authorization": f"Bearer {AUTH_TOKEN}"}
-        response = requests.get(f"{BASE_URL}/breakdown-analysis", headers=headers, timeout=60)
-        
-        if response.status_code != 200:
-            log_test("Breakdown Analysis - Default Params", False, 
-                    f"Expected 200, got {response.status_code}: {response.text[:200]}")
-            return False
-        
-        data = response.json()
-        
-        # Verify all required fields
-        required_fields = [
-            "date_range", "module", "total_records", "total_breakdowns", 
-            "distinct_departments", "executive_summary", "top_issues_overall",
-            "overall_top_keywords", "per_department", "recent_breakdowns",
-            "ai_used", "ai_error"
-        ]
-        
-        missing_fields = [f for f in required_fields if f not in data]
-        if missing_fields:
-            log_test("Breakdown Analysis - Default Params", False, 
-                    f"Missing fields: {missing_fields}")
-            return False
-        
-        # Verify date_range structure
-        if not all(k in data["date_range"] for k in ["start", "end", "days"]):
-            log_test("Breakdown Analysis - Default Params", False, 
-                    "date_range missing start/end/days")
-            return False
-        
-        # Verify module
-        if data["module"] != "bims":
-            log_test("Breakdown Analysis - Default Params", False, 
-                    f"Expected module='bims', got '{data['module']}'")
-            return False
-        
-        # Verify data types
-        if not isinstance(data["total_records"], int):
-            log_test("Breakdown Analysis - Default Params", False, 
-                    f"total_records should be int, got {type(data['total_records'])}")
-            return False
-        
-        if not isinstance(data["total_breakdowns"], int):
-            log_test("Breakdown Analysis - Default Params", False, 
-                    f"total_breakdowns should be int, got {type(data['total_breakdowns'])}")
-            return False
-        
-        if not isinstance(data["distinct_departments"], int):
-            log_test("Breakdown Analysis - Default Params", False, 
-                    f"distinct_departments should be int, got {type(data['distinct_departments'])}")
-            return False
-        
-        if not isinstance(data["executive_summary"], str):
-            log_test("Breakdown Analysis - Default Params", False, 
-                    f"executive_summary should be string, got {type(data['executive_summary'])}")
-            return False
-        
-        if not isinstance(data["top_issues_overall"], list):
-            log_test("Breakdown Analysis - Default Params", False, 
-                    f"top_issues_overall should be list, got {type(data['top_issues_overall'])}")
-            return False
-        
-        if not isinstance(data["overall_top_keywords"], list):
-            log_test("Breakdown Analysis - Default Params", False, 
-                    f"overall_top_keywords should be list, got {type(data['overall_top_keywords'])}")
-            return False
-        
-        if not isinstance(data["per_department"], list):
-            log_test("Breakdown Analysis - Default Params", False, 
-                    f"per_department should be list, got {type(data['per_department'])}")
-            return False
-        
-        if not isinstance(data["recent_breakdowns"], list):
-            log_test("Breakdown Analysis - Default Params", False, 
-                    f"recent_breakdowns should be list, got {type(data['recent_breakdowns'])}")
-            return False
-        
-        if not isinstance(data["ai_used"], bool):
-            log_test("Breakdown Analysis - Default Params", False, 
-                    f"ai_used should be bool, got {type(data['ai_used'])}")
-            return False
-        
-        # Verify per_department structure if data exists
-        if data["per_department"]:
-            dept = data["per_department"][0]
-            required_dept_fields = [
-                "department_id", "department_name", "total_breakdowns", 
-                "top_keywords", "ornekler", "ai_kategoriler", "ai_one_liner"
-            ]
-            missing_dept_fields = [f for f in required_dept_fields if f not in dept]
-            if missing_dept_fields:
-                log_test("Breakdown Analysis - Default Params", False, 
-                        f"per_department missing fields: {missing_dept_fields}")
-                return False
-        
-        # Verify recent_breakdowns structure if data exists
-        if data["recent_breakdowns"]:
-            recent = data["recent_breakdowns"][0]
-            required_recent_fields = ["tarih", "isletme", "vardiya", "operator", "urun", "metin"]
-            missing_recent_fields = [f for f in required_recent_fields if f not in recent]
-            if missing_recent_fields:
-                log_test("Breakdown Analysis - Default Params", False, 
-                        f"recent_breakdowns missing fields: {missing_recent_fields}")
-                return False
-        
-        # Log success with details
-        msg = (f"Response OK: total_records={data['total_records']}, "
-               f"total_breakdowns={data['total_breakdowns']}, "
-               f"distinct_departments={data['distinct_departments']}, "
-               f"ai_used={data['ai_used']}, "
-               f"ai_error={data['ai_error']}")
-        
-        if data["total_breakdowns"] == 0:
-            msg += " (No breakdown data in database - expected behavior)"
-        
-        log_test("Breakdown Analysis - Default Params", True, msg)
-        
-        # Print sample response for verification
-        print(f"\n📊 Sample Response:")
-        print(f"  Date Range: {data['date_range']['start']} to {data['date_range']['end']} ({data['date_range']['days']} days)")
-        print(f"  Module: {data['module']}")
-        print(f"  Total Records: {data['total_records']}")
-        print(f"  Total Breakdowns: {data['total_breakdowns']}")
-        print(f"  Distinct Departments: {data['distinct_departments']}")
-        print(f"  AI Used: {data['ai_used']}")
-        print(f"  AI Error: {data['ai_error']}")
-        print(f"  Executive Summary Length: {len(data['executive_summary'])} chars")
-        print(f"  Top Issues Overall: {len(data['top_issues_overall'])} items")
-        print(f"  Overall Top Keywords: {len(data['overall_top_keywords'])} items")
-        print(f"  Per Department: {len(data['per_department'])} departments")
-        print(f"  Recent Breakdowns: {len(data['recent_breakdowns'])} items")
-        
-        if data["executive_summary"]:
-            print(f"\n📝 Executive Summary Preview:")
-            print(f"  {data['executive_summary'][:200]}...")
-        
-        return True
-        
-    except Exception as e:
-        log_test("Breakdown Analysis - Default Params", False, f"Exception: {str(e)}")
-        return False
-
-
-def test_breakdown_analysis_no_ai():
-    """Test 2: GET /api/breakdown-analysis?use_ai=false - Should return quickly without AI call"""
-    print("\n" + "="*80)
-    print("TEST: Breakdown Analysis - No AI (use_ai=false)")
-    print("="*80)
-    
-    try:
-        headers = {"Authorization": f"Bearer {AUTH_TOKEN}"}
-        start_time = time.time()
-        response = requests.get(f"{BASE_URL}/breakdown-analysis?use_ai=false", headers=headers, timeout=30)
-        elapsed_time = time.time() - start_time
-        
-        if response.status_code != 200:
-            log_test("Breakdown Analysis - No AI", False, 
-                    f"Expected 200, got {response.status_code}: {response.text[:200]}")
-            return False
-        
-        data = response.json()
-        
-        # Verify ai_used is false
-        if data.get("ai_used") != False:
-            log_test("Breakdown Analysis - No AI", False, 
-                    f"Expected ai_used=false, got {data.get('ai_used')}")
-            return False
-        
-        # Verify response time is reasonable (should be fast without AI)
-        msg = f"Response OK: ai_used=false, response_time={elapsed_time:.2f}s"
-        if elapsed_time > 10:
-            msg += " (Warning: Response time > 10s without AI)"
-        
-        log_test("Breakdown Analysis - No AI", True, msg)
-        
-        print(f"\n⚡ Performance:")
-        print(f"  Response Time: {elapsed_time:.2f}s")
-        print(f"  AI Used: {data['ai_used']}")
-        
-        return True
-        
-    except Exception as e:
-        log_test("Breakdown Analysis - No AI", False, f"Exception: {str(e)}")
-        return False
-
-
-def test_breakdown_analysis_custom_date_range():
-    """Test 3: GET /api/breakdown-analysis?start_date=2025-01-01&end_date=2026-12-31 - Custom date range"""
-    print("\n" + "="*80)
-    print("TEST: Breakdown Analysis - Custom Date Range")
-    print("="*80)
-    
-    try:
-        headers = {"Authorization": f"Bearer {AUTH_TOKEN}"}
-        params = {
-            "start_date": "2025-01-01",
-            "end_date": "2026-12-31",
-            "use_ai": "false"  # Disable AI for faster test
-        }
-        response = requests.get(f"{BASE_URL}/breakdown-analysis", headers=headers, params=params, timeout=30)
-        
-        if response.status_code != 200:
-            log_test("Breakdown Analysis - Custom Date Range", False, 
-                    f"Expected 200, got {response.status_code}: {response.text[:200]}")
-            return False
-        
-        data = response.json()
-        
-        # Verify date range
-        if data["date_range"]["start"] != "2025-01-01":
-            log_test("Breakdown Analysis - Custom Date Range", False, 
-                    f"Expected start_date='2025-01-01', got '{data['date_range']['start']}'")
-            return False
-        
-        if data["date_range"]["end"] != "2026-12-31":
-            log_test("Breakdown Analysis - Custom Date Range", False, 
-                    f"Expected end_date='2026-12-31', got '{data['date_range']['end']}'")
-            return False
-        
-        msg = (f"Response OK: date_range={data['date_range']['start']} to {data['date_range']['end']}, "
-               f"days={data['date_range']['days']}, "
-               f"total_records={data['total_records']}, "
-               f"total_breakdowns={data['total_breakdowns']}")
-        
-        log_test("Breakdown Analysis - Custom Date Range", True, msg)
-        
-        print(f"\n📅 Date Range Verification:")
-        print(f"  Start Date: {data['date_range']['start']}")
-        print(f"  End Date: {data['date_range']['end']}")
-        print(f"  Days: {data['date_range']['days']}")
-        print(f"  Total Records: {data['total_records']}")
-        print(f"  Total Breakdowns: {data['total_breakdowns']}")
-        
-        return True
-        
-    except Exception as e:
-        log_test("Breakdown Analysis - Custom Date Range", False, f"Exception: {str(e)}")
-        return False
-
-
-def test_breakdown_analysis_no_auth():
-    """Test 4: GET /api/breakdown-analysis without auth - Should return 401/403"""
-    print("\n" + "="*80)
-    print("TEST: Breakdown Analysis - No Authentication")
-    print("="*80)
-    
-    try:
-        # No Authorization header
-        response = requests.get(f"{BASE_URL}/breakdown-analysis", timeout=10)
-        
-        if response.status_code not in [401, 403]:
-            log_test("Breakdown Analysis - No Auth", False, 
-                    f"Expected 401 or 403, got {response.status_code}")
-            return False
-        
-        log_test("Breakdown Analysis - No Auth", True, 
-                f"Correctly returned {response.status_code} for unauthorized access")
-        
-        print(f"\n🔒 Security Check:")
-        print(f"  Status Code: {response.status_code}")
-        print(f"  Auth Required: ✅")
-        
-        return True
-        
-    except Exception as e:
-        log_test("Breakdown Analysis - No Auth", False, f"Exception: {str(e)}")
-        return False
-
-
-def test_breakdown_analysis_ai_integration():
-    """Test 5: Verify EMERGENT_LLM_KEY and AI integration"""
-    print("\n" + "="*80)
-    print("TEST: Breakdown Analysis - AI Integration Verification")
-    print("="*80)
-    
-    try:
-        headers = {"Authorization": f"Bearer {AUTH_TOKEN}"}
-        # Use default params with use_ai=true
-        response = requests.get(f"{BASE_URL}/breakdown-analysis?use_ai=true", headers=headers, timeout=60)
-        
-        if response.status_code != 200:
-            log_test("Breakdown Analysis - AI Integration", False, 
-                    f"Expected 200, got {response.status_code}: {response.text[:200]}")
-            return False
-        
-        data = response.json()
-        
-        # Check if there's breakdown data
-        if data["total_breakdowns"] == 0:
-            # No breakdown data, so AI should not be called
-            if data["ai_used"] == False:
-                log_test("Breakdown Analysis - AI Integration", True, 
-                        "No breakdown data - AI not called (expected behavior)")
-                print(f"\n🤖 AI Integration:")
-                print(f"  Total Breakdowns: 0")
-                print(f"  AI Used: False (expected - no data to analyze)")
-                print(f"  AI Error: {data['ai_error']}")
-                return True
-            else:
-                log_test("Breakdown Analysis - AI Integration", False, 
-                        "AI was called despite no breakdown data")
-                return False
-        else:
-            # There is breakdown data, verify AI was called
-            if data["ai_used"] == False:
-                # AI was not used - check if there's an error
-                if data["ai_error"]:
-                    log_test("Breakdown Analysis - AI Integration", False, 
-                            f"AI not used due to error: {data['ai_error']}")
-                    print(f"\n🤖 AI Integration:")
-                    print(f"  Total Breakdowns: {data['total_breakdowns']}")
-                    print(f"  AI Used: False")
-                    print(f"  AI Error: {data['ai_error']}")
-                    return False
-                else:
-                    log_test("Breakdown Analysis - AI Integration", False, 
-                            "AI not used despite having breakdown data and no error")
-                    return False
-            else:
-                # AI was used successfully
-                msg = (f"AI integration working: total_breakdowns={data['total_breakdowns']}, "
-                       f"ai_used=true, executive_summary_length={len(data['executive_summary'])}")
-                
-                if data["ai_error"]:
-                    msg += f", ai_error={data['ai_error']}"
-                
-                log_test("Breakdown Analysis - AI Integration", True, msg)
-                
-                print(f"\n🤖 AI Integration:")
-                print(f"  Total Breakdowns: {data['total_breakdowns']}")
-                print(f"  AI Used: True ✅")
-                print(f"  AI Error: {data['ai_error']}")
-                print(f"  Executive Summary Length: {len(data['executive_summary'])} chars")
-                print(f"  Top Issues Overall: {len(data['top_issues_overall'])} items")
-                
-                if data["executive_summary"]:
-                    print(f"\n📝 AI-Generated Executive Summary:")
-                    print(f"  {data['executive_summary'][:300]}...")
-                
-                if data["top_issues_overall"]:
-                    print(f"\n🔝 Top Issues Overall (AI-categorized):")
-                    for i, issue in enumerate(data["top_issues_overall"][:3], 1):
-                        print(f"  {i}. {issue.get('kategori', 'N/A')}: {issue.get('aciklama', 'N/A')[:80]}...")
-                
-                return True
-        
-    except Exception as e:
-        log_test("Breakdown Analysis - AI Integration", False, f"Exception: {str(e)}")
-        return False
-
-
-def test_breakdown_analysis_ai_with_data():
-    """Test 6: Verify AI integration with actual breakdown data"""
-    print("\n" + "="*80)
-    print("TEST: Breakdown Analysis - AI Integration with Real Data")
-    print("="*80)
-    
-    try:
-        headers = {"Authorization": f"Bearer {AUTH_TOKEN}"}
-        # Use custom date range where we know there's data (2025-01-01 to 2026-12-31)
-        params = {
-            "start_date": "2025-01-01",
-            "end_date": "2026-12-31",
-            "use_ai": "true"
-        }
-        response = requests.get(f"{BASE_URL}/breakdown-analysis", headers=headers, params=params, timeout=90)
-        
-        if response.status_code != 200:
-            log_test("Breakdown Analysis - AI with Data", False, 
-                    f"Expected 200, got {response.status_code}: {response.text[:200]}")
-            return False
-        
-        data = response.json()
-        
-        # Check if there's breakdown data
-        if data["total_breakdowns"] == 0:
-            log_test("Breakdown Analysis - AI with Data", True, 
-                    "No breakdown data in specified range - AI not called (expected)")
-            print(f"\n🤖 AI Integration:")
-            print(f"  Total Breakdowns: 0")
-            print(f"  AI Used: {data['ai_used']}")
-            print(f"  Note: No data to analyze in this date range")
-            return True
-        
-        # There is breakdown data - verify AI processing
-        print(f"\n📊 Data Found:")
-        print(f"  Total Records: {data['total_records']}")
-        print(f"  Total Breakdowns: {data['total_breakdowns']}")
-        print(f"  Distinct Departments: {data['distinct_departments']}")
-        
-        print(f"\n🤖 AI Processing:")
-        print(f"  AI Used: {data['ai_used']}")
-        print(f"  AI Error: {data['ai_error']}")
-        
-        if data["ai_used"]:
-            # AI was successfully used
-            print(f"  Executive Summary Length: {len(data['executive_summary'])} chars")
-            print(f"  Top Issues Overall: {len(data['top_issues_overall'])} items")
-            
-            if data["executive_summary"]:
-                print(f"\n📝 AI-Generated Executive Summary:")
-                summary_lines = data['executive_summary'].split('\n')
-                for line in summary_lines[:5]:  # Show first 5 lines
-                    if line.strip():
-                        print(f"  {line.strip()}")
-                if len(summary_lines) > 5:
-                    print(f"  ... ({len(summary_lines) - 5} more lines)")
-            
-            if data["top_issues_overall"]:
-                print(f"\n🔝 Top Issues Overall (AI-categorized):")
-                for i, issue in enumerate(data["top_issues_overall"][:5], 1):
-                    kategori = issue.get('kategori', 'N/A')
-                    adet = issue.get('adet', 0)
-                    aciklama = issue.get('aciklama', 'N/A')
-                    print(f"  {i}. {kategori} ({adet} adet): {aciklama[:100]}")
-            
-            if data["per_department"]:
-                print(f"\n🏭 Per Department AI Analysis:")
-                for i, dept in enumerate(data["per_department"][:3], 1):
-                    print(f"  {i}. {dept['department_name']} ({dept['total_breakdowns']} breakdowns)")
-                    if dept.get('ai_one_liner'):
-                        print(f"     → {dept['ai_one_liner']}")
-                    if dept.get('ai_kategoriler'):
-                        print(f"     Categories: {len(dept['ai_kategoriler'])} AI-categorized issues")
-            
-            msg = (f"AI integration successful: total_breakdowns={data['total_breakdowns']}, "
-                   f"ai_used=true, executive_summary_length={len(data['executive_summary'])}, "
-                   f"top_issues={len(data['top_issues_overall'])}")
-            
-            log_test("Breakdown Analysis - AI with Data", True, msg)
-            return True
-        else:
-            # AI was not used - check for error
-            if data["ai_error"]:
-                log_test("Breakdown Analysis - AI with Data", False, 
-                        f"AI not used due to error: {data['ai_error']}")
-                print(f"\n❌ AI Error Details:")
-                print(f"  {data['ai_error']}")
-                return False
-            else:
-                log_test("Breakdown Analysis - AI with Data", False, 
-                        "AI not used despite having breakdown data and no error reported")
-                return False
-        
-    except Exception as e:
-        log_test("Breakdown Analysis - AI with Data", False, f"Exception: {str(e)}")
-        import traceback
-        print(f"\n❌ Exception Details:")
-        print(traceback.format_exc())
-        return False
-
-
-def test_breakdown_analysis_comprehensive():
-    """Run all breakdown analysis tests"""
-    print("\n" + "="*80)
-    print("BREAKDOWN ANALYSIS ENDPOINT - COMPREHENSIVE TEST SUITE")
-    print("="*80)
-    
-    # Test 1: Default parameters
-    test_breakdown_analysis_default_params()
-    
-    # Test 2: No AI
-    test_breakdown_analysis_no_ai()
-    
-    # Test 3: Custom date range
-    test_breakdown_analysis_custom_date_range()
-    
-    # Test 4: No authentication
-    test_breakdown_analysis_no_auth()
-    
-    # Test 5: AI integration (with default params - may have no data)
-    test_breakdown_analysis_ai_integration()
-    
-    # Test 6: AI integration with actual data (custom date range)
-    test_breakdown_analysis_ai_with_data()
-
+    return failed_tests == 0
 
 def main():
-    """Main test runner"""
+    """Main test execution"""
+    print("\n" + "="*80)
+    print("PUANTAJ MÜKERRER KAYIT ENGELLEME BUG FIX TESTING")
     print("="*80)
-    print("BREAKDOWN ANALYSIS BACKEND TEST SUITE")
-    print("="*80)
-    print(f"Backend URL: {BASE_URL}")
-    print(f"Test Credentials: {TEST_EMAIL} / {TEST_PASSWORD}")
-    print(f"Test Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    print(f"Backend URL: {BACKEND_URL}")
+    print(f"Login: {LOGIN_EMAIL} / {LOGIN_PASSWORD}")
     print("="*80)
     
-    # Login is required for tests
-    if not test_login():
-        print("\n❌ Login failed - cannot continue with tests")
-        print_summary()
+    # Test dates (future dates to avoid conflicts)
+    test_date = "2027-03-15"
+    test_date2 = "2027-03-16"
+    
+    # Step 1: Login
+    if not login():
+        print("\n❌ Login failed. Cannot proceed with tests.")
         sys.exit(1)
     
-    # Run breakdown analysis tests
-    test_breakdown_analysis_comprehensive()
+    # Step 2: Get active personel
+    personel_id, personel_adi = get_active_personel()
+    if not personel_id:
+        print("\n❌ Could not get active personel. Cannot proceed with tests.")
+        sys.exit(1)
+    
+    # Step 3: Test toplu first insert (overwrite=false)
+    if not test_toplu_first_insert(personel_id, personel_adi, test_date):
+        print("\n⚠️ First insert failed. Continuing with other tests...")
+    
+    # Step 4: Test toplu duplicate skip (overwrite=false)
+    if not test_toplu_duplicate_skip(personel_id, personel_adi, test_date):
+        print("\n⚠️ Duplicate skip test failed. Continuing with other tests...")
+    
+    # Step 5: Test toplu overwrite (overwrite=true)
+    if not test_toplu_overwrite(personel_id, personel_adi, test_date):
+        print("\n⚠️ Overwrite test failed. Continuing with other tests...")
+    
+    # Step 6: Test single POST duplicate (should return 409)
+    if not test_single_post_duplicate(personel_id, personel_adi, test_date):
+        print("\n⚠️ Single POST duplicate test failed. Continuing with other tests...")
+    
+    # Step 7: Test single POST with new date
+    record_id2 = test_single_post_new_date(personel_id, personel_adi, test_date2)
+    if not record_id2:
+        print("\n⚠️ Single POST new date test failed. Continuing with other tests...")
+    
+    # Step 8: Test single POST duplicate on new date
+    if not test_single_post_duplicate_new_date(personel_id, personel_adi, test_date2):
+        print("\n⚠️ Single POST duplicate on new date test failed. Continuing with other tests...")
+    
+    # Step 9: Regression test - different personel, same date
+    personel_id2 = test_regression_different_personel(test_date)
+    
+    # Step 10: Cleanup
+    cleanup_test_records(personel_id, test_date, test_date2, personel_id2)
     
     # Print summary
-    print_summary()
+    all_passed = print_summary()
     
-    # Exit with appropriate code
-    if test_results['failed'] > 0:
-        sys.exit(1)
-    else:
+    if all_passed:
+        print("\n✅ ALL TESTS PASSED!")
         sys.exit(0)
+    else:
+        print("\n❌ SOME TESTS FAILED!")
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()
