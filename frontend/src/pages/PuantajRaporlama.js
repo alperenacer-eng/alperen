@@ -136,13 +136,41 @@ const PuantajRaporlama = () => {
   const [personelSort, setPersonelSort] = useState('ad_asc');
 
   // ACER Rapor sekmesi state'i (pivot/sürükle-bırak)
+  // Topla/Çıkart/Sabit yapılandırması localStorage'da kalıcı — personel/dönem değişse veya
+  // sayfa yenilense de kullanıcının seçimi korunur. Yeni eklenen durum yalnızca
+  // "Kullanılabilir" havuzunda görünür, mevcut seçime dokunulmaz.
+  const ACER_STORAGE_KEY = 'puantaj_acer_rapor_cfg_v1';
+  const loadAcerCfg = () => {
+    try {
+      const raw = localStorage.getItem(ACER_STORAGE_KEY);
+      if (!raw) return null;
+      const cfg = JSON.parse(raw);
+      return {
+        topla: Array.isArray(cfg.topla) ? cfg.topla.filter(k => k !== 'brut_maas') : [],
+        cikart: Array.isArray(cfg.cikart) ? cfg.cikart.filter(k => k !== 'brut_maas') : [],
+        sabit: cfg.sabit != null ? cfg.sabit : 0
+      };
+    } catch (_) { return null; }
+  };
+  const _initAcerCfg = loadAcerCfg();
   const [acerPersonelId, setAcerPersonelId] = useState('');
   const [acerYear, setAcerYear] = useState(String(_today.getFullYear()));
   const [acerMonth, setAcerMonth] = useState(String(_today.getMonth() + 1));
-  const [acerTopla, setAcerTopla] = useState([]);    // metric key listesi
-  const [acerCikart, setAcerCikart] = useState([]);  // metric key listesi
+  const [acerTopla, setAcerTopla] = useState(_initAcerCfg?.topla || []);    // metric key listesi
+  const [acerCikart, setAcerCikart] = useState(_initAcerCfg?.cikart || []); // metric key listesi
   const [acerDragKey, setAcerDragKey] = useState(null);
-  const [acerSabit, setAcerSabit] = useState(0);     // sabit ekle/çıkar (ikramiye, kesinti gibi)
+  const [acerSabit, setAcerSabit] = useState(_initAcerCfg?.sabit || 0);     // sabit ekle/çıkar (ikramiye, kesinti gibi)
+
+  // Topla/Çıkart/Sabit değiştiğinde localStorage'a kaydet
+  React.useEffect(() => {
+    try {
+      localStorage.setItem(ACER_STORAGE_KEY, JSON.stringify({
+        topla: acerTopla,
+        cikart: acerCikart,
+        sabit: acerSabit
+      }));
+    } catch (_) { /* noop */ }
+  }, [acerTopla, acerCikart, acerSabit]);
   
   const headers = { Authorization: `Bearer ${token}` };
 
