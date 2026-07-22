@@ -2128,6 +2128,29 @@ const PuantajRaporlama = () => {
                               </TableRow>
                             );
                           })}
+                          {/* Alt Toplamlar */}
+                          {acerTopla.length > 0 && (
+                            <TableRow className="border-slate-800 bg-emerald-900/20">
+                              <TableCell colSpan={4} className="text-right text-emerald-300 font-semibold uppercase tracking-wide text-xs">Toplama (+)</TableCell>
+                              <TableCell className="text-right font-bold text-emerald-200" data-testid="acer-detay-toplama">+{formatCurrency(acerTotals.topla)}</TableCell>
+                            </TableRow>
+                          )}
+                          {acerCikart.length > 0 && (
+                            <TableRow className="border-slate-800 bg-rose-900/20">
+                              <TableCell colSpan={4} className="text-right text-rose-300 font-semibold uppercase tracking-wide text-xs">Çıkarma (−)</TableCell>
+                              <TableCell className="text-right font-bold text-rose-200" data-testid="acer-detay-cikarma">−{formatCurrency(acerTotals.cikart)}</TableCell>
+                            </TableRow>
+                          )}
+                          {(acerTotals.sabit || 0) !== 0 && (
+                            <TableRow className="border-slate-800 bg-slate-800/40">
+                              <TableCell colSpan={4} className="text-right text-slate-300 font-semibold uppercase tracking-wide text-xs">Sabit (±)</TableCell>
+                              <TableCell className={`text-right font-bold ${acerTotals.sabit < 0 ? 'text-rose-200' : 'text-slate-100'}`}>{acerTotals.sabit >= 0 ? '+' : ''}{formatCurrency(acerTotals.sabit)}</TableCell>
+                            </TableRow>
+                          )}
+                          <TableRow className="border-slate-700 bg-gradient-to-r from-orange-900/40 to-amber-900/30">
+                            <TableCell colSpan={4} className="text-right text-orange-200 font-extrabold uppercase tracking-wider text-sm">Toplam Hak Ediş</TableCell>
+                            <TableCell className={`text-right font-extrabold text-lg ${acerTotals.net < 0 ? 'text-rose-300' : 'text-yellow-300'}`} data-testid="acer-detay-toplam-hak-edis">{formatCurrency(acerTotals.net)}</TableCell>
+                          </TableRow>
                         </TableBody>
                       </Table>
                     </div>
