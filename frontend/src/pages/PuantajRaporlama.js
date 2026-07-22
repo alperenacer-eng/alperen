@@ -227,8 +227,11 @@ const PuantajRaporlama = () => {
   };
 
   // Toplam hak edilen ücret hesaplaması — Belirleme'deki çarpan/override değerlerini baz alır.
-  // Bordro hesabı ile aynı mantık: F.Mesai saatlik (toplam saat), Pazar/R.Tatil günlük, diğer 7 durum günlük.
-  // 'pazar_calismasi', 'resmi_tatil_calisti', 'bayram_calisti' → R.Tatil Çal. veya Pazar Çal. ücretine sayılır.
+  // FORMÜL (Kullanıcı tanımı):
+  //   Hak Ediş = geldi_tutar + hafta_tatili_tutar + resmi_tatil_tutar + bayram_tatili_tutar
+  //            + olum_izni_tutar + dogum_izni_tutar + pazar_calismasi_tutar
+  //            + resmi_tatil_calismasi_tutar + bayram_calismasi_tutar + fazla_mesai_tutar
+  //            - izinli_tutar - raporlu_tutar - izinsiz_tutar - eksik_calisma_tutar
   const hesaplaPersonelHakedilen = (personel, puantajlari) => {
     const maas = parseFloat(personel.maas) || 0;
     const gunluk = maas / 30;
@@ -242,6 +245,7 @@ const PuantajRaporlama = () => {
     const rtBirim = applyOvr(personel.ucret_override_resmi_tatil_calisti,  Math.ceil(gunluk * rc));
     const eksikCarpan = parseFloat(personel.durum_carpan_eksik_calisma ?? 1.0);
     const eksikBirim = applyOvr(personel.ucret_override_eksik_calisma,      Math.ceil(saatlik * eksikCarpan));
+    const geldiBirim = Math.ceil(gunluk);
     // Custom durumlar için JSON çarpan/override parse
     const customCarpanlar = (() => {
       try { return JSON.parse(personel.custom_durum_carpanlar || '{}') || {}; } catch (_) { return {}; }
@@ -249,7 +253,8 @@ const PuantajRaporlama = () => {
     const customOverrides = (() => {
       try { return JSON.parse(personel.custom_durum_overrides || '{}') || {}; } catch (_) { return {}; }
     })();
-    let toplamFm = 0, pazarGun = 0, rtGun = 0;
+    let toplamFm = 0, pazarGun = 0, rtCalGun = 0, byrCalGun = 0, geldiGun = 0;
+    let eksikDakikaTop = 0;
     const durumGun = { izinli:0, raporlu:0, hafta_tatili:0, resmi_tatil:0, bayram_tatili:0, izinsiz_gelmedi:0, olum_izni:0, dogum_izni:0 };
     // Aktif custom durumlar için sayım slotları aç
     activeCustomDurumlar.forEach(c => { durumGun[c.value] = 0; });
@@ -258,20 +263,31 @@ const PuantajRaporlama = () => {
       const fm = parseFloat(p.fazla_mesai) || 0;
       let haftaGunu = -1;
       try { haftaGunu = new Date(p.tarih).getDay(); } catch (_) {}
-      // Pazar günü mantığı
+      // Pazar / geldi mantığı
       if (durum === 'pazar_calismasi') pazarGun += 1;
       else if (haftaGunu === 0 && durum === 'geldi') pazarGun += 1;
-      else if (durum === 'resmi_tatil_calisti' || durum === 'bayram_calisti') rtGun += 1;
-      else if ((durum === 'resmi_tatil' || durum === 'bayram_tatili') && p.giris_saati && p.cikis_saati) rtGun += 1;
+      else if (durum === 'geldi') geldiGun += 1;
+      else if (durum === 'resmi_tatil_calisti') rtCalGun += 1;
+      else if (durum === 'bayram_calisti') byrCalGun += 1;
+      else if ((durum === 'resmi_tatil' || durum === 'bayram_tatili') && p.giris_saati && p.cikis_saati) {
+        // Tatilde çalışmışsa — 'resmi_tatil_calisti' ücretine sayılır
+        rtCalGun += 1;
+      }
       else if (durumGun[durum] !== undefined) durumGun[durum] += 1;
       if (fm > 0 && ['geldi','resmi_tatil','bayram_tatili','pazar_calismasi','resmi_tatil_calisti','bayram_calisti'].includes(durum)) {
         toplamFm += fm;
       }
+      // Eksik çalışma dakikası (yalnızca 'geldi' günlerinde)
+      eksikDakikaTop += eksikDakikaKaydi(p);
     });
+    const geldiUcret = geldiGun > 0 ? geldiBirim * geldiGun : 0;
     const fmUcret = toplamFm > 0 ? Math.ceil(fmBirim * toplamFm) : 0;
     const pzUcret = pazarGun > 0 ? Math.ceil(pzBirim * pazarGun) : 0;
-    const rtUcret = rtGun > 0 ? Math.ceil(rtBirim * rtGun) : 0;
-    // Durum bazlı ek ücret (yerleşik + custom)
+    // rtUcret: resmi_tatil_calisti + bayram_calisti + tatilde çalışılan gün toplamı
+    const rtUcret = (rtCalGun + byrCalGun) > 0 ? Math.ceil(rtBirim * (rtCalGun + byrCalGun)) : 0;
+    const eksikSaat = eksikDakikaTop / 60;
+    const eksikUcret = eksikSaat > 0 ? Math.ceil(eksikBirim * eksikSaat) : 0;
+    // Durum bazlı birim fiyatları
     const durumMap = [
       ['izinli',          personel.durum_carpan_izinli,          personel.ucret_override_izinli,          1.0],
       ['raporlu',         personel.durum_carpan_raporlu,         personel.ucret_override_raporlu,         0.0],
@@ -282,25 +298,24 @@ const PuantajRaporlama = () => {
       ['olum_izni',       personel.durum_carpan_olum_izni,       personel.ucret_override_olum_izni,       1.0],
       ['dogum_izni',      personel.durum_carpan_dogum_izni,      personel.ucret_override_dogum_izni,      1.0],
     ];
-    let durumEk = 0;
-    // Her durum için birim fiyatları topla (Belirleme tablosundan)
     const birimFiyatlar = {
-      geldi: Math.ceil(gunluk),  // 'geldi' günleri ana maaşa dahil — günlük birim
+      geldi: geldiBirim,
       fazla_mesai: fmBirim,
       eksik_calisma: eksikBirim,
       pazar_calismasi: pzBirim,
       resmi_tatil_calisti: rtBirim,
-      bayram_calisti: rtBirim,  // bayram çal. → R.Tatil ücretine sayılır
+      bayram_calisti: rtBirim,
     };
+    const durumTutar = {}; // her durum için hesaplanan tutar
     durumMap.forEach(([k, carpan, ovr, defC]) => {
       const c = parseFloat(carpan ?? defC);
       const birim = applyOvr(ovr, Math.ceil(gunluk * c));
       birimFiyatlar[k] = birim;
       const gun = durumGun[k] || 0;
-      if (gun <= 0) return;
-      if (birim > 0) durumEk += Math.ceil(birim * gun);
+      durumTutar[k] = (gun > 0 && birim > 0) ? Math.ceil(birim * gun) : 0;
     });
-    // Custom durumlar için birim hesabı + ek ücret toplamı
+    // Custom durumlar → durumEk (formül dışı, geriye dönük ek gösterim)
+    let customEk = 0;
     activeCustomDurumlar.forEach(cd => {
       const carp = customCarpanlar[cd.value] !== undefined ? parseFloat(customCarpanlar[cd.value]) : parseFloat(cd.def_carpan ?? 1.0);
       const ovr = customOverrides[cd.value];
@@ -308,9 +323,41 @@ const PuantajRaporlama = () => {
       const birim = applyOvr(ovr, Math.ceil(baz * carp));
       birimFiyatlar[cd.value] = birim;
       const gun = durumGun[cd.value] || 0;
-      if (gun > 0 && birim > 0) durumEk += Math.ceil(birim * gun);
+      if (gun > 0 && birim > 0) customEk += Math.ceil(birim * gun);
     });
-    return { fmUcret, pzUcret, rtUcret, durumEk, toplam: fmUcret + pzUcret + rtUcret + durumEk, birimFiyatlar };
+    // ─── Yeni Hak Ediş Formülü ────────────────────────────────────────────
+    // Eklenenler: geldi + hafta_tatili + resmi_tatil + bayram_tatili + olum_izni
+    //           + dogum_izni + pazar_calismasi + rt+byr çal + fazla_mesai
+    // Çıkarılanlar: izinli + raporlu + izinsiz_gelmedi + eksik_calisma
+    const toplaTutar =
+      geldiUcret
+      + (durumTutar.hafta_tatili   || 0)
+      + (durumTutar.resmi_tatil    || 0)
+      + (durumTutar.bayram_tatili  || 0)
+      + (durumTutar.olum_izni      || 0)
+      + (durumTutar.dogum_izni     || 0)
+      + pzUcret
+      + rtUcret
+      + fmUcret;
+    const cikartTutar =
+      (durumTutar.izinli          || 0)
+      + (durumTutar.raporlu       || 0)
+      + (durumTutar.izinsiz_gelmedi || 0)
+      + eksikUcret;
+    const toplam = toplaTutar - cikartTutar;
+    // durumEk: geriye dönük — UI/Excel için tüm durum tutarlarının toplamı + custom
+    const durumEk =
+      (durumTutar.izinli || 0) + (durumTutar.raporlu || 0) + (durumTutar.hafta_tatili || 0) +
+      (durumTutar.resmi_tatil || 0) + (durumTutar.bayram_tatili || 0) + (durumTutar.izinsiz_gelmedi || 0) +
+      (durumTutar.olum_izni || 0) + (durumTutar.dogum_izni || 0) + customEk;
+    return {
+      fmUcret, pzUcret, rtUcret, durumEk,
+      geldiUcret, eksikUcret,
+      durumTutar,
+      toplaTutar, cikartTutar,
+      toplam,
+      birimFiyatlar
+    };
   };
 
   // Personel Bazlı Rapor (tesis bilgisiyle + her durum sayısı + eksik çalışma saati + hak edilen toplam)
@@ -957,7 +1004,7 @@ const PuantajRaporlama = () => {
       renderCell: (p) => (
         <TableCell key="hak"
           className="whitespace-nowrap text-emerald-300 font-semibold"
-          title={`F.Mesai: ${formatCurrency(p.hakedilen.fmUcret)} · Pazar: ${formatCurrency(p.hakedilen.pzUcret)} · R.Tatil Çal.: ${formatCurrency(p.hakedilen.rtUcret)} · Durum Ek: ${formatCurrency(p.hakedilen.durumEk)}`}
+          title={`Formül: Geldi (${formatCurrency(p.hakedilen.geldiUcret || 0)}) + Hafta Tatili (${formatCurrency(p.hakedilen.durumTutar?.hafta_tatili || 0)}) + Resmi Tatil (${formatCurrency(p.hakedilen.durumTutar?.resmi_tatil || 0)}) + Bayram Tatili (${formatCurrency(p.hakedilen.durumTutar?.bayram_tatili || 0)}) + Ölüm İzni (${formatCurrency(p.hakedilen.durumTutar?.olum_izni || 0)}) + Doğum İzni (${formatCurrency(p.hakedilen.durumTutar?.dogum_izni || 0)}) + Pazar Çal. (${formatCurrency(p.hakedilen.pzUcret)}) + R.Tatil/Bayram Çal. (${formatCurrency(p.hakedilen.rtUcret)}) + Fazla Mesai (${formatCurrency(p.hakedilen.fmUcret)}) - İzinli (${formatCurrency(p.hakedilen.durumTutar?.izinli || 0)}) - Raporlu (${formatCurrency(p.hakedilen.durumTutar?.raporlu || 0)}) - İzinsiz (${formatCurrency(p.hakedilen.durumTutar?.izinsiz_gelmedi || 0)}) - Eksik Çal. (${formatCurrency(p.hakedilen.eksikUcret || 0)})  =  Toplama: ${formatCurrency(p.hakedilen.toplaTutar || 0)} · Çıkarma: ${formatCurrency(p.hakedilen.cikartTutar || 0)}`}
           data-testid={`hakedilen-toplam-${p.id}`}>
           {formatCurrency(p.hakedilen.toplam)}
         </TableCell>
