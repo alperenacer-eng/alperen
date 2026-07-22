@@ -519,8 +519,7 @@ const PuantajRaporlama = () => {
       const gun = durumGun[cd.value] || 0;
       items.push({ key: cd.value, label: cd.label + ' (özel)', kategori: cd.tip === 'saatlik' ? 'saat' : 'gun', count: gun, unit: cd.tip === 'saatlik' ? 'saat' : 'gün', birim, tutar: Math.ceil(birim * gun), custom: true });
     });
-    // Brüt Maaş (sabit referans — Kullanıcı isterse topla'ya alır)
-    items.push({ key: 'brut_maas', label: 'Brüt Maaş (referans)', kategori: 'sabit', count: 1, unit: 'aylık', birim: Math.ceil(maas), tutar: Math.ceil(maas) });
+    // Not: Brüt Maaş referans kalemi kaldırıldı (kullanıcı isteği). Ana maaş, günlük "geldi" birimiyle hesaplanan Geldi kaleminde yansıyor.
     return items;
   })();
 
@@ -1872,10 +1871,15 @@ const PuantajRaporlama = () => {
                     </div>
                   </div>
                   <div className="rounded-lg border-2 border-orange-500/60 bg-gradient-to-br from-orange-900/40 to-amber-900/30 p-2.5">
-                    <div className="text-[11px] text-orange-300">Net Sonuç</div>
+                    <div className="text-[11px] text-orange-300 font-semibold uppercase tracking-wide">Toplam Hak Ediş</div>
                     <div data-testid="acer-rapor-net-sonuc" className={`text-xl font-extrabold mt-0.5 ${acerTotals.net < 0 ? 'text-rose-300' : 'text-orange-200'}`}>
                       {formatCurrency(acerTotals.net)}
                     </div>
+                    {(acerTopla.length === 0 && acerCikart.length === 0) ? (
+                      <div className="text-[10px] text-orange-300/70 mt-1">Alan sürükleyin — «Topla» veya «Çıkart» alanına atılan kalemler bu toplama girer.</div>
+                    ) : (
+                      <div className="text-[10px] text-orange-300/70 mt-1">Formül: Topla − Çıkart {acerTotals.sabit ? '± Sabit' : ''}</div>
+                    )}
                   </div>
                 </div>
               </div>
