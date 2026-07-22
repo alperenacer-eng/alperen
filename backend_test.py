@@ -17,7 +17,7 @@ import sys
 from datetime import datetime
 
 # Backend URL from frontend/.env
-BASE_URL = "https://entry-portal-79.preview.emergentagent.com/api"
+BASE_URL = "https://tender-wing-9.preview.emergentagent.com/api"
 
 # Test credentials
 TEST_EMAIL = "alperenacer@acerler.com"
