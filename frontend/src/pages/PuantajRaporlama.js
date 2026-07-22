@@ -624,6 +624,10 @@ const PuantajRaporlama = () => {
       footerRows.push(['', '', '', 'TOPLAM HAK EDİŞ', acerTotals.net]);
       const ws = XLSX.utils.aoa_to_sheet([...infoRows, ...dataRows, [], ...footerRows]);
       ws['!cols'] = [{ wch: 12 }, { wch: 32 }, { wch: 14 }, { wch: 18 }, { wch: 16 }];
+      // Tek sayfaya sığdır — Excel print ayarları
+      ws['!margins'] = { left: 0.3, right: 0.3, top: 0.4, bottom: 0.4, header: 0.2, footer: 0.2 };
+      ws['!pageSetup'] = { orientation: 'portrait', paperSize: 9, fitToWidth: 1, fitToHeight: 1, scale: 100 };
+      ws['!printOptions'] = { horizontalCentered: true };
       XLSX.utils.book_append_sheet(wb, ws, 'ACER Detay');
       const fileName = `acer_detay_${acerSecilenPersonel.ad_soyad.replace(/\s+/g,'_')}_${acerYear}_${String(acerMonth).padStart(2,'0')}.xlsx`;
       XLSX.writeFile(wb, fileName);
@@ -659,19 +663,28 @@ const PuantajRaporlama = () => {
     const html = `
       <!DOCTYPE html><html><head><title>ACER Detay — ${acerSecilenPersonel.ad_soyad} — ${acerYear}/${acerAyAdi}</title>
       <style>
-        body{font-family:Arial,sans-serif;padding:20px;font-size:12px;color:#0f172a}
-        h1{border-bottom:2px solid #333;padding-bottom:8px;margin:0 0 8px}
-        .meta{background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:10px 14px;margin-bottom:14px}
-        .meta div{margin:2px 0}
-        table{width:100%;border-collapse:collapse;margin-top:8px}
-        th,td{border:1px solid #cbd5e1;padding:8px 10px;font-size:12px}
-        thead th{background:#0f172a;color:#fff;text-align:left}
+        @page { size: A4 portrait; margin: 10mm; }
+        html, body { margin: 0; padding: 0; }
+        body{font-family:Arial,sans-serif;padding:10px 12px;font-size:10.5px;color:#0f172a}
+        h1{border-bottom:2px solid #333;padding-bottom:5px;margin:0 0 6px;font-size:16px}
+        .meta{background:#f8fafc;border:1px solid #e2e8f0;border-radius:5px;padding:6px 10px;margin-bottom:8px;display:flex;gap:14px;flex-wrap:wrap;font-size:10.5px}
+        .meta div{margin:0}
+        table{width:100%;border-collapse:collapse;margin-top:4px;table-layout:fixed;page-break-inside:avoid}
+        th,td{border:1px solid #cbd5e1;padding:4px 6px;font-size:10px;word-wrap:break-word;overflow-wrap:break-word}
+        thead th{background:#0f172a;color:#fff;text-align:left;padding:5px 6px;font-size:10.5px}
         tbody tr:nth-child(even) td{background:#f8fafc}
-        tr.ft td{background:#f1f5f9;font-weight:600;font-size:12px}
+        tbody tr{page-break-inside:avoid}
+        tr.ft td{background:#f1f5f9;font-weight:600;font-size:10.5px;padding:5px 6px}
         tr.ft.plus td{background:#ecfdf5}
         tr.ft.minus td{background:#fef2f2}
-        tr.ft.grand td{background:#0f172a;color:#facc15;font-weight:800;font-size:15px;padding:10px 12px;border-top:3px double #0f172a}
-        @media print { .no-print{display:none !important} }
+        tr.ft.grand td{background:#0f172a;color:#facc15;font-weight:800;font-size:12.5px;padding:7px 8px;border-top:2px double #0f172a}
+        /* Kolon genişlikleri (5 sütun) — toplam 100% */
+        col.c1{width:14%} col.c2{width:36%} col.c3{width:14%} col.c4{width:18%} col.c5{width:18%}
+        @media print {
+          .no-print{display:none !important}
+          body { padding: 6px 8px; font-size: 10px; }
+          h1 { font-size: 14px; }
+        }
         .action-bar{position:sticky;top:0;z-index:10;background:#fff;padding:10px 0 14px;border-bottom:1px solid #e2e8f0;margin-bottom:8px;display:flex;gap:8px;flex-wrap:wrap}
         .action-bar button{font-family:inherit;font-size:13px;padding:8px 16px;border-radius:6px;border:1px solid transparent;cursor:pointer;font-weight:600}
         .action-bar .btn-print{background:#dc2626;color:#fff;border-color:#dc2626}
@@ -687,6 +700,7 @@ const PuantajRaporlama = () => {
           <div><strong>Dönem:</strong> ${acerYear} / ${acerAyAdi} (${String(acerMonth).padStart(2,'0')})</div>
         </div>
         <table>
+          <colgroup><col class="c1"><col class="c2"><col class="c3"><col class="c4"><col class="c5"></colgroup>
           <thead><tr><th>İşlem</th><th>Metrik</th><th style="text-align:right">Miktar</th><th style="text-align:right">Birim Fiyat</th><th style="text-align:right">Tutar</th></tr></thead>
           <tbody>${rowsHtml}${footHtml}</tbody>
         </table>
