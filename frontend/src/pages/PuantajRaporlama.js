@@ -587,6 +587,115 @@ const PuantajRaporlama = () => {
   };
   const acerTumunuTemizle = () => { setAcerTopla([]); setAcerCikart([]); setAcerSabit(0); };
 
+  // ACER Detay tablosu — ay adı ve export yardımcıları
+  const acerAyAdi = (() => {
+    const map = { '1':'Ocak','2':'Şubat','3':'Mart','4':'Nisan','5':'Mayıs','6':'Haziran','7':'Temmuz','8':'Ağustos','9':'Eylül','10':'Ekim','11':'Kasım','12':'Aralık' };
+    return map[String(parseInt(acerMonth, 10))] || acerMonth;
+  })();
+  const acerDetayRows = () => {
+    const rows = [];
+    acerTopla.forEach(k => {
+      const m = acerMetrikGetir(k); if (!m) return;
+      rows.push(['+ Topla', m.label, `${m.count} ${m.unit}`, m.birim, m.tutar]);
+    });
+    acerCikart.forEach(k => {
+      const m = acerMetrikGetir(k); if (!m) return;
+      rows.push(['− Çıkart', m.label, `${m.count} ${m.unit}`, m.birim, -m.tutar]);
+    });
+    return rows;
+  };
+  const acerExportExcel = () => {
+    if (!acerSecilenPersonel) { toast.error('Önce personel seçin'); return; }
+    if (acerTopla.length === 0 && acerCikart.length === 0) { toast.error('Önce Topla veya Çıkart alanına kalem sürükleyin'); return; }
+    try {
+      const wb = XLSX.utils.book_new();
+      const infoRows = [
+        ['ACER Rapor — Detay'],
+        ['Personel', acerSecilenPersonel.ad_soyad],
+        ['Dönem', `${acerYear} / ${acerAyAdi}`],
+        [],
+        ['İşlem', 'Metrik', 'Miktar', 'Birim Fiyat (₺)', 'Tutar (₺)'],
+      ];
+      const dataRows = acerDetayRows();
+      const footerRows = [];
+      if (acerTopla.length > 0)  footerRows.push(['', '', '', 'Toplama (+)',    acerTotals.topla]);
+      if (acerCikart.length > 0) footerRows.push(['', '', '', 'Çıkarma (−)',   -acerTotals.cikart]);
+      if ((acerTotals.sabit || 0) !== 0) footerRows.push(['', '', '', 'Sabit (±)', acerTotals.sabit]);
+      footerRows.push(['', '', '', 'TOPLAM HAK EDİŞ', acerTotals.net]);
+      const ws = XLSX.utils.aoa_to_sheet([...infoRows, ...dataRows, [], ...footerRows]);
+      ws['!cols'] = [{ wch: 12 }, { wch: 32 }, { wch: 14 }, { wch: 18 }, { wch: 16 }];
+      XLSX.utils.book_append_sheet(wb, ws, 'ACER Detay');
+      const fileName = `acer_detay_${acerSecilenPersonel.ad_soyad.replace(/\s+/g,'_')}_${acerYear}_${String(acerMonth).padStart(2,'0')}.xlsx`;
+      XLSX.writeFile(wb, fileName);
+      toast.success('Excel indirildi');
+    } catch (e) {
+      console.error(e); toast.error('Excel oluşturulurken hata oluştu');
+    }
+  };
+  const acerExportPDF = () => {
+    if (!acerSecilenPersonel) { toast.error('Önce personel seçin'); return; }
+    if (acerTopla.length === 0 && acerCikart.length === 0) { toast.error('Önce Topla veya Çıkart alanına kalem sürükleyin'); return; }
+    const fmt = (n) => formatCurrency(n);
+    const rowsHtml = acerDetayRows().map(r => {
+      const isMinus = String(r[0]).includes('Çıkart');
+      const badge = isMinus
+        ? `<span style="padding:2px 8px;border-radius:10px;background:#fee2e2;color:#991b1b;border:1px solid #fecaca;font-weight:600;font-size:11px">− Çıkart</span>`
+        : `<span style="padding:2px 8px;border-radius:10px;background:#d1fae5;color:#065f46;border:1px solid #a7f3d0;font-weight:600;font-size:11px">+ Topla</span>`;
+      const tutarColor = isMinus ? '#dc2626' : '#059669';
+      const tutarPrefix = isMinus ? '−' : '+';
+      return `<tr>
+        <td>${badge}</td>
+        <td>${r[1]}</td>
+        <td style="text-align:right">${r[2]}</td>
+        <td style="text-align:right">${fmt(r[3])}</td>
+        <td style="text-align:right;color:${tutarColor};font-weight:600">${tutarPrefix}${fmt(Math.abs(r[4]))}</td>
+      </tr>`;
+    }).join('');
+    let footHtml = '';
+    if (acerTopla.length > 0) footHtml += `<tr class="ft plus"><td colspan="4" style="text-align:right">Toplama (+)</td><td style="text-align:right;color:#065f46;font-weight:700">+${fmt(acerTotals.topla)}</td></tr>`;
+    if (acerCikart.length > 0) footHtml += `<tr class="ft minus"><td colspan="4" style="text-align:right">Çıkarma (−)</td><td style="text-align:right;color:#991b1b;font-weight:700">−${fmt(acerTotals.cikart)}</td></tr>`;
+    if ((acerTotals.sabit || 0) !== 0) footHtml += `<tr class="ft"><td colspan="4" style="text-align:right">Sabit (±)</td><td style="text-align:right;font-weight:700">${acerTotals.sabit >= 0 ? '+' : ''}${fmt(acerTotals.sabit)}</td></tr>`;
+    footHtml += `<tr class="ft grand"><td colspan="4" style="text-align:right">TOPLAM HAK EDİŞ</td><td style="text-align:right">${fmt(acerTotals.net)}</td></tr>`;
+    const html = `
+      <!DOCTYPE html><html><head><title>ACER Detay — ${acerSecilenPersonel.ad_soyad} — ${acerYear}/${acerAyAdi}</title>
+      <style>
+        body{font-family:Arial,sans-serif;padding:20px;font-size:12px;color:#0f172a}
+        h1{border-bottom:2px solid #333;padding-bottom:8px;margin:0 0 8px}
+        .meta{background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:10px 14px;margin-bottom:14px}
+        .meta div{margin:2px 0}
+        table{width:100%;border-collapse:collapse;margin-top:8px}
+        th,td{border:1px solid #cbd5e1;padding:8px 10px;font-size:12px}
+        thead th{background:#0f172a;color:#fff;text-align:left}
+        tbody tr:nth-child(even) td{background:#f8fafc}
+        tr.ft td{background:#f1f5f9;font-weight:600;font-size:12px}
+        tr.ft.plus td{background:#ecfdf5}
+        tr.ft.minus td{background:#fef2f2}
+        tr.ft.grand td{background:#0f172a;color:#facc15;font-weight:800;font-size:15px;padding:10px 12px;border-top:3px double #0f172a}
+        @media print { .no-print{display:none !important} }
+        .action-bar{position:sticky;top:0;z-index:10;background:#fff;padding:10px 0 14px;border-bottom:1px solid #e2e8f0;margin-bottom:8px;display:flex;gap:8px;flex-wrap:wrap}
+        .action-bar button{font-family:inherit;font-size:13px;padding:8px 16px;border-radius:6px;border:1px solid transparent;cursor:pointer;font-weight:600}
+        .action-bar .btn-print{background:#dc2626;color:#fff;border-color:#dc2626}
+        .action-bar .btn-close{background:#f1f5f9;color:#334155;border-color:#cbd5e1}
+      </style></head><body>
+        <div class="action-bar no-print">
+          <button class="btn-print" onclick="window.print()">🖨️ Yazdır / PDF Kaydet</button>
+          <button class="btn-close" onclick="window.close()">Kapat</button>
+        </div>
+        <h1>ACER Rapor — Detay</h1>
+        <div class="meta">
+          <div><strong>Personel:</strong> ${acerSecilenPersonel.ad_soyad}</div>
+          <div><strong>Dönem:</strong> ${acerYear} / ${acerAyAdi} (${String(acerMonth).padStart(2,'0')})</div>
+        </div>
+        <table>
+          <thead><tr><th>İşlem</th><th>Metrik</th><th style="text-align:right">Miktar</th><th style="text-align:right">Birim Fiyat</th><th style="text-align:right">Tutar</th></tr></thead>
+          <tbody>${rowsHtml}${footHtml}</tbody>
+        </table>
+      </body></html>`;
+    const w = window.open('', '_blank');
+    w.document.write(html); w.document.close();
+    toast.success('PDF hazır — yeni sekmede "Yazdır" butonuna basın');
+  };
+
   // Tesis Bazlı Rapor
   const tesisRaporu = (() => {
     const tesisMap = {};
@@ -2092,7 +2201,36 @@ const PuantajRaporlama = () => {
 
                   {/* Detay tablosu */}
                   {(acerTopla.length > 0 || acerCikart.length > 0) && (
-                    <div className="rounded-lg border border-slate-800 overflow-hidden">
+                    <div className="space-y-2">
+                      {/* Başlık: Personel + Dönem + Export butonları */}
+                      <div className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-lg bg-gradient-to-r from-slate-900/70 to-slate-900/40 border border-slate-800">
+                        <div className="flex items-center gap-4 flex-wrap">
+                          <div className="flex items-center gap-2">
+                            <User className="w-4 h-4 text-orange-400" />
+                            <div>
+                              <div className="text-[11px] text-slate-400 uppercase tracking-wide">Personel</div>
+                              <div className="text-sm font-bold text-white" data-testid="acer-detay-personel">{acerSecilenPersonel?.ad_soyad || '-'}</div>
+                            </div>
+                          </div>
+                          <div className="h-8 w-px bg-slate-700" />
+                          <div className="flex items-center gap-2">
+                            <Calendar className="w-4 h-4 text-orange-400" />
+                            <div>
+                              <div className="text-[11px] text-slate-400 uppercase tracking-wide">Dönem</div>
+                              <div className="text-sm font-bold text-white" data-testid="acer-detay-donem">{acerYear} / {acerAyAdi}</div>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button onClick={acerExportExcel} data-testid="acer-detay-excel-btn" variant="outline" size="sm" className="border-emerald-600 text-emerald-400 hover:bg-emerald-600/20">
+                            <FileSpreadsheet className="w-4 h-4 mr-1" /> Excel
+                          </Button>
+                          <Button onClick={acerExportPDF} data-testid="acer-detay-pdf-btn" variant="outline" size="sm" className="border-red-600 text-red-400 hover:bg-red-600/20">
+                            <FileText className="w-4 h-4 mr-1" /> PDF
+                          </Button>
+                        </div>
+                      </div>
+                      <div className="rounded-lg border border-slate-800 overflow-hidden">
                       <Table>
                         <TableHeader>
                           <TableRow className="border-slate-800 bg-slate-900/60">
@@ -2153,6 +2291,7 @@ const PuantajRaporlama = () => {
                           </TableRow>
                         </TableBody>
                       </Table>
+                      </div>
                     </div>
                   )}
                 </>
