@@ -744,6 +744,50 @@ const PuantajRaporlama = () => {
         if (dep && dep !== '-') subtitleParts.push(`<span>Departman: <strong>${dep}</strong></span>`);
         if (poz && poz !== '-') subtitleParts.push(`<span>Pozisyon: <strong>${poz}</strong></span>`);
         const subtitle = subtitleParts.length ? `<div class="sub">${subtitleParts.join(' &nbsp;•&nbsp; ')}</div>` : '';
+        // Hak Ediş formülü özeti — kartın en altında
+        const h = p.hakedilen || {};
+        const dt = h.durumTutar || {};
+        const plusItems = [
+          ['Geldi Tutarı',                      h.geldiUcret || 0],
+          ['Hafta Tatili Tutarı',               dt.hafta_tatili || 0],
+          ['Resmi Tatil Tutarı',                dt.resmi_tatil || 0],
+          ['Bayram Tatili Tutarı',              dt.bayram_tatili || 0],
+          ['Ölüm İzni Tutarı',                  dt.olum_izni || 0],
+          ['Doğum İzni Tutarı',                 dt.dogum_izni || 0],
+          ['Pazar Çalışması Tutarı',            h.pzUcret || 0],
+          ['R.Tatil/Bayram Çalışması Tutarı',   h.rtUcret || 0],
+          ['Fazla Mesai Tutarı',                h.fmUcret || 0],
+        ].filter(([, v]) => v > 0);
+        const minusItems = [
+          ['İzinli Tutarı',        dt.izinli || 0],
+          ['Raporlu Tutarı',       dt.raporlu || 0],
+          ['İzinsiz Tutarı',       dt.izinsiz_gelmedi || 0],
+          ['Eksik Çalışma Tutarı', h.eksikUcret || 0],
+        ].filter(([, v]) => v > 0);
+        const plusRows = plusItems.map(([lbl, v]) =>
+          `<tr class="plus-row"><td class="lbl">+ ${escapeHtml(lbl)}</td><td class="val" style="text-align:right;color:#059669;font-weight:600">${formatCurrency(v)}</td></tr>`
+        ).join('');
+        const minusRows = minusItems.map(([lbl, v]) =>
+          `<tr class="minus-row"><td class="lbl">− ${escapeHtml(lbl)}</td><td class="val" style="text-align:right;color:#dc2626;font-weight:600">${formatCurrency(v)}</td></tr>`
+        ).join('');
+        const toplaHtml = (h.toplaTutar !== undefined) ?
+          `<tr class="subtotal-row"><td class="lbl" style="background:#ecfdf5;font-weight:700;color:#065f46">Toplama (+)</td><td class="val" style="text-align:right;color:#065f46;font-weight:700;background:#ecfdf5">${formatCurrency(h.toplaTutar || 0)}</td></tr>` : '';
+        const cikartHtml = ((h.cikartTutar || 0) > 0) ?
+          `<tr class="subtotal-row"><td class="lbl" style="background:#fef2f2;font-weight:700;color:#991b1b">Çıkarma (−)</td><td class="val" style="text-align:right;color:#991b1b;font-weight:700;background:#fef2f2">−${formatCurrency(h.cikartTutar || 0)}</td></tr>` : '';
+        const toplamHakEdisHtml = `<tr class="grand-total-row"><td class="lbl" style="background:#0f172a;color:#fff;font-weight:800;font-size:13px">TOPLAM HAK EDİŞ</td><td class="val" style="text-align:right;background:#0f172a;color:#facc15;font-weight:800;font-size:14px">${formatCurrency(h.toplam || 0)}</td></tr>`;
+        const formulaBlock = (plusRows || minusRows) ? `
+          <div class="formula-block">
+            <div class="formula-title">Hak Ediş Detayı</div>
+            <table class="kv formula-table">
+              <tbody>
+                ${plusRows}
+                ${minusRows}
+                ${toplaHtml}
+                ${cikartHtml}
+                ${toplamHakEdisHtml}
+              </tbody>
+            </table>
+          </div>` : '';
         return `
           <div class="person-block">
             <div class="person-title">${idx + 1}. ${ad || '-'}</div>
@@ -751,6 +795,7 @@ const PuantajRaporlama = () => {
             <table class="kv">
               <tbody>${rows}</tbody>
             </table>
+            ${formulaBlock}
           </div>`;
       }).join('');
     } else if (activeTab === 'tesis') {
@@ -836,6 +881,14 @@ const PuantajRaporlama = () => {
           .person-block table.kv td.val { width: 45%; color: #0f172a; }
           .person-block table.kv tr:nth-child(even) td { background-color: #f8fafc; }
           .person-block table.kv tr:nth-child(even) td.val { background-color: #f8fafc; }
+          /* Hak Ediş formül bloğu */
+          .formula-block { margin-top: 10px; border-top: 2px dashed #94a3b8; padding-top: 8px; }
+          .formula-title { font-size: 12px; font-weight: 700; color: #334155; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.4px; }
+          .person-block table.formula-table tr:nth-child(even) td { background: transparent !important; }
+          .person-block table.formula-table tr.plus-row td { background: #f0fdf4; }
+          .person-block table.formula-table tr.minus-row td { background: #fef2f2; }
+          .person-block table.formula-table tr.subtotal-row td { border-top: 2px solid #cbd5e1; }
+          .person-block table.formula-table tr.grand-total-row td { border-top: 3px double #0f172a; padding: 8px 10px; }
           @media print {
             .person-block { break-inside: avoid; }
             .no-print { display: none !important; }
