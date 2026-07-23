@@ -21,6 +21,15 @@ GitHub'dan getirilen mevcut Acerler BIMS projesinin Puantaj, Personel ve Raporla
 
 ## Bu Oturumda Yapılanlar
 
+### Bu Oturum (Jul 2026) — 📷 Fotoğraftan Otomatik Doldur (Gemini Vision)
+- **Backend:** `POST /api/uretim/foto-analiz` endpoint eklendi. Fotoğraf yükleniyor, Gemini 2.5 Flash ile Türkçe "Üretim Takip Raporu" formu okunuyor, JSON olarak veri döner. Fotoğraf `/app/backend/uploads/uretim_fotolar/` altında saklanıyor, `/api/files/uretim/{filename}` üzerinden serve ediliyor.
+- **DB:** `production_records.photo_url` kolonu eklendi (ALTER TABLE ADD COLUMN).
+- **Frontend (ProductionEntry.js):** Formun en üstüne emerald renkli "Fotoğraftan Otomatik Doldur" bölümü eklendi. "Fotoğraf Seç" (galeri veya kamera) + "Analiz Et & Doldur" butonu + preview. AI'ın çıkardığı JSON `applyExtractedToForm()` fonksiyonu ile form alanlarına maplenerek doldurulur:
+  - Tarih, İşletme (rakamdan eşleşme), Vardiya, Çalışılan Saat, Ürün (rakam + SW eşleşmesi), Kalıp No, Şerit, Palet/Fire/Palet Adeti, Karma, Çimento miktarları, Operatör (isim başı eşleşme), Bakım açıklamaları (breakdown_1/2/3), Çıkan Paketler (max 5), Personel listesi (notes).
+- Kaydedilen record `photo_url` ile birlikte saklanır — daha sonra kayıtlar sayfasından fotoğraf tekrar açılabilir.
+- **Test:** Örnek WhatsApp fotoğrafı sisteme yüklenip analiz → form doldurma → kayıt oluşturma başarılı (Record ID: 1784818898398968).
+- **AI:** Gemini 2.5 Flash — Emergent LLM Key ile.
+
 ### Önceki Oturum (Jan 2026)
 - Puantaj raporlama: Baz Alınan Gün + Birim Fiyat sütunları
 - "Gelmedi" durumu UI'dan kaldırıldı
