@@ -373,6 +373,10 @@ async def init_db():
             await db.execute("ALTER TABLE production_records ADD COLUMN toplam_5_boy INTEGER DEFAULT 0")
         except:
             pass
+        try:
+            await db.execute("ALTER TABLE production_records ADD COLUMN photo_url TEXT")
+        except:
+            pass
         
         # Cimento Giris table
         await db.execute('''
@@ -1499,6 +1503,7 @@ class ProductionRecordCreate(BaseModel):
     cikan_paket_5: Optional[str] = None
     toplam_7_boy: Optional[int] = None
     toplam_5_boy: Optional[int] = None
+    photo_url: Optional[str] = None
 
 class ProductionRecordUpdate(BaseModel):
     product_id: Optional[str] = None
@@ -1539,6 +1544,7 @@ class ProductionRecordUpdate(BaseModel):
     cikan_paket_5: Optional[str] = None
     toplam_7_boy: Optional[int] = None
     toplam_5_boy: Optional[int] = None
+    photo_url: Optional[str] = None
 
 class ProductionRecordResponse(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -1585,6 +1591,7 @@ class ProductionRecordResponse(BaseModel):
     cikan_paket_5: Optional[str] = None
     toplam_7_boy: Optional[int] = None
     toplam_5_boy: Optional[int] = None
+    photo_url: Optional[str] = None
 
 class DashboardStats(BaseModel):
     total_records: int
@@ -3049,8 +3056,8 @@ async def create_production_record(record: ProductionRecordCreate, current_user:
            production_date, shift_type, shift_number, worked_hours, required_hours, product_type, mold_no,
            strip_used, pallet_count, pallet_quantity, waste, pieces_per_pallet, mix_count, cement_in_mix,
            machine_cement, product_to_field, product_length, breakdown_1, breakdown_2, breakdown_3,
-           cikan_paket_1, cikan_paket_2, cikan_paket_3, cikan_paket_4, cikan_paket_5, toplam_7_boy, toplam_5_boy)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+           cikan_paket_1, cikan_paket_2, cikan_paket_3, cikan_paket_4, cikan_paket_5, toplam_7_boy, toplam_5_boy, photo_url)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
         (record_id, record.product_id, record.product_name, record.quantity, record.unit, record.department_id,
          record.department_name, record.operator_id, record.operator_name, record.shift, record.notes, record.module,
          current_user["id"], current_user["name"], created_at, created_at, record.production_date, record.shift_type,
@@ -3059,7 +3066,7 @@ async def create_production_record(record: ProductionRecordCreate, current_user:
          record.mix_count, record.cement_in_mix, record.machine_cement, record.product_to_field, record.product_length,
          record.breakdown_1, record.breakdown_2, record.breakdown_3,
          record.cikan_paket_1, record.cikan_paket_2, record.cikan_paket_3, record.cikan_paket_4, record.cikan_paket_5,
-         record.toplam_7_boy, record.toplam_5_boy)
+         record.toplam_7_boy, record.toplam_5_boy, record.photo_url)
     )
     await db.commit()
     
@@ -7728,6 +7735,174 @@ async def get_breakdown_analysis(
         "ai_used": ai_used,
         "ai_error": ai_error,
     }
+
+
+# =============================================
+# BIMS ÜRETİM — Fotoğraftan Veri Çıkarma (Gemini Vision)
+# =============================================
+URETIM_FOTO_DIR = UPLOAD_DIR / "uretim_fotolar"
+URETIM_FOTO_DIR.mkdir(exist_ok=True)
+
+@api_router.post("/uretim/foto-analiz")
+async def uretim_foto_analiz(
+    file: UploadFile = File(...),
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Bir üretim takip raporu fotoğrafını Gemini Vision ile analiz eder,
+    çıkarılan verileri JSON olarak döner ve fotoğrafı sunucuya kaydeder.
+    """
+    # 1) Dosya doğrula
+    allowed_exts = {"jpg", "jpeg", "png", "webp", "heic", "heif"}
+    orig_name = file.filename or "photo.jpg"
+    ext = (orig_name.rsplit(".", 1)[-1] if "." in orig_name else "jpg").lower()
+    if ext not in allowed_exts:
+        raise HTTPException(status_code=400, detail=f"Geçersiz dosya türü. İzin verilenler: {', '.join(sorted(allowed_exts))}")
+
+    # 2) Fotoğrafı kaydet
+    unique_filename = f"{uuid.uuid4()}.{ext}"
+    file_path = URETIM_FOTO_DIR / unique_filename
+    contents = await file.read()
+    with open(file_path, "wb") as f:
+        f.write(contents)
+    photo_url = f"/api/files/uretim/{unique_filename}"
+
+    # 3) MIME type belirle (Gemini için)
+    mime_map = {
+        "jpg": "image/jpeg",
+        "jpeg": "image/jpeg",
+        "png": "image/png",
+        "webp": "image/webp",
+        "heic": "image/heic",
+        "heif": "image/heif",
+    }
+    mime_type = mime_map.get(ext, "image/jpeg")
+
+    # 4) LLM ile analiz
+    api_key = os.environ.get("EMERGENT_LLM_KEY")
+    if not api_key:
+        raise HTTPException(status_code=500, detail="EMERGENT_LLM_KEY tanımlı değil")
+
+    try:
+        from emergentintegrations.llm.chat import LlmChat, UserMessage, FileContentWithMimeType
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"emergentintegrations import hatası: {e}")
+
+    system_prompt = (
+        "Sen Türkçe bir üretim takip raporunu okuyan bir OCR/veri çıkarım uzmanısın. "
+        "Sana verilen fotoğraf 'Acerler BIMS - Üretim Takip Raporu' formudur. "
+        "Formdan verileri okuyup SADECE geçerli bir JSON objesi olarak döndür. "
+        "JSON dışında hiçbir metin, açıklama veya markdown kod bloğu ekleme. "
+        "Bulamadığın alanları null yap, sayı alanlarını sayı olarak döndür, tarihi YYYY-MM-DD formatına çevir."
+    )
+
+    schema_hint = {
+        "tarih": "YYYY-MM-DD veya null",
+        "isletme": "işletme numarası veya adı (örn: '2' veya 'İşletme 2')",
+        "vardiya": "'gunduz' veya 'gece'",
+        "calisilan_saat": "HH.MM formatında (örn: '7.40' = 7 saat 40 dk)",
+        "urun_cinsi": "üretilen ana ürün cinsi (örn: '19.5W')",
+        "kalip_no": "kalıp numarası (string)",
+        "ince_kalin": "'ince' veya 'kalin' veya null",
+        "kullanilan_serit": "sayı",
+        "palet": "toplam palet üretimi (sayı)",
+        "fire": "fire adedi (sayı)",
+        "net_uretim": "net üretim (sayı)",
+        "palet_adeti": "palet adedi (sayı)",
+        "karma_sayisi": "karma sayısı (sayı)",
+        "karmadaki_cimento_miktari": "sayı",
+        "makinadaki_cimento_miktari": "sayı (ondalıklı olabilir)",
+        "operator": "operatör adı",
+        "cikan_paketler": [
+            {"urun_cinsi": "örn: '19.BL'", "cikan_paket_adeti": "sayı", "boy": "'7_boy' veya '5_boy' veya null", "paket_adeti": "sayı"}
+        ],
+        "bakim_aciklamalari": ["metin listesi"],
+        "personel": [{"isim": "ad soyad", "geldi": True}]
+    }
+
+    prompt_text = (
+        "Aşağıdaki fotoğraftaki Üretim Takip Raporu formunu OKUYUP verileri JSON olarak çıkar. "
+        "Beklenen JSON şeması (sadece referans, alanları eksiksiz doldur veya null yap):\n\n"
+        + json.dumps(schema_hint, ensure_ascii=False, indent=2)
+        + "\n\nÖNEMLİ KURALLAR:\n"
+        + "- Sadece JSON döndür, başka hiçbir şey yazma.\n"
+        + "- Tarihi mutlaka YYYY-MM-DD formatına çevir (örn: 04.05.2026 -> 2026-05-04).\n"
+        + "- Sayısal değerleri JSON number olarak döndür (string değil).\n"
+        + "- Vardiya için 'gündüz' işaretliyse 'gunduz', 'gece' işaretliyse 'gece' yaz.\n"
+        + "- Çıkan Paket tablosundaki her dolu satırı 'cikan_paketler' array'ine ekle.\n"
+        + "- Personel tablosundaki her satırı 'personel' array'ine ekle; 'geldi' işaretiyle (v, ✓) varsa geldi=true.\n"
+        + "- Türkçe karakterleri koru (İ, ş, ğ, ü, ö, ç)."
+    )
+
+    try:
+        session_id = f"uretim-foto-{uuid.uuid4()}"
+        chat = LlmChat(
+            api_key=api_key,
+            session_id=session_id,
+            system_message=system_prompt,
+        ).with_model("gemini", "gemini-2.5-flash")
+
+        image_file = FileContentWithMimeType(
+            file_path=str(file_path),
+            mime_type=mime_type,
+        )
+
+        user_msg = UserMessage(
+            text=prompt_text,
+            file_contents=[image_file],
+        )
+
+        response_text = await chat.send_message(user_msg)
+    except Exception as e:
+        logger.exception("Gemini vision hatası: %s", e)
+        raise HTTPException(status_code=500, detail=f"Fotoğraf analizi başarısız: {str(e)}")
+
+    # 5) JSON parse et (markdown kod bloğu içinde gelirse temizle)
+    def _clean_json_text(txt: str) -> str:
+        if not txt:
+            return "{}"
+        t = txt.strip()
+        # ```json ... ``` veya ``` ... ``` bloğunu kaldır
+        if t.startswith("```"):
+            t = t.strip("`")
+            if t.lower().startswith("json"):
+                t = t[4:]
+            t = t.strip()
+        # İlk { veya [ karakterinden son } veya ] karakterine kadar al
+        first = min([i for i in [t.find("{"), t.find("[")] if i != -1], default=-1)
+        if first > 0:
+            t = t[first:]
+        return t.strip()
+
+    try:
+        raw = _clean_json_text(response_text)
+        parsed = json.loads(raw)
+    except Exception as e:
+        logger.warning("Gemini JSON parse hatası: %s | raw=%s", e, response_text[:500] if response_text else "")
+        parsed = {"_raw_text": response_text, "_parse_error": str(e)}
+
+    return {
+        "photo_url": photo_url,
+        "extracted": parsed,
+        "raw_response": response_text if isinstance(response_text, str) else str(response_text),
+    }
+
+
+@api_router.get("/files/uretim/{filename}")
+async def get_uretim_photo(filename: str):
+    file_path = URETIM_FOTO_DIR / filename
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="Fotoğraf bulunamadı")
+    ext = filename.split(".")[-1].lower() if "." in filename else ""
+    media_types = {
+        "jpg": "image/jpeg",
+        "jpeg": "image/jpeg",
+        "png": "image/png",
+        "webp": "image/webp",
+        "heic": "image/heic",
+        "heif": "image/heif",
+    }
+    return FileResponse(str(file_path), media_type=media_types.get(ext, "application/octet-stream"))
 
 
 # Include the API router after all routes are defined

@@ -15,7 +15,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { Save, ArrowLeft, Calculator, Clock } from 'lucide-react';
+import { Save, ArrowLeft, Calculator, Clock, Camera, Upload, Loader2, X } from 'lucide-react';
 import { formatNumber, formatInteger, formatDecimal } from '@/utils/formatNumber';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL + '/api';
@@ -154,6 +154,13 @@ const ProductionEntry = () => {
   });
 
   const [isEditMode, setIsEditMode] = useState(false);
+
+  // 📷 Fotoğraftan veri çıkarma state'leri
+  const [photoFile, setPhotoFile] = useState(null);
+  const [photoPreview, setPhotoPreview] = useState('');
+  const [photoUrl, setPhotoUrl] = useState('');
+  const [analyzing, setAnalyzing] = useState(false);
+  const [extractedData, setExtractedData] = useState(null);
 
   useEffect(() => {
     if (!currentModule) {
@@ -403,6 +410,250 @@ const ProductionEntry = () => {
     return uniqueKalipNos;
   };
 
+  // 📷 FOTOĞRAFTAN VERİ ÇIKARMA
+  const normalizeText = (s) => {
+    if (!s) return '';
+    return String(s)
+      .toLocaleLowerCase('tr-TR')
+      .replace(/[İıI]/g, 'i')
+      .replace(/[şŞ]/g, 's')
+      .replace(/[ğĞ]/g, 'g')
+      .replace(/[üÜ]/g, 'u')
+      .replace(/[öÖ]/g, 'o')
+      .replace(/[çÇ]/g, 'c')
+      .replace(/[^a-z0-9]/g, '')
+      .trim();
+  };
+
+  const findBestMatch = (list, target, keyName = 'name') => {
+    if (!list || !list.length || !target) return null;
+    const t = normalizeText(target);
+    if (!t) return null;
+    // Tam eşleşme
+    let match = list.find(item => normalizeText(item[keyName]) === t);
+    if (match) return match;
+    // Contains eşleşmesi
+    match = list.find(item => {
+      const n = normalizeText(item[keyName]);
+      return n.includes(t) || t.includes(n);
+    });
+    return match || null;
+  };
+
+  const handlePhotoSelect = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      toast.error('Lütfen bir resim dosyası seçin');
+      return;
+    }
+    setPhotoFile(file);
+    setPhotoPreview(URL.createObjectURL(file));
+    setPhotoUrl('');
+    setExtractedData(null);
+  };
+
+  const clearPhoto = () => {
+    setPhotoFile(null);
+    setPhotoPreview('');
+    setPhotoUrl('');
+    setExtractedData(null);
+  };
+
+  const handleAnalyzePhoto = async () => {
+    if (!photoFile) {
+      toast.error('Önce bir fotoğraf seçin');
+      return;
+    }
+    setAnalyzing(true);
+    try {
+      const fd = new FormData();
+      fd.append('file', photoFile);
+      const res = await axios.post(`${API_URL}/uretim/foto-analiz`, fd, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data',
+        },
+        timeout: 120000,
+      });
+      const { photo_url, extracted } = res.data || {};
+      setPhotoUrl(photo_url || '');
+      setExtractedData(extracted || null);
+
+      if (!extracted || typeof extracted !== 'object') {
+        toast.error('Fotoğraftan veri çıkarılamadı');
+        return;
+      }
+      applyExtractedToForm(extracted);
+      toast.success('Fotoğraf analiz edildi — form alanları dolduruldu, lütfen kontrol edin');
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Analiz başarısız');
+    } finally {
+      setAnalyzing(false);
+    }
+  };
+
+  const applyExtractedToForm = (data) => {
+    setFormData(prev => {
+      const next = { ...prev };
+
+      // Tarih
+      if (data.tarih && /^\d{4}-\d{2}-\d{2}$/.test(data.tarih)) {
+        next.production_date = data.tarih;
+      }
+
+      // Vardiya
+      if (data.vardiya) {
+        const v = String(data.vardiya).toLowerCase();
+        if (v.includes('gec')) next.shift_type = 'gece';
+        else next.shift_type = 'gunduz';
+      }
+
+      // Çalışılan saat (HH.MM string)
+      if (data.calisilan_saat !== undefined && data.calisilan_saat !== null && data.calisilan_saat !== '') {
+        next.worked_hours = String(data.calisilan_saat);
+      }
+
+      // İşletme (departman eşleştir) — genelde sadece rakam gelir (2), depo adı "2.İŞLETME" biçiminde
+      if (data.isletme !== undefined && data.isletme !== null && String(data.isletme).trim() !== '') {
+        const targetStr = String(data.isletme).trim();
+        let dept = null;
+        // 1) Sayı içerdiği varsa (örn "2" veya "İşletme 2"): departman adı içinde bu sayı geçen ilk kayıt
+        const digitMatch = targetStr.match(/\d+/);
+        if (digitMatch) {
+          const digit = digitMatch[0];
+          dept = departments.find(d => {
+            const nn = String(d.name || '').match(/\d+/);
+            return nn && nn[0] === digit;
+          });
+        }
+        // 2) Fallback: normalize eşleşme
+        if (!dept) dept = findBestMatch(departments, targetStr, 'name');
+        if (!dept) dept = findBestMatch(departments, `İşletme ${targetStr}`, 'name');
+        if (dept) {
+          next.department_id = String(dept.id);
+          next.department_name = dept.name;
+        }
+      }
+
+      // Ürün Cinsi — form üstünde ana ürün (opsiyonel: çıkan paketlerden birinci alınabilir)
+      if (data.urun_cinsi) {
+        const t = String(data.urun_cinsi);
+        // "19.SW" veya "19SW" veya "19 SW" -> "AC BL 19 SW"
+        const numMatch = t.match(/(\d+)/);
+        const hasSW = /sw/i.test(t);
+        let product = null;
+        if (numMatch) {
+          const num = numMatch[1];
+          product = products.find(p => {
+            const n = String(p.name || '');
+            const pn = n.match(/\d+/);
+            if (!pn || pn[0] !== num) return false;
+            const nHasSW = /sw/i.test(n);
+            return nHasSW === hasSW;
+          });
+        }
+        if (!product) product = findBestMatch(products, t, 'name');
+        if (product) {
+          next.product_id = String(product.id);
+          next.product_name = product.name;
+          if (product.unit) next.unit = product.unit;
+        }
+      }
+
+      // Operatör
+      if (data.operator) {
+        const targetOp = String(data.operator).trim();
+        // Önce isim başı eşleşme (İzzet → İZZET AKAL)
+        const targetNorm = normalizeText(targetOp);
+        let op = operators.find(o => normalizeText(o.name).startsWith(targetNorm));
+        if (!op) op = findBestMatch(operators, targetOp, 'name');
+        if (op) {
+          next.operator_id = String(op.id);
+          next.operator_name = op.name;
+        } else {
+          // Bulunamazsa notlara yaz
+          next.operator_name = targetOp;
+        }
+      }
+
+      // Kalıp No
+      if (data.kalip_no !== undefined && data.kalip_no !== null) {
+        next.mold_no = String(data.kalip_no).replace(/[^0-9.]/g, '');
+      }
+
+      // Kullanılan Şerit
+      if (data.kullanilan_serit !== undefined && data.kullanilan_serit !== null) {
+        next.strip_used = String(data.kullanilan_serit);
+      }
+
+      // Palet
+      if (data.palet !== undefined && data.palet !== null) {
+        next.produced_pallets = String(data.palet);
+      }
+      // Fire
+      if (data.fire !== undefined && data.fire !== null) {
+        next.waste = String(data.fire);
+      }
+      // Palet Adeti (paletteki adet gibi)
+      if (data.palet_adeti !== undefined && data.palet_adeti !== null) {
+        next.pieces_per_pallet = String(data.palet_adeti);
+      }
+
+      // Karma
+      if (data.karma_sayisi !== undefined && data.karma_sayisi !== null) {
+        next.mix_count = String(data.karma_sayisi);
+      }
+      if (data.karmadaki_cimento_miktari !== undefined && data.karmadaki_cimento_miktari !== null) {
+        next.cement_per_mix = String(data.karmadaki_cimento_miktari);
+      }
+      if (data.makinadaki_cimento_miktari !== undefined && data.makinadaki_cimento_miktari !== null) {
+        next.machine_cement = String(data.makinadaki_cimento_miktari);
+      }
+
+      // Çıkan Paketler (max 5 slot)
+      if (Array.isArray(data.cikan_paketler)) {
+        data.cikan_paketler.slice(0, 5).forEach((p, idx) => {
+          const slotKey = `cikan_paket_${idx + 1}`;
+          const productMatch = findBestMatch(products, p.urun_cinsi, 'name');
+          const boy = String(p.boy || '').toLowerCase();
+          const is7 = boy.includes('7');
+          const is5 = boy.includes('5');
+          const cikanAdet = p.cikan_paket_adeti !== undefined && p.cikan_paket_adeti !== null ? String(p.cikan_paket_adeti) : '';
+          const paketAdet = p.paket_adeti !== undefined && p.paket_adeti !== null ? String(p.paket_adeti) : '';
+          next[slotKey] = {
+            urun_id: productMatch ? String(productMatch.id) : '',
+            urun_adi: productMatch ? productMatch.name : (p.urun_cinsi || ''),
+            paket_7_boy: is7 || (!is5 && cikanAdet) ? cikanAdet : '',
+            paket_5_boy: is5 ? cikanAdet : '',
+            birim_7_boy: is7 || (!is5) ? (parseInt(paketAdet) || 0) : 0,
+            birim_5_boy: is5 ? (parseInt(paketAdet) || 0) : 0,
+            onceki_yil_kalan: '',
+          };
+        });
+      }
+
+      // Bakım / arızalar → breakdown_1/2/3
+      if (Array.isArray(data.bakim_aciklamalari)) {
+        const arr = data.bakim_aciklamalari.filter(Boolean).slice(0, 3);
+        next.breakdown_1 = arr[0] || '';
+        next.breakdown_2 = arr[1] || '';
+        next.breakdown_3 = arr[2] || '';
+      }
+
+      // Personel bilgisi → notes'a ekle
+      if (Array.isArray(data.personel) && data.personel.length) {
+        const gelenler = data.personel.filter(p => p && p.geldi).map(p => p.isim).filter(Boolean);
+        if (gelenler.length) {
+          const line = `Personel (geldi): ${gelenler.join(', ')}`;
+          next.notes = next.notes ? `${next.notes}\n${line}` : line;
+        }
+      }
+
+      return next;
+    });
+  };
+
   const handleChange = (field, value) => {
     // Validation error'ı temizle
     setValidationErrors(prev => ({ ...prev, [field]: null }));
@@ -590,6 +841,7 @@ const ProductionEntry = () => {
         cikan_paket_5: JSON.stringify(formData.cikan_paket_5),
         toplam_7_boy: calculations.toplam_7_boy,
         toplam_5_boy: calculations.toplam_5_boy,
+        photo_url: photoUrl || null,
       };
 
       if (isEditMode && editId) {
@@ -646,7 +898,100 @@ const ProductionEntry = () => {
 
       <div className="glass-effect rounded-xl p-6 md:p-8 border border-slate-800">
         <form onSubmit={handleSubmit} className="space-y-8">
-          
+
+          {/* 📷 FOTOĞRAFTAN OTOMATİK DOLDURMA */}
+          <div
+            data-testid="photo-fill-section"
+            className="rounded-lg border-2 border-emerald-500/40 bg-gradient-to-br from-emerald-500/10 to-teal-500/10 p-4 md:p-5"
+          >
+            <div className="flex items-start justify-between gap-4 flex-wrap">
+              <div className="flex-1 min-w-[220px]">
+                <h3 className="text-lg font-semibold text-emerald-300 flex items-center gap-2 mb-1">
+                  <Camera className="w-5 h-5" />
+                  Fotoğraftan Otomatik Doldur
+                </h3>
+                <p className="text-emerald-100/80 text-sm">
+                  Üretim Takip Raporu fotoğrafını yükleyin, AI (Gemini Vision) form alanlarını otomatik doldursun.
+                  Kaydetmeden önce lütfen değerleri kontrol edin.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2 flex-wrap">
+                <label
+                  htmlFor="uretim-foto-input"
+                  data-testid="photo-picker-label"
+                  className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 rounded-md bg-slate-800 hover:bg-slate-700 text-white text-sm font-medium border border-slate-600 transition"
+                >
+                  <Upload className="w-4 h-4" />
+                  {photoFile ? 'Değiştir' : 'Fotoğraf Seç'}
+                </label>
+                <input
+                  id="uretim-foto-input"
+                  data-testid="photo-picker-input"
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  className="hidden"
+                  onChange={handlePhotoSelect}
+                />
+
+                <Button
+                  type="button"
+                  data-testid="analyze-photo-btn"
+                  onClick={handleAnalyzePhoto}
+                  disabled={!photoFile || analyzing}
+                  className="bg-emerald-600 hover:bg-emerald-500 text-white"
+                >
+                  {analyzing ? (
+                    <><Loader2 className="w-4 h-4 animate-spin mr-2" />Analiz ediliyor…</>
+                  ) : (
+                    <><Camera className="w-4 h-4 mr-2" />Analiz Et &amp; Doldur</>
+                  )}
+                </Button>
+
+                {photoFile && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    data-testid="clear-photo-btn"
+                    onClick={clearPhoto}
+                    className="text-red-300 hover:text-red-200 hover:bg-red-500/10"
+                  >
+                    <X className="w-4 h-4 mr-1" />Temizle
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            {photoPreview && (
+              <div className="mt-4 flex items-start gap-4 flex-wrap">
+                <img
+                  data-testid="photo-preview"
+                  src={photoPreview}
+                  alt="Yüklenen üretim fotoğrafı"
+                  className="max-h-48 rounded-md border border-slate-700 shadow-lg"
+                />
+                {extractedData && (
+                  <div className="flex-1 min-w-[240px] text-sm text-emerald-100/90 bg-slate-900/50 rounded-md p-3 border border-emerald-500/20">
+                    <div className="font-semibold text-emerald-300 mb-1">✅ Çıkarılan veriler:</div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1">
+                      {extractedData.tarih && <div>📅 Tarih: <b>{extractedData.tarih}</b></div>}
+                      {extractedData.isletme !== undefined && <div>🏭 İşletme: <b>{String(extractedData.isletme)}</b></div>}
+                      {extractedData.vardiya && <div>🕐 Vardiya: <b>{extractedData.vardiya}</b></div>}
+                      {extractedData.calisilan_saat && <div>⏱️ Çalışılan: <b>{extractedData.calisilan_saat}</b></div>}
+                      {extractedData.urun_cinsi && <div>📦 Ürün: <b>{extractedData.urun_cinsi}</b></div>}
+                      {extractedData.kalip_no && <div>🔧 Kalıp No: <b>{extractedData.kalip_no}</b></div>}
+                      {extractedData.operator && <div>👷 Operatör: <b>{extractedData.operator}</b></div>}
+                      {extractedData.palet !== undefined && <div>📦 Palet: <b>{extractedData.palet}</b></div>}
+                      {extractedData.fire !== undefined && <div>🗑️ Fire: <b>{extractedData.fire}</b></div>}
+                      {extractedData.net_uretim !== undefined && <div>✔️ Net Üretim: <b>{extractedData.net_uretim}</b></div>}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
           {/* Aynı vardiya için mükerrer kayıt uyarısı */}
           {duplicateRecord && (
             <div
