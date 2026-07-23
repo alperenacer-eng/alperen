@@ -163,6 +163,11 @@ const ProductionEntry = () => {
   const [extractedData, setExtractedData] = useState(null);
   const [photoLightboxOpen, setPhotoLightboxOpen] = useState(false);
 
+  // 📄 TASLAK OTOMATİK KAYIT (localStorage)
+  const DRAFT_KEY = 'bims_uretim_giris_draft_v1';
+  const [draftSavedAt, setDraftSavedAt] = useState(null);
+  const [draftRestored, setDraftRestored] = useState(false);
+
   useEffect(() => {
     if (!currentModule) {
       navigate('/');
@@ -182,6 +187,76 @@ const ProductionEntry = () => {
       fetchRecordForEdit();
     }
   }, [editId, token]);
+
+  // 📄 TASLAK GERİ YÜKLE (sayfa yüklendiğinde, sadece yeni kayıt modunda)
+  useEffect(() => {
+    if (editId) return; // düzenleme modunda taslak yükleme
+    try {
+      const raw = localStorage.getItem(DRAFT_KEY);
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      if (parsed && parsed.formData) {
+        setFormData(prev => ({ ...prev, ...parsed.formData }));
+        if (parsed.photoUrl) setPhotoUrl(parsed.photoUrl);
+        setDraftRestored(true);
+        setDraftSavedAt(parsed.savedAt || null);
+        toast.success('📄 Kaydedilmemiş taslak geri yüklendi — kaldığınız yerden devam edebilirsiniz');
+      }
+    } catch (e) {
+      // sessizce geç
+    }
+    // sadece ilk mount'ta çalışsın
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // 📄 TASLAK OTOMATİK KAYDET (formData değiştikçe, debounce 400ms)
+  useEffect(() => {
+    if (isEditMode || editId) return; // düzenleme modunda taslak yazma
+    const timer = setTimeout(() => {
+      try {
+        const hasContent = !!(
+          formData.department_id || formData.product_id || formData.operator_id ||
+          formData.mold_no || formData.pallet_count || formData.strip_used ||
+          formData.notes || formData.worked_hours || formData.waste ||
+          formData.mix_count || formData.machine_cement || formData.breakdown_1
+        );
+        if (hasContent) {
+          const nowIso = new Date().toISOString();
+          localStorage.setItem(DRAFT_KEY, JSON.stringify({
+            formData,
+            photoUrl,
+            savedAt: nowIso,
+          }));
+          setDraftSavedAt(nowIso);
+        }
+      } catch (e) {}
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [formData, photoUrl, isEditMode, editId]);
+
+  // 🔄 Sekmeye/pencereye dönünce dropdown verilerini yenile
+  //    (kullanıcı Kaynaklar'da yeni kalıp/ürün/operatör ekleyip döndüğünde otomatik gözüksün)
+  useEffect(() => {
+    const onFocus = () => {
+      fetchData();
+    };
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') fetchData();
+    };
+    window.addEventListener('focus', onFocus);
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      window.removeEventListener('focus', onFocus);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const clearDraft = () => {
+    try { localStorage.removeItem(DRAFT_KEY); } catch (e) {}
+    setDraftSavedAt(null);
+    setDraftRestored(false);
+  };
 
   const fetchRecordForEdit = async () => {
     setLoadingData(true);
@@ -858,7 +933,10 @@ const ProductionEntry = () => {
         });
         toast.success('Üretim kaydı başarıyla oluşturuldu!');
       }
-      
+
+      // ✅ Taslağı temizle (başarılı kayıt sonrası)
+      try { localStorage.removeItem(DRAFT_KEY); } catch (e) {}
+
       navigate('/production-list');
     } catch (error) {
       toast.error(error.response?.data?.detail || (isEditMode ? 'Kayıt güncellenemedi' : 'Kayıt oluşturulamadı'));
@@ -899,6 +977,43 @@ const ProductionEntry = () => {
 
       <div className="glass-effect rounded-xl p-6 md:p-8 border border-slate-800">
         <form onSubmit={handleSubmit} className="space-y-8">
+
+          {/* 📄 TASLAK DURUM BİLDİRİMİ */}
+          {!isEditMode && (draftSavedAt || draftRestored) && (
+            <div
+              data-testid="draft-indicator"
+              className="rounded-lg border border-sky-500/40 bg-sky-500/10 px-4 py-2 flex items-center justify-between gap-3 text-sm"
+            >
+              <div className="text-sky-200 flex items-center gap-2">
+                <span className="text-lg">📄</span>
+                <span>
+                  {draftRestored ? (
+                    <>Kaydedilmemiş taslak geri yüklendi — kaldığınız yerden devam edebilirsiniz.</>
+                  ) : (
+                    <>Taslak otomatik kaydedildi. Sayfayı kapatsanız bile veriler kaybolmaz.</>
+                  )}
+                  {draftSavedAt && (
+                    <span className="ml-2 text-sky-400/80 text-xs">
+                      ({new Date(draftSavedAt).toLocaleTimeString('tr-TR')})
+                    </span>
+                  )}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  if (window.confirm('Kaydedilmiş taslak silinsin ve form sıfırlansın mı?')) {
+                    clearDraft();
+                    window.location.reload();
+                  }
+                }}
+                data-testid="clear-draft-btn"
+                className="text-xs px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-600 transition"
+              >
+                Taslağı Sil
+              </button>
+            </div>
+          )}
 
           {/* 📷 FOTOĞRAFTAN OTOMATİK DOLDURMA */}
           <div
