@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import useFormDraft from '../hooks/useFormDraft';
 import DraftBanner from '../components/DraftBanner';
+import { subscribeResourceUpdate } from '../utils/resourceEvents';
 import axios from 'axios';
 import { useAuth } from '@/context/AuthContext';
 import { useModule } from '@/context/ModuleContext';
@@ -204,6 +205,19 @@ const ProductionEntry = () => {
     }
   );
 
+  // 🔔 KAYNAK OLAYLARINI DİNLE (Kaynaklar sayfasında yeni kalıp/ürün/operatör/işletme eklenince anında yenile)
+  useEffect(() => {
+    const unsubscribe = subscribeResourceUpdate((detail) => {
+      // Herhangi bir kaynak değiştiğinde tam yenileme
+      fetchData();
+      if (detail?.resourceType) {
+        toast.success(`🔄 ${detail.resourceType === 'molds' ? 'Kalıp' : detail.resourceType === 'products' ? 'Ürün' : detail.resourceType === 'operators' ? 'Operatör' : detail.resourceType === 'departments' ? 'İşletme' : 'Kaynak'} listesi güncellendi`);
+      }
+    });
+    return unsubscribe;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const fetchRecordForEdit = async () => {
     setLoadingData(true);
     try {
@@ -368,12 +382,21 @@ const ProductionEntry = () => {
 
   const fetchData = async () => {
     try {
+      // Cache-busting: her istek benzersiz olsun ki tarayıcı önbelleklemesin
+      const cb = `_ts=${Date.now()}`;
+      const noCache = {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Cache-Control': 'no-cache, no-store',
+          Pragma: 'no-cache',
+        },
+      };
       const [productsRes, departmentsRes, operatorsRes, moldsRes, existingRes] = await Promise.all([
-        axios.get(`${API_URL}/products`, { headers: { Authorization: `Bearer ${token}` } }),
-        axios.get(`${API_URL}/departments`, { headers: { Authorization: `Bearer ${token}` } }),
-        axios.get(`${API_URL}/operators`, { headers: { Authorization: `Bearer ${token}` } }),
-        axios.get(`${API_URL}/molds`, { headers: { Authorization: `Bearer ${token}` } }),
-        axios.get(`${API_URL}/production?limit=1000&module=${currentModule?.id || 'bims'}`, { headers: { Authorization: `Bearer ${token}` } })
+        axios.get(`${API_URL}/products?${cb}`, noCache),
+        axios.get(`${API_URL}/departments?${cb}`, noCache),
+        axios.get(`${API_URL}/operators?${cb}`, noCache),
+        axios.get(`${API_URL}/molds?${cb}`, noCache),
+        axios.get(`${API_URL}/production?limit=1000&module=${currentModule?.id || 'bims'}&${cb}`, noCache),
       ]);
       setProducts(productsRes.data);
       setDepartments(departmentsRes.data);

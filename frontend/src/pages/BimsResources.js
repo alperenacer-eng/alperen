@@ -15,6 +15,7 @@ import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
+import { emitResourceUpdate } from '@/utils/resourceEvents';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL + '/api';
 
@@ -98,6 +99,7 @@ const BimsResources = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
       toast.success('İşletme eklendi');
+      emitResourceUpdate('departments', 'create');
       setNewDepartment('');
       fetchDepartments();
     } catch (error) {
@@ -111,6 +113,7 @@ const BimsResources = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
       toast.success('İşletme silindi');
+      emitResourceUpdate('departments', 'delete');
       fetchDepartments();
     } catch (error) {
       toast.error('İşletme silinemedi');
@@ -162,12 +165,14 @@ const BimsResources = () => {
           headers: { Authorization: `Bearer ${token}` }
         });
         toast.success('Ürün güncellendi');
+        emitResourceUpdate('products', 'update');
         setEditingProduct(null);
       } else {
         await axios.post(`${API_URL}/products`, productData, {
           headers: { Authorization: `Bearer ${token}` }
         });
         toast.success('Ürün eklendi');
+        emitResourceUpdate('products', 'create');
       }
       
       setNewProduct({ 
@@ -237,6 +242,7 @@ const BimsResources = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
       toast.success('Ürün silindi');
+      emitResourceUpdate('products', 'delete');
       fetchProducts();
     } catch (error) {
       toast.error('Ürün silinemedi');
@@ -391,12 +397,14 @@ const BimsResources = () => {
           headers: { Authorization: `Bearer ${token}` }
         });
         toast.success('Kalıp güncellendi');
+        emitResourceUpdate('molds', 'update');
         setEditingMold(null);
       } else {
         await axios.post(`${API_URL}/molds`, newMold, {
           headers: { Authorization: `Bearer ${token}` }
         });
         toast.success('Kalıp eklendi');
+        emitResourceUpdate('molds', 'create');
       }
       setNewMold({ 
         mold_no: '', description: '', product_id: '', product_name: '',
@@ -464,6 +472,7 @@ const BimsResources = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
       toast.success('Kalıp silindi');
+      emitResourceUpdate('molds', 'delete');
       fetchMolds();
     } catch (error) {
       toast.error('Kalıp silinemedi');
@@ -492,6 +501,7 @@ const BimsResources = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
       toast.success('Operatör eklendi');
+      emitResourceUpdate('operators', 'create');
       setNewOperator({ name: '', employee_id: '' });
       fetchOperators();
     } catch (error) {
@@ -505,6 +515,7 @@ const BimsResources = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
       toast.success('Operatör silindi');
+      emitResourceUpdate('operators', 'delete');
       fetchOperators();
     } catch (error) {
       toast.error('Operatör silinemedi');
