@@ -10,7 +10,7 @@ import sys
 from datetime import datetime
 
 # Backend URL from frontend/.env
-BACKEND_URL = "https://tender-wing-9.preview.emergentagent.com/api"
+BACKEND_URL = "https://photo-backup-app.preview.emergentagent.com/api"
 
 # Test credentials
 LOGIN_EMAIL = "alperenacer@acerler.com"

@@ -16,7 +16,7 @@ import uuid
 import pytest
 import requests
 
-BASE_URL = os.environ.get("REACT_APP_BACKEND_URL", "https://tender-wing-9.preview.emergentagent.com").rstrip("/")
+BASE_URL = os.environ.get("REACT_APP_BACKEND_URL", "https://photo-backup-app.preview.emergentagent.com").rstrip("/")
 LOGIN = {"email": "alperenacer@acerler.com", "password": "1234"}
 TESIS_NAME = "TEST_BIMS_POMPA_BULK"
 TEST_PLAKA = "TEST34BULK99"
