@@ -520,9 +520,10 @@ const ProductionEntry = () => {
       const next = { ...prev };
 
       // 🔒 SABİT KURALLAR (kullanıcı isteği — fotoğraftaki değerden bağımsız):
-      //    - Çalışılan Saat her zaman "8.45"
+      //    - Çalışılması Gereken Saat her zaman "8.45"
       //    - Çalışılan Vardiya her zaman "1"
-      next.worked_hours = '8.45';
+      //    (Çalışılan Saat ise fotoğraftan okunur — aşağıda)
+      next.required_hours = '8.45';
       next.shift_number = '1';
 
       // Yardımcı: el yazısındaki nokta/virgüller basamak ayracı olarak yazıldığı için kaldırılır
@@ -544,7 +545,10 @@ const ProductionEntry = () => {
         else next.shift_type = 'gunduz';
       }
 
-      // Çalışılan saat sabittir (yukarıda "8.45" atandı, fotoğraftaki değer yok sayılır)
+      // Çalışılan saat (HH.MM string) — fotoğraftan okunur
+      if (data.calisilan_saat !== undefined && data.calisilan_saat !== null && data.calisilan_saat !== '') {
+        next.worked_hours = String(data.calisilan_saat);
+      }
 
       // İşletme — önce backend'in matched değerine bak (AI + fuzzy sonucu)
       if (data._matched_department && data._matched_department.id) {
