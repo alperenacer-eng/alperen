@@ -519,6 +519,19 @@ const ProductionEntry = () => {
     setFormData(prev => {
       const next = { ...prev };
 
+      // 🔒 SABİT KURALLAR (kullanıcı isteği — fotoğraftaki değerden bağımsız):
+      //    - Çalışılan Saat her zaman "8.45"
+      //    - Çalışılan Vardiya her zaman "1"
+      next.worked_hours = '8.45';
+      next.shift_number = '1';
+
+      // Yardımcı: el yazısındaki nokta/virgüller basamak ayracı olarak yazıldığı için kaldırılır
+      //   (örn: makinadaki çimento "21.562" → 21562)
+      const stripSeparators = (v) => {
+        if (v === undefined || v === null || v === '') return '';
+        return String(v).replace(/[.,\s]/g, '');
+      };
+
       // Tarih
       if (data.tarih && /^\d{4}-\d{2}-\d{2}$/.test(data.tarih)) {
         next.production_date = data.tarih;
@@ -531,10 +544,7 @@ const ProductionEntry = () => {
         else next.shift_type = 'gunduz';
       }
 
-      // Çalışılan saat (HH.MM string)
-      if (data.calisilan_saat !== undefined && data.calisilan_saat !== null && data.calisilan_saat !== '') {
-        next.worked_hours = String(data.calisilan_saat);
-      }
+      // Çalışılan saat sabittir (yukarıda "8.45" atandı, fotoğraftaki değer yok sayılır)
 
       // İşletme — önce backend'in matched değerine bak (AI + fuzzy sonucu)
       if (data._matched_department && data._matched_department.id) {
@@ -631,11 +641,12 @@ const ProductionEntry = () => {
       if (data.karma_sayisi !== undefined && data.karma_sayisi !== null) {
         next.mix_count = String(data.karma_sayisi);
       }
+      // Çimento miktarları — el yazısındaki nokta/virgül basamak ayracı, kaldırılır
       if (data.karmadaki_cimento_miktari !== undefined && data.karmadaki_cimento_miktari !== null) {
-        next.cement_per_mix = String(data.karmadaki_cimento_miktari);
+        next.cement_per_mix = stripSeparators(data.karmadaki_cimento_miktari);
       }
       if (data.makinadaki_cimento_miktari !== undefined && data.makinadaki_cimento_miktari !== null) {
-        next.machine_cement = String(data.makinadaki_cimento_miktari);
+        next.machine_cement = stripSeparators(data.makinadaki_cimento_miktari);
       }
 
       // Çıkan Paketler (max 5 slot) — backend'in her satır için matched product'ı varsa onu kullan
