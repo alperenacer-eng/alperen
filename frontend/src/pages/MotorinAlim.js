@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import useFormDraft from '../hooks/useFormDraft';
+import DraftBanner from '../components/DraftBanner';
 import axios from 'axios';
 import { useAuth } from '@/context/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -104,6 +106,27 @@ const MotorinAlim = () => {
     fetchTesisler();
     fetchMarkalar();
   }, []);
+
+  // 📄 TASLAK: otomatik kaydet + geri yükle + focus'ta dropdown yenile
+  const { draftSavedAt, draftRestored, clearDraft } = useFormDraft(
+    'motorin_alim_draft_v1',
+    formData,
+    setFormData,
+    {
+      enabled: true,
+      hasContent: (fd) => !!(
+        fd.tedarikci_id || fd.tedarikci_adi || fd.akaryakit_markasi ||
+        fd.cekici_plaka || fd.dorse_plaka || fd.sofor_adi ||
+        fd.miktar_litre || fd.fatura_no || fd.irsaliye_no || fd.notlar ||
+        fd.bosaltim_tesisi
+      ),
+      onFocusRefresh: () => {
+        fetchTedarikciler();
+        fetchTesisler();
+        fetchMarkalar();
+      },
+    }
+  );
 
   // Toplam tutar otomatik hesaplama artık manuel — kaldırıldı
 
@@ -294,6 +317,7 @@ const MotorinAlim = () => {
       });
 
       toast.success('Motorin alım kaydı oluşturuldu');
+      try { localStorage.removeItem('motorin_alim_draft_v1'); } catch (e) {}
       navigate('/motorin-liste');
     } catch (error) {
       toast.error('Kayıt oluşturulamadı');
@@ -324,6 +348,11 @@ const MotorinAlim = () => {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
+        <DraftBanner
+          draftSavedAt={draftSavedAt}
+          draftRestored={draftRestored}
+          onClear={clearDraft}
+        />
         {/* Temel Bilgiler */}
         <div className="glass-effect rounded-xl border border-slate-800 p-6">
           <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">

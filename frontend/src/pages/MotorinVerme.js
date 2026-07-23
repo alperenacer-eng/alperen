@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import useFormDraft from '../hooks/useFormDraft';
+import DraftBanner from '../components/DraftBanner';
 import axios from 'axios';
 import { useAuth } from '@/context/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -141,6 +143,25 @@ const MotorinVerme = () => {
     fetchAraclar();
     fetchPersoneller();
   }, []);
+
+  // 📄 TASLAK: otomatik kaydet + geri yükle + focus'ta dropdown yenile
+  const { draftSavedAt, draftRestored, clearDraft } = useFormDraft(
+    'motorin_verme_manuel_draft_v1',
+    formData,
+    setFormData,
+    {
+      enabled: true,
+      hasContent: (fd) => !!(
+        fd.bosaltim_tesisi || fd.arac_id || fd.arac_plaka || fd.miktar_litre ||
+        fd.sofor_adi || fd.personel_adi || fd.notlar
+      ),
+      onFocusRefresh: () => {
+        fetchTesisler();
+        fetchAraclar();
+        fetchPersoneller();
+      },
+    }
+  );
 
   const fetchUploads = useCallback(async (tesisAdi) => {
     if (!tesisAdi) return;
@@ -606,6 +627,7 @@ const MotorinVerme = () => {
 
       await axios.post(`${API_URL}/motorin-verme`, submitData, authHeaders);
       toast.success(`${selectedTesis.name} tesisinden motorin verildi`);
+      try { localStorage.removeItem('motorin_verme_manuel_draft_v1'); } catch (e) {}
 
       setFormData({
         ...formData,
@@ -1066,6 +1088,13 @@ const MotorinVerme = () => {
           </div>
 
           <form onSubmit={handleManualSubmit} className="glass-effect rounded-xl border border-slate-800 p-6">
+            <div className="mb-4">
+              <DraftBanner
+                draftSavedAt={draftSavedAt}
+                draftRestored={draftRestored}
+                onClear={clearDraft}
+              />
+            </div>
             <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
               <Fuel className="w-5 h-5 text-blue-400" />
               Motorin Verme Bilgileri

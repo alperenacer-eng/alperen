@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import useFormDraft from '../hooks/useFormDraft';
+import DraftBanner from '../components/DraftBanner';
 import axios from 'axios';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -96,6 +98,20 @@ const ParkeUretim = () => {
   useEffect(() => {
     fetchAll();
   }, []);
+
+  // 📄 TASLAK: yeni kayıt eklerken otomatik kaydet, kaynaklara gidip dönünce dropdown yenile
+  const { draftSavedAt, draftRestored, clearDraft } = useFormDraft(
+    'parke_uretim_draft_v1',
+    form,
+    setForm,
+    {
+      enabled: !editId,
+      hasContent: (fd) => !!(
+        fd && (fd.urun_id || fd.operator_id || fd.hammadde_id || fd.miktar || fd.notlar)
+      ),
+      onFocusRefresh: () => fetchAll(),
+    }
+  );
 
   const fetchAll = async () => {
     await Promise.all([
@@ -297,6 +313,7 @@ const ParkeUretim = () => {
       } else {
         await axios.post(`${API_URL}/parke-uretim`, payload, authHeaders);
         toast.success('Üretim kaydı eklendi');
+        try { localStorage.removeItem('parke_uretim_draft_v1'); } catch (e) {}
       }
       handleCancel();
       fetchKayitlar();
@@ -373,6 +390,13 @@ const ParkeUretim = () => {
         onSubmit={handleSubmit}
         className="bg-white rounded-xl shadow border border-green-100 p-6 mb-8 space-y-6"
       >
+        {!editId && (
+          <DraftBanner
+            draftSavedAt={draftSavedAt}
+            draftRestored={draftRestored}
+            onClear={clearDraft}
+          />
+        )}
         {/* Üst alan: temel bilgiler */}
         <div>
           <h2 className="text-lg font-semibold text-green-700 mb-3 flex items-center gap-2">

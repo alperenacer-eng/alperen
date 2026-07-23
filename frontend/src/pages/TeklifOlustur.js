@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import useFormDraft from '../hooks/useFormDraft';
+import DraftBanner from '../components/DraftBanner';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
@@ -75,6 +77,21 @@ const TeklifOlustur = () => {
       fetchTeklif();
     }
   }, [id]);
+
+  // 📄 TASLAK: yeni teklif oluştururken otomatik kaydet
+  const { draftSavedAt, draftRestored, clearDraft } = useFormDraft(
+    `teklif_olustur_draft_${teklifTuru}_v1`,
+    formData,
+    setFormData,
+    {
+      enabled: !isEdit,
+      hasContent: (fd) => !!(
+        fd.musteri_id || fd.musteri_adi || fd.konu || fd.notlar ||
+        (fd.kalemler && fd.kalemler.some(k => k.urun_hizmet || k.aciklama || k.birim_fiyat > 0))
+      ),
+      onFocusRefresh: () => { fetchMusteriler(); fetchUrunler(); },
+    }
+  );
 
   useEffect(() => {
     // Teklif türü değiştiğinde ürünleri yeniden yükle
@@ -271,6 +288,7 @@ const TeklifOlustur = () => {
       if (response.ok) {
         const data = await response.json();
         toast.success(isEdit ? 'Teklif güncellendi' : `Teklif oluşturuldu: ${data.teklif_no}`);
+        try { localStorage.removeItem(`teklif_olustur_draft_${teklifTuru}_v1`); } catch (e) {}
         navigate('/teklif-liste');
       } else {
         const error = await response.json();
@@ -338,6 +356,14 @@ const TeklifOlustur = () => {
           <p className="text-slate-400 text-sm">Teklif bilgilerini doldurun</p>
         </div>
       </div>
+
+      {!isEdit && (
+        <DraftBanner
+          draftSavedAt={draftSavedAt}
+          draftRestored={draftRestored}
+          onClear={clearDraft}
+        />
+      )}
 
       {/* BIMS / Parke Sekmeleri */}
       {!isEdit && (
