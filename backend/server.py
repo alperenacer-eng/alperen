@@ -10,6 +10,7 @@ import logging
 import uuid
 import shutil
 import json
+import re
 from pathlib import Path
 from pydantic import BaseModel, Field, ConfigDict, EmailStr
 from typing import List, Optional
@@ -7749,8 +7750,10 @@ async def uretim_foto_analiz(
     current_user: dict = Depends(get_current_user)
 ):
     """
-    Bir üretim takip raporu fotoğrafını Gemini Vision ile analiz eder,
-    çıkarılan verileri JSON olarak döner ve fotoğrafı sunucuya kaydeder.
+    Bir üretim takip raporu fotoğrafını Gemini Vision ile analiz eder.
+    Kayıtlı veritabanı bilgilerini (ürünler, kalıplar, operatörler, işletmeler)
+    Gemini'a bağlam olarak verir; el yazısı bulanık okunsa bile en yakın gerçek
+    değeri seçmesini sağlar. Çıkarılan verileri JSON olarak döner.
     """
     # 1) Dosya doğrula
     allowed_exts = {"jpg", "jpeg", "png", "webp", "heic", "heif"}
@@ -7769,16 +7772,58 @@ async def uretim_foto_analiz(
 
     # 3) MIME type belirle (Gemini için)
     mime_map = {
-        "jpg": "image/jpeg",
-        "jpeg": "image/jpeg",
-        "png": "image/png",
-        "webp": "image/webp",
-        "heic": "image/heic",
-        "heif": "image/heif",
+        "jpg": "image/jpeg", "jpeg": "image/jpeg", "png": "image/png",
+        "webp": "image/webp", "heic": "image/heic", "heif": "image/heif",
     }
     mime_type = mime_map.get(ext, "image/jpeg")
 
-    # 4) LLM ile analiz
+    # 4) VERİTABANINDAN BAĞLAM VERİLERİNİ TOPLA (AI'a rehber olarak verilecek)
+    db_products = []
+    db_departments = []
+    db_operators = []
+    db_mold_numbers = []
+    db_personnel = []
+    try:
+        db = await get_db()
+        # Products
+        async with db.execute("SELECT id, name FROM products ORDER BY name") as cur:
+            rows = await cur.fetchall()
+            db_products = [{"id": r[0], "name": r[1]} for r in rows if r[1]]
+        # Departments
+        async with db.execute("SELECT id, name FROM departments ORDER BY name") as cur:
+            rows = await cur.fetchall()
+            db_departments = [{"id": r[0], "name": r[1]} for r in rows if r[1]]
+        # Operators
+        async with db.execute("SELECT id, name FROM operators ORDER BY name") as cur:
+            rows = await cur.fetchall()
+            db_operators = [{"id": r[0], "name": r[1]} for r in rows if r[1]]
+        # Mold numbers — molds tablosunda kalip_no_1..kalip_no_10 kolonları var
+        try:
+            async with db.execute(
+                "SELECT kalip_no_1, kalip_no_2, kalip_no_3, kalip_no_4, kalip_no_5, "
+                "kalip_no_6, kalip_no_7, kalip_no_8, kalip_no_9, kalip_no_10, product_id FROM molds"
+            ) as cur:
+                rows = await cur.fetchall()
+                seen = set()
+                for row in rows:
+                    for i in range(10):
+                        v = row[i]
+                        if v and str(v).strip() and str(v).strip() not in seen:
+                            seen.add(str(v).strip())
+                            db_mold_numbers.append({"kalip_no": str(v).strip(), "product_id": row[10]})
+        except Exception:
+            pass
+        # Personel adları (operator listesindekiler zaten var; ayrıca personnel tablosundakiler)
+        try:
+            async with db.execute("SELECT name FROM personnel WHERE active=1 ORDER BY name") as cur:
+                rows = await cur.fetchall()
+                db_personnel = [r[0] for r in rows if r[0]]
+        except Exception:
+            pass
+    except Exception as e:
+        logger.warning("Bağlam verisi toplanamadı: %s", e)
+
+    # 5) LLM ile analiz
     api_key = os.environ.get("EMERGENT_LLM_KEY")
     if not api_key:
         raise HTTPException(status_code=500, detail="EMERGENT_LLM_KEY tanımlı değil")
@@ -7789,49 +7834,83 @@ async def uretim_foto_analiz(
         raise HTTPException(status_code=500, detail=f"emergentintegrations import hatası: {e}")
 
     system_prompt = (
-        "Sen Türkçe bir üretim takip raporunu okuyan bir OCR/veri çıkarım uzmanısın. "
+        "Sen deneyimli bir üretim mühendisisin ve Türkçe el yazısı üretim raporlarını okumada uzmansın. "
         "Sana verilen fotoğraf 'Acerler BIMS - Üretim Takip Raporu' formudur. "
-        "Formdan verileri okuyup SADECE geçerli bir JSON objesi olarak döndür. "
-        "JSON dışında hiçbir metin, açıklama veya markdown kod bloğu ekleme. "
-        "Bulamadığın alanları null yap, sayı alanlarını sayı olarak döndür, tarihi YYYY-MM-DD formatına çevir."
+        "Formda EL YAZISI ve baskı karışık bilgiler var. Bazı yazılar bulanık, kısaltılmış veya kısmen "
+        "silinmiş olabilir. Görevin: fotoğrafı DİKKATLİCE oku VE sana verilen 'BAĞLAM' listelerini "
+        "(kayıtlı ürünler, kalıp numaraları, operatörler, işletmeler, personel) kullanarak en olası "
+        "gerçek değeri MANTIKSAL AKIL YÜRÜTME ile seç. "
+        "\n\nÖRNEK MUHAKEME: Fotoğrafta 'İzgat' yazıyor gibi görünüyor ama operatör listesinde "
+        "sadece 'İZZET AKAL', 'MUSTAFA KAYNAR', 'ADNAN ŞAHİN', 'SERHAT YÜCEL' var — o zaman en yakın "
+        "'İZZET AKAL' olmalıdır. 'İzgat' aslında 'İzzet'in bulanık okunuşudur. "
+        "\n\nBenzer şekilde: kalıp no 227.25 gibi görünüyorsa ve kayıtlı kalıp listesinde tam 22725 "
+        "veya 227.25 varsa ONU seç; hiç eşleşme yoksa formdaki değeri as-is döndür. "
+        "\n\nÜrün cinsleri için de aynı: '19.5W' yazan aslında kayıtlı ürünlerdeki 'AC BL 19 SW' olabilir. "
+        "\n\nSADECE geçerli JSON döndür — açıklama, markdown yok."
     )
+
+    def _truncate(lst, max_n=100):
+        return lst[:max_n]
+
+    # Bağlam listelerini kısa tut (token tasarrufu)
+    ctx_products = [p["name"] for p in _truncate(db_products, 60)]
+    ctx_departments = [d["name"] for d in _truncate(db_departments, 30)]
+    ctx_operators = [o["name"] for o in _truncate(db_operators, 60)]
+    ctx_molds = [m["kalip_no"] for m in _truncate(db_mold_numbers, 200)]
+    ctx_personnel = _truncate(db_personnel, 100)
+
+    bagliam_json = {
+        "kayitli_urunler": ctx_products,
+        "kayitli_isletmeler": ctx_departments,
+        "kayitli_operatorler": ctx_operators,
+        "kayitli_kalip_numaralari": ctx_molds,
+        "kayitli_personel": ctx_personnel,
+    }
 
     schema_hint = {
         "tarih": "YYYY-MM-DD veya null",
-        "isletme": "işletme numarası veya adı (örn: '2' veya 'İşletme 2')",
+        "isletme": "kayıtlı işletmelerden en yakın olanın TAM adı (örn 'İşletme 2' değil '2.İŞLETME')",
         "vardiya": "'gunduz' veya 'gece'",
-        "calisilan_saat": "HH.MM formatında (örn: '7.40' = 7 saat 40 dk)",
-        "urun_cinsi": "üretilen ana ürün cinsi (örn: '19.5W')",
-        "kalip_no": "kalıp numarası (string)",
+        "calisilan_saat": "HH.MM (örn: '7.40' = 7 saat 40 dk)",
+        "urun_cinsi": "kayıtlı ürünlerden EN YAKIN eşleşen ürünün TAM adı",
+        "kalip_no": "kayıtlı kalıp numaralarından en yakın olanı (yoksa fotoğraftaki değeri döndür)",
         "ince_kalin": "'ince' veya 'kalin' veya null",
         "kullanilan_serit": "sayı",
         "palet": "toplam palet üretimi (sayı)",
         "fire": "fire adedi (sayı)",
         "net_uretim": "net üretim (sayı)",
         "palet_adeti": "palet adedi (sayı)",
-        "karma_sayisi": "karma sayısı (sayı)",
+        "karma_sayisi": "sayı",
         "karmadaki_cimento_miktari": "sayı",
         "makinadaki_cimento_miktari": "sayı (ondalıklı olabilir)",
-        "operator": "operatör adı",
+        "operator": "kayıtlı operatörlerden EN YAKIN eşleşen operatörün TAM adı",
         "cikan_paketler": [
-            {"urun_cinsi": "örn: '19.BL'", "cikan_paket_adeti": "sayı", "boy": "'7_boy' veya '5_boy' veya null", "paket_adeti": "sayı"}
+            {"urun_cinsi": "kayıtlı ürünlerden tam ad", "cikan_paket_adeti": "sayı", "boy": "'7_boy' veya '5_boy' veya null", "paket_adeti": "sayı"}
         ],
         "bakim_aciklamalari": ["metin listesi"],
-        "personel": [{"isim": "ad soyad", "geldi": True}]
+        "personel": [{"isim": "kayıtlı personelden tam ad (yoksa fotoğrafta yazan)", "geldi": True}],
+        "_muhakeme_notlari": "her önemli karar için 1 cümlelik kısa Türkçe açıklama (örn 'İzgat -> İZZET AKAL: en yakın operatör') — opsiyonel"
     }
 
     prompt_text = (
-        "Aşağıdaki fotoğraftaki Üretim Takip Raporu formunu OKUYUP verileri JSON olarak çıkar. "
-        "Beklenen JSON şeması (sadece referans, alanları eksiksiz doldur veya null yap):\n\n"
+        "AŞAĞIDAKİ FOTOĞRAFI OKU ve verileri JSON olarak çıkar.\n\n"
+        "== BAĞLAM (Kayıtlı Veritabanı Değerleri) ==\n"
+        + json.dumps(bagliam_json, ensure_ascii=False, indent=2)
+        + "\n\n== BEKLENEN JSON ŞEMASI ==\n"
         + json.dumps(schema_hint, ensure_ascii=False, indent=2)
-        + "\n\nÖNEMLİ KURALLAR:\n"
-        + "- Sadece JSON döndür, başka hiçbir şey yazma.\n"
-        + "- Tarihi mutlaka YYYY-MM-DD formatına çevir (örn: 04.05.2026 -> 2026-05-04).\n"
-        + "- Sayısal değerleri JSON number olarak döndür (string değil).\n"
-        + "- Vardiya için 'gündüz' işaretliyse 'gunduz', 'gece' işaretliyse 'gece' yaz.\n"
-        + "- Çıkan Paket tablosundaki her dolu satırı 'cikan_paketler' array'ine ekle.\n"
-        + "- Personel tablosundaki her satırı 'personel' array'ine ekle; 'geldi' işaretiyle (v, ✓) varsa geldi=true.\n"
-        + "- Türkçe karakterleri koru (İ, ş, ğ, ü, ö, ç)."
+        + "\n\n== KURALLAR ==\n"
+        + "1. SADECE JSON döndür (markdown yok, açıklama yok).\n"
+        + "2. isletme/urun_cinsi/operator alanlarında BAĞLAM listelerinden EN YAKIN gerçek değeri seç "
+        + "(el yazısı bulanık olabilir — mantıksal akıl yürüt). Eşleşme yoksa fotoğrafta yazanı döndür.\n"
+        + "3. Tarihi mutlaka YYYY-MM-DD formatına çevir (örn: 04.05.2026 → 2026-05-04).\n"
+        + "4. Sayısal değerleri JSON number olarak döndür.\n"
+        + "5. 'gündüz' işareti varsa vardiya='gunduz', 'gece' işareti varsa 'gece'.\n"
+        + "6. Çıkan Paket tablosundaki HER DOLU satırı 'cikan_paketler' array'ine ekle — "
+        + "ürün adlarını bağlamdaki kayıtlı ürünlere göre eşleştir (19.BL → AC BL 19, 19.SW → AC BL 19 SW gibi).\n"
+        + "7. Personel tablosundaki her satırı 'personel' array'ine ekle; 'v' veya '✓' varsa geldi=true.\n"
+        + "8. Bakım/arıza bölümündeki tüm satırları 'bakim_aciklamalari' listesine ekle.\n"
+        + "9. Türkçe karakterleri koru (İ, ş, ğ, ü, ö, ç).\n"
+        + "10. Emin olmadığın alanları null yap, TAHMİN ETME."
     )
 
     try:
@@ -7857,19 +7936,18 @@ async def uretim_foto_analiz(
         logger.exception("Gemini vision hatası: %s", e)
         raise HTTPException(status_code=500, detail=f"Fotoğraf analizi başarısız: {str(e)}")
 
-    # 5) JSON parse et (markdown kod bloğu içinde gelirse temizle)
+    # 6) JSON parse et
     def _clean_json_text(txt: str) -> str:
         if not txt:
             return "{}"
         t = txt.strip()
-        # ```json ... ``` veya ``` ... ``` bloğunu kaldır
         if t.startswith("```"):
             t = t.strip("`")
             if t.lower().startswith("json"):
                 t = t[4:]
             t = t.strip()
-        # İlk { veya [ karakterinden son } veya ] karakterine kadar al
-        first = min([i for i in [t.find("{"), t.find("[")] if i != -1], default=-1)
+        first_candidates = [i for i in [t.find("{"), t.find("[")] if i != -1]
+        first = min(first_candidates) if first_candidates else -1
         if first > 0:
             t = t[first:]
         return t.strip()
@@ -7881,10 +7959,107 @@ async def uretim_foto_analiz(
         logger.warning("Gemini JSON parse hatası: %s | raw=%s", e, response_text[:500] if response_text else "")
         parsed = {"_raw_text": response_text, "_parse_error": str(e)}
 
+    # 7) BACKEND-SIDE FUZZY POST-MATCHING (AI'ın kaçırdığı durumlar için ekstra güvenlik)
+    def _norm(s):
+        if s is None: return ""
+        s = str(s).lower()
+        tr_map = str.maketrans({"i":"i","ı":"i","İ":"i","I":"i","ş":"s","Ş":"s","ğ":"g","Ğ":"g","ü":"u","Ü":"u","ö":"o","Ö":"o","ç":"c","Ç":"c"})
+        s = s.translate(tr_map)
+        return "".join(ch for ch in s if ch.isalnum())
+
+    def _best_match(target, candidates_list, name_key=None):
+        """En iyi eşleşen adayı bul. Skorlama: exact > startswith > contains > token overlap."""
+        if not target or not candidates_list:
+            return None
+        t = _norm(target)
+        if not t:
+            return None
+        best = None
+        best_score = 0
+        for c in candidates_list:
+            cname = c[name_key] if name_key else c
+            n = _norm(cname)
+            if not n:
+                continue
+            score = 0
+            if n == t:
+                score = 100
+            elif n.startswith(t) or t.startswith(n):
+                score = 80
+            elif t in n or n in t:
+                score = 60
+            else:
+                # Token bazlı: rakam+harf ortak parça sayısı
+                common = sum(1 for ch in set(t) if ch in n)
+                score = int(common * 100 / max(len(t), 1) * 0.4)
+            if score > best_score:
+                best_score = score
+                best = c
+        return best if best_score >= 40 else None
+
+    if isinstance(parsed, dict):
+        try:
+            # Operatör → gerçek operator ID/name
+            if parsed.get("operator"):
+                op_match = _best_match(parsed["operator"], db_operators, name_key="name")
+                if op_match:
+                    parsed["_matched_operator"] = op_match  # {id, name}
+
+            # İşletme
+            if parsed.get("isletme"):
+                # önce rakam eşleşmesi dene (çok yaygın)
+                iso_str = str(parsed["isletme"])
+                digit_m = re.search(r"\d+", iso_str)
+                dep_match = None
+                if digit_m:
+                    d = digit_m.group()
+                    for dp in db_departments:
+                        dm = re.search(r"\d+", dp["name"] or "")
+                        if dm and dm.group() == d:
+                            dep_match = dp
+                            break
+                if not dep_match:
+                    dep_match = _best_match(iso_str, db_departments, name_key="name")
+                if dep_match:
+                    parsed["_matched_department"] = dep_match
+
+            # Ürün
+            if parsed.get("urun_cinsi"):
+                prod_match = _best_match(parsed["urun_cinsi"], db_products, name_key="name")
+                if prod_match:
+                    parsed["_matched_product"] = prod_match
+
+            # Kalıp no — sayısal karşılaştırma
+            if parsed.get("kalip_no") is not None:
+                target_kalip = str(parsed["kalip_no"]).strip()
+                # Nokta veya boşluk temizle
+                t_clean = re.sub(r"[^\d]", "", target_kalip)
+                for m in db_mold_numbers:
+                    k_clean = re.sub(r"[^\d]", "", str(m["kalip_no"]))
+                    if k_clean and (k_clean == t_clean or (len(t_clean) >= 3 and (t_clean in k_clean or k_clean in t_clean))):
+                        parsed["_matched_mold"] = m
+                        break
+
+            # Çıkan paketler — her satır için ürün eşle
+            if isinstance(parsed.get("cikan_paketler"), list):
+                for cp in parsed["cikan_paketler"]:
+                    if isinstance(cp, dict) and cp.get("urun_cinsi"):
+                        cpm = _best_match(cp["urun_cinsi"], db_products, name_key="name")
+                        if cpm:
+                            cp["_matched_product"] = cpm
+        except Exception as e:
+            logger.warning("Post-matching hatası: %s", e)
+
     return {
         "photo_url": photo_url,
         "extracted": parsed,
         "raw_response": response_text if isinstance(response_text, str) else str(response_text),
+        "context_stats": {
+            "products": len(db_products),
+            "departments": len(db_departments),
+            "operators": len(db_operators),
+            "mold_numbers": len(db_mold_numbers),
+        },
     }
 
 

@@ -536,11 +536,13 @@ const ProductionEntry = () => {
         next.worked_hours = String(data.calisilan_saat);
       }
 
-      // İşletme (departman eşleştir) — genelde sadece rakam gelir (2), depo adı "2.İŞLETME" biçiminde
-      if (data.isletme !== undefined && data.isletme !== null && String(data.isletme).trim() !== '') {
+      // İşletme — önce backend'in matched değerine bak (AI + fuzzy sonucu)
+      if (data._matched_department && data._matched_department.id) {
+        next.department_id = String(data._matched_department.id);
+        next.department_name = data._matched_department.name;
+      } else if (data.isletme !== undefined && data.isletme !== null && String(data.isletme).trim() !== '') {
         const targetStr = String(data.isletme).trim();
         let dept = null;
-        // 1) Sayı içerdiği varsa (örn "2" veya "İşletme 2"): departman adı içinde bu sayı geçen ilk kayıt
         const digitMatch = targetStr.match(/\d+/);
         if (digitMatch) {
           const digit = digitMatch[0];
@@ -549,19 +551,19 @@ const ProductionEntry = () => {
             return nn && nn[0] === digit;
           });
         }
-        // 2) Fallback: normalize eşleşme
         if (!dept) dept = findBestMatch(departments, targetStr, 'name');
-        if (!dept) dept = findBestMatch(departments, `İşletme ${targetStr}`, 'name');
         if (dept) {
           next.department_id = String(dept.id);
           next.department_name = dept.name;
         }
       }
 
-      // Ürün Cinsi — form üstünde ana ürün (opsiyonel: çıkan paketlerden birinci alınabilir)
-      if (data.urun_cinsi) {
+      // Ürün Cinsi — backend matched > frontend fuzzy
+      if (data._matched_product && data._matched_product.id) {
+        next.product_id = String(data._matched_product.id);
+        next.product_name = data._matched_product.name;
+      } else if (data.urun_cinsi) {
         const t = String(data.urun_cinsi);
-        // "19.SW" veya "19SW" veya "19 SW" -> "AC BL 19 SW"
         const numMatch = t.match(/(\d+)/);
         const hasSW = /sw/i.test(t);
         let product = null;
@@ -583,10 +585,12 @@ const ProductionEntry = () => {
         }
       }
 
-      // Operatör
-      if (data.operator) {
+      // Operatör — backend matched > frontend fuzzy
+      if (data._matched_operator && data._matched_operator.id) {
+        next.operator_id = String(data._matched_operator.id);
+        next.operator_name = data._matched_operator.name;
+      } else if (data.operator) {
         const targetOp = String(data.operator).trim();
-        // Önce isim başı eşleşme (İzzet → İZZET AKAL)
         const targetNorm = normalizeText(targetOp);
         let op = operators.find(o => normalizeText(o.name).startsWith(targetNorm));
         if (!op) op = findBestMatch(operators, targetOp, 'name');
@@ -594,13 +598,14 @@ const ProductionEntry = () => {
           next.operator_id = String(op.id);
           next.operator_name = op.name;
         } else {
-          // Bulunamazsa notlara yaz
           next.operator_name = targetOp;
         }
       }
 
-      // Kalıp No
-      if (data.kalip_no !== undefined && data.kalip_no !== null) {
+      // Kalıp No — backend matched > raw
+      if (data._matched_mold && data._matched_mold.kalip_no) {
+        next.mold_no = String(data._matched_mold.kalip_no);
+      } else if (data.kalip_no !== undefined && data.kalip_no !== null) {
         next.mold_no = String(data.kalip_no).replace(/[^0-9.]/g, '');
       }
 
@@ -617,7 +622,7 @@ const ProductionEntry = () => {
       if (data.fire !== undefined && data.fire !== null) {
         next.waste = String(data.fire);
       }
-      // Palet Adeti (paletteki adet gibi)
+      // Palet Adeti
       if (data.palet_adeti !== undefined && data.palet_adeti !== null) {
         next.pieces_per_pallet = String(data.palet_adeti);
       }
@@ -633,11 +638,16 @@ const ProductionEntry = () => {
         next.machine_cement = String(data.makinadaki_cimento_miktari);
       }
 
-      // Çıkan Paketler (max 5 slot)
+      // Çıkan Paketler (max 5 slot) — backend'in her satır için matched product'ı varsa onu kullan
       if (Array.isArray(data.cikan_paketler)) {
         data.cikan_paketler.slice(0, 5).forEach((p, idx) => {
           const slotKey = `cikan_paket_${idx + 1}`;
-          const productMatch = findBestMatch(products, p.urun_cinsi, 'name');
+          let productMatch = null;
+          if (p._matched_product && p._matched_product.id) {
+            productMatch = { id: p._matched_product.id, name: p._matched_product.name };
+          } else {
+            productMatch = findBestMatch(products, p.urun_cinsi, 'name');
+          }
           const boy = String(p.boy || '').toLowerCase();
           const is7 = boy.includes('7');
           const is5 = boy.includes('5');
