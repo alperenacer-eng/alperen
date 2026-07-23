@@ -22,7 +22,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Search, Trash2, Edit, Plus, Settings2, RotateCcw, FileSpreadsheet, FileText, GripVertical, Filter, X, Calendar, Bookmark, Save, ArrowDownAZ, ArrowUpAZ, ListFilter, Check, Clock } from 'lucide-react';
+import { Search, Trash2, Edit, Plus, Settings2, RotateCcw, FileSpreadsheet, FileText, GripVertical, Filter, X, Calendar, Bookmark, Save, ArrowDownAZ, ArrowUpAZ, ListFilter, Check, Clock, Image as ImageIcon, Printer, Download } from 'lucide-react';
 import { format } from 'date-fns';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
@@ -408,6 +408,7 @@ const ProductionList = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [deleteId, setDeleteId] = useState(null);
+  const [photoRecord, setPhotoRecord] = useState(null);  // Fotoğraf modal için seçili kayıt
   const [visibleCols, setVisibleCols] = useState(loadVisible);
   const [columnOrder, setColumnOrder] = useState(loadOrder);
   const [columnFilters, setColumnFilters] = useState({}); // { colId: 'arama' } — metin arama
@@ -1203,6 +1204,18 @@ const ProductionList = () => {
                     ))}
                     <td className="px-3 py-2 text-right">
                       <div className="flex items-center justify-end gap-1">
+                        {record.photo_url && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setPhotoRecord(record)}
+                            data-testid={`photo-button-${index}`}
+                            className="text-emerald-400 hover:text-emerald-300 hover:bg-emerald-400/10 h-7 w-7 p-0"
+                            title="Yüklenen fotoğrafı görüntüle"
+                          >
+                            <ImageIcon className="w-3.5 h-3.5" />
+                          </Button>
+                        )}
                         <Button
                           variant="ghost"
                           size="sm"
@@ -1252,6 +1265,17 @@ const ProductionList = () => {
                   <p className="text-xs text-slate-500">{fmtShortDate(record.production_date || record.created_at)} • {record.department_name || '-'}</p>
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
+                  {record.photo_url && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setPhotoRecord(record)}
+                      className="text-emerald-400 h-8 w-8 p-0"
+                      title="Fotoğrafı görüntüle"
+                    >
+                      <ImageIcon className="w-4 h-4" />
+                    </Button>
+                  )}
                   <Button
                     variant="ghost"
                     size="sm"
@@ -1313,6 +1337,151 @@ const ProductionList = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* 📷 FOTOĞRAF GÖRÜNTÜLEME MODAL — YAZDIR / PDF */}
+      {photoRecord && photoRecord.photo_url && (
+        <div
+          data-testid="photo-view-modal"
+          className="fixed inset-0 z-[9999] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4"
+          onClick={() => setPhotoRecord(null)}
+        >
+          <div
+            className="relative bg-slate-900 border border-slate-700 rounded-xl shadow-2xl max-w-5xl w-full max-h-[92vh] flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 py-3 border-b border-slate-800">
+              <div>
+                <h3 className="text-white font-semibold text-lg">
+                  📷 {photoRecord.product_name || 'Üretim'} — {photoRecord.production_date || photoRecord.created_at?.slice(0, 10)}
+                </h3>
+                <p className="text-xs text-slate-400">
+                  {photoRecord.department_name || '-'} • {photoRecord.operator_name || '-'}
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  data-testid="photo-print-btn"
+                  onClick={() => {
+                    const url = photoRecord.photo_url.startsWith('http')
+                      ? photoRecord.photo_url
+                      : `${process.env.REACT_APP_BACKEND_URL}${photoRecord.photo_url}`;
+                    const w = window.open('', '_blank', 'width=900,height=1200');
+                    if (!w) {
+                      toast.error('Pop-up engellendi. Yeni sekmeye izin verin.');
+                      return;
+                    }
+                    w.document.write(`
+                      <!DOCTYPE html><html><head><title>Üretim Fotoğrafı - ${photoRecord.production_date || ''}</title>
+                      <style>
+                        body { margin: 0; padding: 20px; font-family: Arial, sans-serif; background: #fff; }
+                        h1 { font-size: 16px; margin: 0 0 6px; }
+                        .meta { font-size: 12px; color: #666; margin-bottom: 12px; }
+                        img { max-width: 100%; height: auto; display: block; margin: 0 auto; }
+                        @media print {
+                          body { padding: 0; }
+                          @page { margin: 10mm; }
+                        }
+                      </style>
+                      </head><body>
+                      <h1>Üretim Takip Raporu — ${photoRecord.production_date || ''}</h1>
+                      <div class="meta">${photoRecord.department_name || ''} • ${photoRecord.operator_name || ''} • ${photoRecord.product_name || ''}</div>
+                      <img src="${url}" alt="Üretim Fotoğrafı" onload="setTimeout(() => window.print(), 250);" />
+                      </body></html>
+                    `);
+                    w.document.close();
+                  }}
+                  className="bg-slate-800 hover:bg-slate-700 border-slate-600 text-white"
+                >
+                  <Printer className="w-4 h-4 mr-1.5" />
+                  Yazdır
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  data-testid="photo-pdf-btn"
+                  onClick={async () => {
+                    try {
+                      const url = photoRecord.photo_url.startsWith('http')
+                        ? photoRecord.photo_url
+                        : `${process.env.REACT_APP_BACKEND_URL}${photoRecord.photo_url}`;
+                      // Görseli fetch edip PDF'e koy
+                      const resp = await fetch(url);
+                      const blob = await resp.blob();
+                      const reader = new FileReader();
+                      reader.onloadend = () => {
+                        const dataUrl = reader.result;
+                        const img = new Image();
+                        img.onload = () => {
+                          const pdf = new jsPDF({
+                            orientation: img.width > img.height ? 'landscape' : 'portrait',
+                            unit: 'mm',
+                            format: 'a4',
+                          });
+                          const pageW = pdf.internal.pageSize.getWidth();
+                          const pageH = pdf.internal.pageSize.getHeight();
+                          const margin = 10;
+                          const maxW = pageW - margin * 2;
+                          const maxH = pageH - margin * 2 - 15;
+                          let w = img.width;
+                          let h = img.height;
+                          const ratio = Math.min(maxW / w, maxH / h);
+                          w = w * ratio;
+                          h = h * ratio;
+                          // Başlık
+                          pdf.setFontSize(12);
+                          pdf.text(`Üretim Fotoğrafı — ${photoRecord.production_date || ''}`, margin, margin);
+                          pdf.setFontSize(9);
+                          pdf.text(`${photoRecord.department_name || ''} • ${photoRecord.operator_name || ''} • ${photoRecord.product_name || ''}`, margin, margin + 5);
+                          const x = (pageW - w) / 2;
+                          const y = margin + 12;
+                          const format = dataUrl.startsWith('data:image/png') ? 'PNG' : 'JPEG';
+                          pdf.addImage(dataUrl, format, x, y, w, h);
+                          const fileName = `uretim-foto-${photoRecord.production_date || photoRecord.id}.pdf`;
+                          pdf.save(fileName);
+                          toast.success('PDF indirildi');
+                        };
+                        img.onerror = () => toast.error('Görsel yüklenemedi');
+                        img.src = dataUrl;
+                      };
+                      reader.readAsDataURL(blob);
+                    } catch (err) {
+                      toast.error('PDF oluşturulamadı: ' + (err.message || err));
+                    }
+                  }}
+                  className="bg-slate-800 hover:bg-slate-700 border-slate-600 text-white"
+                >
+                  <Download className="w-4 h-4 mr-1.5" />
+                  PDF Kaydet
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setPhotoRecord(null)}
+                  className="text-slate-400 hover:text-white hover:bg-slate-800 h-9 w-9 p-0"
+                  aria-label="Kapat"
+                >
+                  <X className="w-5 h-5" />
+                </Button>
+              </div>
+            </div>
+            {/* Görsel */}
+            <div className="flex-1 overflow-auto p-4 bg-black/40 flex items-center justify-center">
+              <img
+                src={
+                  photoRecord.photo_url.startsWith('http')
+                    ? photoRecord.photo_url
+                    : `${process.env.REACT_APP_BACKEND_URL}${photoRecord.photo_url}`
+                }
+                alt="Yüklenen üretim fotoğrafı"
+                className="max-w-full max-h-[75vh] object-contain rounded-md border border-slate-700 shadow-xl"
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
