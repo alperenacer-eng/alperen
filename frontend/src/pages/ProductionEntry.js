@@ -403,6 +403,14 @@ const ProductionEntry = () => {
       setOperators(operatorsRes.data);
       setMolds(moldsRes.data);
       setExistingRecords(Array.isArray(existingRes.data) ? existingRes.data : (existingRes.data?.records || []));
+
+      // Freshest verileri return et — applyExtractedToForm için gerekli
+      const _fresh = {
+        products: productsRes.data,
+        departments: departmentsRes.data,
+        operators: operatorsRes.data,
+        molds: moldsRes.data,
+      };
       
       // Tüm kalıp numaralarını çıkar ve sırala
       const allKalipNos = [];
@@ -421,8 +429,10 @@ const ProductionEntry = () => {
         return numA - numB;
       });
       setKalipNoListesi([...new Set(allKalipNos)]); // Tekrarları kaldır
+      return _fresh;
     } catch (error) {
       toast.error('Veriler yüklenemedi');
+      return null;
     }
   };
 
@@ -512,6 +522,8 @@ const ProductionEntry = () => {
     }
     setAnalyzing(true);
     try {
+      // Analiz öncesi ürün/kaynak listelerini yenile — Kaynaklar'daki en güncel paket adetlerini almak için
+      const fresh = await fetchData().catch(() => null);
       const fd = new FormData();
       fd.append('file', photoFile);
       const res = await axios.post(`${API_URL}/uretim/foto-analiz`, fd, {
@@ -529,7 +541,8 @@ const ProductionEntry = () => {
         toast.error('Fotoğraftan veri çıkarılamadı');
         return;
       }
-      applyExtractedToForm(extracted);
+      // fresh varsa onu kullan (en güncel), yoksa state'ten
+      applyExtractedToForm(extracted, fresh);
       toast.success('Fotoğraf analiz edildi — form alanları dolduruldu, lütfen kontrol edin');
     } catch (err) {
       toast.error(err.response?.data?.detail || 'Analiz başarısız');
@@ -538,7 +551,11 @@ const ProductionEntry = () => {
     }
   };
 
-  const applyExtractedToForm = (data) => {
+  const applyExtractedToForm = (data, freshLists = null) => {
+    // Kaynaklar'ın en güncel hâlini kullan (varsa)
+    const P = freshLists?.products || products;
+    const D = freshLists?.departments || departments;
+    const O = freshLists?.operators || operators;
     setFormData(prev => {
       const next = { ...prev };
 
@@ -583,12 +600,12 @@ const ProductionEntry = () => {
         const digitMatch = targetStr.match(/\d+/);
         if (digitMatch) {
           const digit = digitMatch[0];
-          dept = departments.find(d => {
+          dept = D.find(d => {
             const nn = String(d.name || '').match(/\d+/);
             return nn && nn[0] === digit;
           });
         }
-        if (!dept) dept = findBestMatch(departments, targetStr, 'name');
+        if (!dept) dept = findBestMatch(D, targetStr, 'name');
         if (dept) {
           next.department_id = String(dept.id);
           next.department_name = dept.name;
@@ -606,7 +623,7 @@ const ProductionEntry = () => {
         let product = null;
         if (numMatch) {
           const num = numMatch[1];
-          product = products.find(p => {
+          product = P.find(p => {
             const n = String(p.name || '');
             const pn = n.match(/\d+/);
             if (!pn || pn[0] !== num) return false;
@@ -614,7 +631,7 @@ const ProductionEntry = () => {
             return nHasSW === hasSW;
           });
         }
-        if (!product) product = findBestMatch(products, t, 'name');
+        if (!product) product = findBestMatch(P, t, 'name');
         if (product) {
           next.product_id = String(product.id);
           next.product_name = product.name;
@@ -629,8 +646,8 @@ const ProductionEntry = () => {
       } else if (data.operator) {
         const targetOp = String(data.operator).trim();
         const targetNorm = normalizeText(targetOp);
-        let op = operators.find(o => normalizeText(o.name).startsWith(targetNorm));
-        if (!op) op = findBestMatch(operators, targetOp, 'name');
+        let op = O.find(o => normalizeText(o.name).startsWith(targetNorm));
+        if (!op) op = findBestMatch(O, targetOp, 'name');
         if (op) {
           next.operator_id = String(op.id);
           next.operator_name = op.name;
@@ -684,7 +701,7 @@ const ProductionEntry = () => {
           // Ürün eşleştirme: önce backend matched, sonra frontend fuzzy
           let productMatch = null;
           if (p._matched_product && p._matched_product.id) {
-            productMatch = products.find(x => String(x.id) === String(p._matched_product.id))
+            productMatch = P.find(x => String(x.id) === String(p._matched_product.id))
                           || { id: p._matched_product.id, name: p._matched_product.name };
           } else if (p.urun_cinsi) {
             const t = String(p.urun_cinsi);
@@ -693,7 +710,7 @@ const ProductionEntry = () => {
             // Önce rakam + SW filtresi
             if (numMatch) {
               const num = numMatch[1];
-              productMatch = products.find(pr => {
+              productMatch = P.find(pr => {
                 const n = String(pr.name || '');
                 const pn = n.match(/\d+/);
                 if (!pn || pn[0] !== num) return false;
@@ -701,7 +718,7 @@ const ProductionEntry = () => {
                 return nHasSW === hasSW;
               });
             }
-            if (!productMatch) productMatch = findBestMatch(products, t, 'name');
+            if (!productMatch) productMatch = findBestMatch(P, t, 'name');
           }
 
           // Boy tespiti — belirsizse varsayılan 7_boy
@@ -722,20 +739,16 @@ const ProductionEntry = () => {
             paketAdetFromPhoto = parseInt(clean) || 0;
           }
 
-          // Birim adet: ÖNCE ürünün Kaynaklar'daki (product+department) değeri, yoksa fotoğrafın değeri
+          // Birim adet: SADECE Kaynaklar'daki (product+department) değerinden alınır
+          //   Manuel seçimde olduğu gibi — fotoğraftaki paket_adeti değeri kullanılmaz
+          //   Çünkü kullanıcı Kaynaklar'da paket adeti ayarlıyor; foto yanlış olabilir
           let birim7 = 0, birim5 = 0;
           const fullProduct = productMatch && productMatch.id
-            ? products.find(x => String(x.id) === String(productMatch.id))
+            ? P.find(x => String(x.id) === String(productMatch.id))
             : null;
-          if (fullProduct && fullProduct.paket_adetleri_7_boy && targetDeptId && fullProduct.paket_adetleri_7_boy[targetDeptId] !== undefined) {
-            birim7 = parseInt(fullProduct.paket_adetleri_7_boy[targetDeptId]) || 0;
-          } else if (is7) {
-            birim7 = paketAdetFromPhoto;
-          }
-          if (fullProduct && fullProduct.paket_adetleri_5_boy && targetDeptId && fullProduct.paket_adetleri_5_boy[targetDeptId] !== undefined) {
-            birim5 = parseInt(fullProduct.paket_adetleri_5_boy[targetDeptId]) || 0;
-          } else if (is5) {
-            birim5 = paketAdetFromPhoto;
+          if (fullProduct && targetDeptId) {
+            birim7 = parseInt(fullProduct.paket_adetleri_7_boy?.[targetDeptId]) || 0;
+            birim5 = parseInt(fullProduct.paket_adetleri_5_boy?.[targetDeptId]) || 0;
           }
 
           next[slotKey] = {
