@@ -161,6 +161,7 @@ const ProductionEntry = () => {
   const [photoUrl, setPhotoUrl] = useState('');
   const [analyzing, setAnalyzing] = useState(false);
   const [extractedData, setExtractedData] = useState(null);
+  const [photoLightboxOpen, setPhotoLightboxOpen] = useState(false);
 
   useEffect(() => {
     if (!currentModule) {
@@ -969,7 +970,9 @@ const ProductionEntry = () => {
                   data-testid="photo-preview"
                   src={photoPreview}
                   alt="Yüklenen üretim fotoğrafı"
-                  className="max-h-48 rounded-md border border-slate-700 shadow-lg"
+                  onClick={() => setPhotoLightboxOpen(true)}
+                  className="max-h-48 rounded-md border border-slate-700 shadow-lg cursor-zoom-in hover:opacity-90 transition"
+                  title="Büyütmek için tıklayın"
                 />
                 {extractedData && (
                   <div className="flex-1 min-w-[240px] text-sm text-emerald-100/90 bg-slate-900/50 rounded-md p-3 border border-emerald-500/20">
@@ -1615,6 +1618,31 @@ const ProductionEntry = () => {
           </div>
         </form>
       </div>
+
+      {/* 🔍 Fotoğraf Büyütme Modal (Lightbox) */}
+      {photoLightboxOpen && photoPreview && (
+        <div
+          data-testid="photo-lightbox"
+          onClick={() => setPhotoLightboxOpen(false)}
+          className="fixed inset-0 z-[9999] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4 cursor-zoom-out"
+        >
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); setPhotoLightboxOpen(false); }}
+            className="absolute top-4 right-4 z-10 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition"
+            title="Kapat (Esc)"
+            aria-label="Kapat"
+          >
+            <X className="w-6 h-6" />
+          </button>
+          <img
+            src={photoPreview}
+            alt="Yüklenen üretim fotoğrafı (büyütülmüş)"
+            onClick={(e) => e.stopPropagation()}
+            className="max-h-[92vh] max-w-[95vw] object-contain rounded-lg shadow-2xl border border-slate-700 cursor-default"
+          />
+        </div>
+      )}
     </div>
   );
 };
