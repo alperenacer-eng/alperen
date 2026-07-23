@@ -678,26 +678,73 @@ const ProductionEntry = () => {
 
       // Çıkan Paketler (max 5 slot) — backend'in her satır için matched product'ı varsa onu kullan
       if (Array.isArray(data.cikan_paketler)) {
+        const targetDeptId = next.department_id;
         data.cikan_paketler.slice(0, 5).forEach((p, idx) => {
           const slotKey = `cikan_paket_${idx + 1}`;
+          // Ürün eşleştirme: önce backend matched, sonra frontend fuzzy
           let productMatch = null;
           if (p._matched_product && p._matched_product.id) {
-            productMatch = { id: p._matched_product.id, name: p._matched_product.name };
-          } else {
-            productMatch = findBestMatch(products, p.urun_cinsi, 'name');
+            productMatch = products.find(x => String(x.id) === String(p._matched_product.id))
+                          || { id: p._matched_product.id, name: p._matched_product.name };
+          } else if (p.urun_cinsi) {
+            const t = String(p.urun_cinsi);
+            const numMatch = t.match(/(\d+)/);
+            const hasSW = /sw/i.test(t);
+            // Önce rakam + SW filtresi
+            if (numMatch) {
+              const num = numMatch[1];
+              productMatch = products.find(pr => {
+                const n = String(pr.name || '');
+                const pn = n.match(/\d+/);
+                if (!pn || pn[0] !== num) return false;
+                const nHasSW = /sw/i.test(n);
+                return nHasSW === hasSW;
+              });
+            }
+            if (!productMatch) productMatch = findBestMatch(products, t, 'name');
           }
-          const boy = String(p.boy || '').toLowerCase();
-          const is7 = boy.includes('7');
-          const is5 = boy.includes('5');
-          const cikanAdet = p.cikan_paket_adeti !== undefined && p.cikan_paket_adeti !== null ? String(p.cikan_paket_adeti) : '';
-          const paketAdet = p.paket_adeti !== undefined && p.paket_adeti !== null ? String(p.paket_adeti) : '';
+
+          // Boy tespiti — belirsizse varsayılan 7_boy
+          const boyStr = String(p.boy || '').toLowerCase();
+          const explicitly5 = boyStr.includes('5');
+          const is5 = explicitly5;
+          const is7 = !is5;
+
+          // Çıkan paket adeti (kağıttan): sayı ya da string olabilir; nokta/virgül kaldır
+          let cikanAdetStr = '';
+          if (p.cikan_paket_adeti !== undefined && p.cikan_paket_adeti !== null && p.cikan_paket_adeti !== '') {
+            cikanAdetStr = String(p.cikan_paket_adeti).replace(/[.,\s]/g, '');
+          }
+          // Fotoğraftaki paket_adeti (her paketteki birim sayısı)
+          let paketAdetFromPhoto = 0;
+          if (p.paket_adeti !== undefined && p.paket_adeti !== null && p.paket_adeti !== '') {
+            const clean = String(p.paket_adeti).replace(/[.,\s]/g, '');
+            paketAdetFromPhoto = parseInt(clean) || 0;
+          }
+
+          // Birim adet: ÖNCE ürünün Kaynaklar'daki (product+department) değeri, yoksa fotoğrafın değeri
+          let birim7 = 0, birim5 = 0;
+          const fullProduct = productMatch && productMatch.id
+            ? products.find(x => String(x.id) === String(productMatch.id))
+            : null;
+          if (fullProduct && fullProduct.paket_adetleri_7_boy && targetDeptId && fullProduct.paket_adetleri_7_boy[targetDeptId] !== undefined) {
+            birim7 = parseInt(fullProduct.paket_adetleri_7_boy[targetDeptId]) || 0;
+          } else if (is7) {
+            birim7 = paketAdetFromPhoto;
+          }
+          if (fullProduct && fullProduct.paket_adetleri_5_boy && targetDeptId && fullProduct.paket_adetleri_5_boy[targetDeptId] !== undefined) {
+            birim5 = parseInt(fullProduct.paket_adetleri_5_boy[targetDeptId]) || 0;
+          } else if (is5) {
+            birim5 = paketAdetFromPhoto;
+          }
+
           next[slotKey] = {
             urun_id: productMatch ? String(productMatch.id) : '',
             urun_adi: productMatch ? productMatch.name : (p.urun_cinsi || ''),
-            paket_7_boy: is7 || (!is5 && cikanAdet) ? cikanAdet : '',
-            paket_5_boy: is5 ? cikanAdet : '',
-            birim_7_boy: is7 || (!is5) ? (parseInt(paketAdet) || 0) : 0,
-            birim_5_boy: is5 ? (parseInt(paketAdet) || 0) : 0,
+            paket_7_boy: is7 ? cikanAdetStr : '',
+            paket_5_boy: is5 ? cikanAdetStr : '',
+            birim_7_boy: birim7,
+            birim_5_boy: birim5,
             onceki_yil_kalan: '',
           };
         });

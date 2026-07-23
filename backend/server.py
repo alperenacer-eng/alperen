@@ -7885,7 +7885,12 @@ async def uretim_foto_analiz(
         "makinadaki_cimento_miktari": "sayı (ondalıklı olabilir)",
         "operator": "kayıtlı operatörlerden EN YAKIN eşleşen operatörün TAM adı",
         "cikan_paketler": [
-            {"urun_cinsi": "kayıtlı ürünlerden tam ad", "cikan_paket_adeti": "sayı", "boy": "'7_boy' veya '5_boy' veya null", "paket_adeti": "sayı"}
+            {
+                "urun_cinsi": "kayıtlı ürünlerden tam ad (örn '19.BL' → 'AC BL 19', '19.SW' → 'AC BL 19 SW')",
+                "cikan_paket_adeti": "ÇIKAN PAKET ADETİ sütunundaki sayı — üretilen paket sayısı (örn: 88)",
+                "boy": "'7_boy' veya '5_boy' — hangi boy sütununda işaretlenmişse (yoksa varsayılan '7_boy')",
+                "paket_adeti": "PAKET ADETİ sütunundaki sayı — her paketteki birim adet (örn: 120)"
+            }
         ],
         "bakim_aciklamalari": ["metin listesi"],
         "personel": [{"isim": "kayıtlı personelden tam ad (yoksa fotoğrafta yazan)", "geldi": True}],
@@ -7905,8 +7910,10 @@ async def uretim_foto_analiz(
         + "3. Tarihi mutlaka YYYY-MM-DD formatına çevir (örn: 04.05.2026 → 2026-05-04).\n"
         + "4. Sayısal değerleri JSON number olarak döndür.\n"
         + "5. 'gündüz' işareti varsa vardiya='gunduz', 'gece' işareti varsa 'gece'.\n"
-        + "6. Çıkan Paket tablosundaki HER DOLU satırı 'cikan_paketler' array'ine ekle — "
-        + "ürün adlarını bağlamdaki kayıtlı ürünlere göre eşleştir (19.BL → AC BL 19, 19.SW → AC BL 19 SW gibi).\n"
+        + "6. Çıkan Paket tablosundaki HER DOLU satırı 'cikan_paketler' array'ine ekle. "
+        + "Her satırda 3 önemli sütun var: (a) 'ÇIKAN PAKET ADETİ' → cikan_paket_adeti (kaç paket üretildi, örn 88); "
+        + "(b) '7 BOY' veya '5 BOY' işaret sütunu → boy; (c) 'PAKET ADETİ' → paket_adeti (her paketteki birim, örn 120). "
+        + "Ürün adlarını bağlamdaki kayıtlı ürünlere göre eşleştir (19.BL → AC BL 19, 19.SW → AC BL 19 SW).\n"
         + "7. Personel tablosundaki her satırı 'personel' array'ine ekle; 'v' veya '✓' varsa geldi=true.\n"
         + "8. Bakım/arıza bölümündeki tüm satırları 'bakim_aciklamalari' listesine ekle.\n"
         + "9. Türkçe karakterleri koru (İ, ş, ğ, ü, ö, ç).\n"
